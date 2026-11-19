@@ -4,7 +4,7 @@
 // tout de suite pendant la mise au point), le cache si le réseau ne répond pas.
 // L'application définitive mettra plutôt tout en cache d'un bloc, par version.
 
-const CACHE = 'mydevoirs-prototype-1';
+const CACHE = 'mydevoirs-prototype-2';
 const DELAI_RESEAU = 3000;
 const FICHIERS = [
   './',
@@ -12,6 +12,11 @@ const FICHIERS = [
   './style.css',
   './app.js',
   './emploi-du-temps.js',
+  './stockage.js',
+  './stockage-worker.js',
+  './sauvegarde.js',
+  './vendor/sqlite/index.mjs',
+  './vendor/sqlite/sqlite3.wasm',
   './manifest.json',
   './icones/favicon.png',
   './icones/icone-192.png',

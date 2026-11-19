@@ -144,6 +144,22 @@ Vérifié dans Edge 157 sous Windows 11 avec le prototype rendu installable : ma
 - temps de rendu moyen : 1,2 ms ;
 - **stockage persistant refusé, même installée.** Sans persistance, Edge peut effacer les données de lui-même s'il manque de place sur le disque. Avec ou sans persistance, un effacement manuel des données de navigation les supprime. La sauvegarde dans un fichier reste donc la vraie protection. À revérifier sur l'adresse HTTPS définitive : le critère d'Edge pour accorder la persistance n'est pas documenté.
 
+### Stockage SQLite dans le navigateur (19 novembre 2026)
+
+SQLite 3.54 compilé en WebAssembly (`@sqlite.org/sqlite-wasm`), VFS `opfs-sahpool`, dans un worker. Vérifié automatiquement dans Edge 157 sous Windows **et** dans Electron 45 (même code) :
+
+- la base est créée, puis retrouvée après rechargement, avec les modifications ;
+- export de la base (24 Ko pour 6 devoirs), effacement, réimport : aucune perte ;
+- un fichier qui n'est pas une base est refusé, et les données actuelles sont conservées ;
+- aucun en-tête HTTP particulier n'est nécessaire : compatible avec GitHub Pages.
+
+Contraintes découvertes :
+
+- **une seule fenêtre à la fois** peut ouvrir la base. Une deuxième fenêtre (onglet et application installée en même temps, par exemple) n'y a pas accès. Le prototype prend un verrou (Web Locks) et affiche « déjà ouvert dans une autre fenêtre », avec un bouton pour réessayer ;
+- **la sauvegarde automatique peut écraser une bonne sauvegarde** par une base vide ou abîmée (après un effacement, par exemple). Le prototype la suspend après une perte simulée. L'application devra **garder plusieurs sauvegardes datées** dans un dossier choisi, plutôt qu'un seul fichier.
+
+Test manuel réussi dans l'application installée (Edge, Windows 11) : choix du fichier de sauvegarde, sauvegarde automatique après une modification, fermeture puis réouverture, perte simulée, puis restauration depuis le fichier avec les devoirs cochés. Reste à préciser si Edge a gardé l'autorisation d'écrire à la réouverture (`granted`) ou l'a redemandée (`prompt`).
+
 **Décision provisoire** : mettre l'application au point en PWA, testée dans Edge sous Windows. Electron devient une enveloppe facultative, à ajouter si un besoin le justifie (rappels application fermée, fenêtre au premier plan, démarrage automatique). Conditions pour que ce passage reste peu coûteux :
 
 - tout accès au système passe par une couche « plateforme » unique, avec une implémentation par enveloppe ;

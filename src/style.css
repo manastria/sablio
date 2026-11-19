@@ -101,6 +101,16 @@ select, input[type="datetime-local"] {
 .commandes { margin-left: auto; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .profil { display: flex; gap: 0.4rem; align-items: center; color: var(--texte-doux); }
 
+.alerte-globale {
+  margin: 1rem 1rem 0;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--alerte);
+  border-radius: 10px;
+  color: var(--alerte);
+  font-weight: 600;
+}
+.alerte-globale[hidden] { display: none; }
+
 /* --- Tableau principal --- */
 
 .tableau {

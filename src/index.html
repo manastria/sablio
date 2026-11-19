@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'">
   <meta name="theme-color" content="#1f4f8f">
   <title>MyDevoirs – prototype</title>
   <link rel="manifest" href="manifest.json">
@@ -28,11 +28,14 @@
       </label>
       <button type="button" class="mise-en-avant" data-action="installer" hidden>Installer l’application</button>
       <button type="button" class="mise-en-avant" data-action="activer-rappels" hidden>Activer les rappels</button>
+      <button type="button" class="mise-en-avant" data-action="reprendre-sauvegarde" hidden>Reprendre la sauvegarde</button>
       <button type="button" data-action="compact">Mode compact</button>
       <button type="button" data-action="plein-ecran" title="F11">Plein écran</button>
       <button type="button" data-action="outils" aria-expanded="false" aria-controls="outils">Outils</button>
     </div>
   </header>
+
+  <p class="alerte-globale" id="alerte" role="alert" hidden></p>
 
   <main class="tableau">
     <section id="maintenant" class="carte carte-maintenant" aria-live="polite"></section>
@@ -69,6 +72,17 @@
         </select>
       </label>
       <button type="button" data-action="heure-reelle">Heure réelle</button>
+    </div>
+
+    <h3>Données</h3>
+    <dl class="environnement" id="donnees"></dl>
+    <div class="ligne">
+      <button type="button" data-action="choisir-sauvegarde">Choisir le fichier de sauvegarde…</button>
+      <button type="button" data-action="sauvegarder">Sauvegarder maintenant</button>
+    </div>
+    <div class="ligne">
+      <button type="button" data-action="restaurer">Restaurer depuis un fichier…</button>
+      <button type="button" data-action="perte">Simuler une perte de données</button>
     </div>
 
     <h3>Essais</h3>

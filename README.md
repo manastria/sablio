@@ -35,9 +35,22 @@ Depuis WSL, le serveur est joignable par Edge sous Windows à l'adresse `http://
 - **Installer l'application** (bouton dans l'en-tête, ou icône dans la barre d'adresse d'Edge) : elle obtient sa fenêtre et une entrée dans le menu Démarrer.
 - **Activer les rappels** : le navigateur demande l'autorisation d'afficher des notifications.
 - **Hors ligne** : une fois la page ouverte une première fois, elle fonctionne serveur arrêté.
-- Les devoirs cochés et le profil sont gardés d'une session à l'autre.
 - `?heure=2026-11-23T10:32&profil=primaire` fige l'horloge et choisit le profil.
-- SQLite et le mode compact ne sont pas encore disponibles dans cette version.
+- Le mode compact n'est pas encore disponible dans cette version.
+
+## Données et sauvegarde
+
+Les devoirs sont dans une base SQLite (WebAssembly) enregistrée dans le stockage privé du navigateur (OPFS), dans Electron comme dans Edge. `npm install` copie SQLite dans `src/vendor/sqlite/` (fichiers non versionnés) : il faut l'avoir lancé avant de servir `src/`.
+
+Dans **Outils → Données** :
+
+- **Choisir le fichier de sauvegarde** : ensuite, chaque modification est sauvegardée dans ce fichier au bout de 2 secondes ;
+- **Restaurer depuis un fichier** : remplace les données par celles d'une sauvegarde (un fichier invalide est refusé) ;
+- **Simuler une perte de données** : vide la base du navigateur, sans toucher au fichier. La sauvegarde automatique est alors suspendue, pour ne pas écraser le fichier avec une base vide.
+
+Si le navigateur demande de nouveau l'autorisation d'écrire dans le fichier, le bouton **Reprendre la sauvegarde** apparaît dans l'en-tête.
+
+Une seule fenêtre à la fois peut ouvrir la base ; les autres affichent un avertissement.
 
 Les données sont liées à l'adresse : celles de `http://localhost:8765` ne seront pas visibles depuis une autre adresse.
 
@@ -58,6 +71,9 @@ L'exécutable n'est **pas signé** : le Contrôle intelligent des applications d
 | `src/emploi-du-temps.js` | Données et calculs de temps, sans DOM (semaines A/B, états de la journée, textes) |
 | `src/app.js` | Interface |
 | `src/index.html`, `src/style.css` | Page et styles (thème clair et sombre) |
+| `src/stockage.js`, `src/stockage-worker.js` | Base SQLite (WebAssembly, OPFS) dans un worker, avec repli en mémoire |
+| `src/sauvegarde.js` | Sauvegarde et restauration dans un fichier choisi |
+| `scripts/copier-sqlite.mjs` | Copie SQLite WebAssembly dans `src/vendor/` (après `npm install`) |
 | `src/manifest.json`, `src/icones/` | Rendent la page installable (nom, icônes, fenêtre dédiée) |
 | `src/sw.js` | *Service worker* : hors-ligne, retour à l'application au clic sur une notification |
 | `scripts/preparer-windows.mjs` | Assemble la version Windows portable depuis Linux |

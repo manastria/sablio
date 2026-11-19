@@ -110,9 +110,15 @@ function aHeure(jour, hhmm) {
   return d;
 }
 
-function isoLocal(date) {
+export function isoLocal(date) {
   const p = (n) => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}`;
+}
+
+// « 2026-11-23 » -> minuit, heure locale (new Date("2026-11-23") serait en UTC).
+export function dateDepuisIso(texte) {
+  const [a, m, j] = texte.split('-').map(Number);
+  return new Date(a, m - 1, j);
 }
 
 // --- Emploi du temps ---

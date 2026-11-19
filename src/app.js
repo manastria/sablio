@@ -1,6 +1,8 @@
 // Interface : vue « Maintenant / Ensuite », frise, devoirs, panneau d'outils.
 
 import * as edt from './emploi-du-temps.js';
+import * as sauvegarde from './sauvegarde.js';
+import { ouvrirStockage } from './stockage.js';
 
 const MINUTE = 60_000;
 const RAPPEL_AVANT = 5 * MINUTE;
@@ -91,8 +93,8 @@ function reglerHorloge({ date = maintenant(), vitesse = horloge.vitesse, simulee
 
 const etat = {
   profil: PROFILS[lirePreference('profil', '')] ? lirePreference('profil', '') : 'college',
-  // Gardés d'une session à l'autre, pour vérifier que les données survivent.
-  faits: new Set(lirePreference('faits', '').split(',').filter(Boolean).map(Number)),
+  devoirs: null, // chargés depuis la base (null tant qu'elle n'est pas ouverte)
+  versionDevoirs: 0,
   rappels: new Set(),
   journal: [],
   durees: [],
@@ -133,7 +135,7 @@ function rendre(forcer = false) {
   const profil = PROFILS[etat.profil];
   const cle = [
     s.etat, s.actuel?.id, s.suivant?.id, s.demain?.jour?.getTime(),
-    edt.debutJour(n).getTime(), etat.profil, [...etat.faits].join(','),
+    edt.debutJour(n).getTime(), etat.profil, etat.versionDevoirs,
   ].join('|');
   if (forcer || cle !== cleStructure) {
     cleStructure = cle;
@@ -181,7 +183,7 @@ function htmlMaintenant(s, n, profil) {
       ${barre}
       <p class="bornes"><span>${s.precedent ? `Depuis ${edt.heureTexte(s.precedent.fin)}` : ''}</span><span>${edt.heureTexte(s.suivant.debut)}</span></p>`;
   }
-  const pourDemain = devoirsDates(n).filter((d) => !etat.faits.has(d.id) && edt.ecartJours(n, d.pour) === 1).length;
+  const pourDemain = (etat.devoirs ?? []).filter((d) => !d.fait && edt.ecartJours(n, d.pour) === 1).length;
   const texteDevoirs = pourDemain === 0
     ? 'Rien à faire pour demain.'
     : `${pourDemain} devoir${pourDemain > 1 ? 's' : ''} à faire pour demain.`;
@@ -249,15 +251,11 @@ function htmlFrise(s) {
     <div class="graduations">${heures.join('')}</div>`;
 }
 
-function devoirsDates(n) {
-  const jour = edt.debutJour(n);
-  return edt.DEVOIRS.map((d) => ({ ...d, pour: edt.ajouterJours(jour, d.dans), matiere: edt.MATIERES[d.matiere] }));
-}
-
 function htmlDevoirs(n, profil) {
-  const tous = devoirsDates(n).sort((a, b) => a.pour - b.pour);
-  const aFaire = tous.filter((d) => !etat.faits.has(d.id));
-  const faits = tous.filter((d) => etat.faits.has(d.id));
+  if (!etat.devoirs) return `<p class="etiquette">Devoirs à faire</p><p class="vide">${echapper(etat.messageDevoirs ?? 'Chargement…')}</p>`;
+  const tous = [...etat.devoirs].sort((a, b) => a.pour - b.pour);
+  const aFaire = tous.filter((d) => !d.fait);
+  const faits = tous.filter((d) => d.fait);
   const ligne = (d, coche) => {
     const proche = edt.ecartJours(n, d.pour) <= 1;
     return `<li class="devoir"><label data-css="${couleurs(d.matiere)}">
@@ -439,16 +437,19 @@ async function lignesEnvironnement() {
   return lignes;
 }
 
-async function afficherEnvironnement() {
-  const dl = $('#environnement');
+function remplirListe(dl, lignes) {
   dl.replaceChildren();
-  for (const [cle, valeur] of await lignesEnvironnement()) {
+  for (const [cle, valeur] of lignes) {
     const dt = document.createElement('dt');
     const dd = document.createElement('dd');
     dt.textContent = cle;
     dd.textContent = valeur;
     dl.append(dt, dd);
   }
+}
+
+async function afficherEnvironnement() {
+  remplirListe($('#environnement'), await lignesEnvironnement());
 }
 
 async function rapport() {
@@ -464,8 +465,32 @@ async function rapport() {
   ].join('\n');
 }
 
+// Aller-retour sans boîte de dialogue : exporter, effacer, réimporter,
+// et vérifier qu'un fichier qui n'est pas une base est refusé.
+async function verifierStockage() {
+  try {
+    const avant = etat.devoirs.length;
+    const octets = await stockage.exporter();
+    const taille = octets.length;
+    await stockage.effacer();
+    const apresPerte = (await stockage.devoirs()).length;
+    const { nombre } = await stockage.importer(octets);
+    let refus = 'accepté à tort';
+    try {
+      await stockage.importer(new TextEncoder().encode('pas une base de données'));
+    } catch (e) {
+      refus = `refusé (${e.message})`;
+    }
+    await chargerDevoirs();
+    return `${avant} devoirs, export ${taille} octets, après perte ${apresPerte}, après import ${nombre} ; faux fichier ${refus}`;
+  } catch (e) {
+    return `échec : ${e.message}`;
+  }
+}
+
 async function lancerTests() {
-  journaliser(`SQLite : ${resumeSqlite(await api.testerSqlite())}`);
+  journaliser(`Stockage aller-retour : ${await verifierStockage()}`);
+  if (dansElectron) journaliser(`SQLite (Node) : ${resumeSqlite(await api.testerSqlite())}`);
   journaliser(`Notification : ${await api.notifier('Essai de notification', 'Si ce message s’affiche, les rappels fonctionnent.')}`);
   journaliser(`Son : ${jouerCarillon()}`);
   journaliser(`Fluidité : ${await mesurerFluidite()}`);
@@ -483,6 +508,7 @@ function basculerOutils() {
     const p = (x) => String(x).padStart(2, '0');
     $('#heure-simulee').value = `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}T${p(n.getHours())}:${p(n.getMinutes())}`;
     afficherEnvironnement();
+    afficherDonnees();
   }
 }
 
@@ -532,11 +558,16 @@ document.addEventListener('click', (e) => {
 
 document.addEventListener('change', (e) => {
   if (e.target.matches('[data-devoir]')) {
-    const id = Number(e.target.dataset.devoir);
-    if (e.target.checked) etat.faits.add(id);
-    else etat.faits.delete(id);
-    ecrirePreference('faits', [...etat.faits].join(','));
+    const id = e.target.dataset.devoir;
+    const devoir = etat.devoirs?.find((d) => d.id === id);
+    if (!devoir) return;
+    // L'écran change tout de suite ; l'enregistrement suit.
+    devoir.fait = e.target.checked;
+    etat.versionDevoirs += 1;
     rendre();
+    stockage.marquer(id, devoir.fait)
+      .then(planifierSauvegarde)
+      .catch((erreur) => journaliser(`Enregistrement : échec (${erreur.message})`));
   } else if (e.target.id === 'profil') {
     changerProfil(e.target.value);
   } else if (e.target.id === 'vitesse') {
@@ -587,7 +618,8 @@ async function activerRappels() {
 }
 
 function preparerNavigateur() {
-  for (const bouton of document.querySelectorAll('[data-action="compact"]')) bouton.hidden = true;
+  // Fonctions propres à Electron, absentes de la version navigateur.
+  for (const bouton of document.querySelectorAll('[data-action="compact"], [data-action^="test-sqlite"]')) bouton.hidden = true;
   if ('Notification' in window && Notification.permission === 'default') {
     $('[data-action="activer-rappels"]').hidden = false;
   }
@@ -613,6 +645,173 @@ function preparerNavigateur() {
 }
 
 if (!dansElectron) preparerNavigateur();
+
+// --- Données : base SQLite et sauvegarde dans un fichier ---
+
+let stockage = null;
+const sauvegardeEtat = { fichier: null, autorisation: '', derniere: null, minuterie: null, suspendue: false };
+
+function graineDemo() {
+  const jour = edt.debutJour(new Date());
+  return edt.DEVOIRS.map((d) => ({
+    id: crypto.randomUUID(),
+    matiere: d.matiere,
+    texte: d.texte,
+    pour: edt.isoLocal(edt.ajouterJours(jour, d.dans)),
+  }));
+}
+
+async function chargerDevoirs() {
+  const lignes = await stockage.devoirs();
+  etat.devoirs = lignes.map((l) => ({
+    id: l.id,
+    texte: l.texte,
+    fait: Boolean(l.fait),
+    pour: edt.dateDepuisIso(l.pour),
+    matiere: edt.MATIERES[l.matiere] ?? { nom: l.matiere, court: '?', couleur: '#888888' },
+  }));
+  etat.versionDevoirs += 1;
+  rendre(true);
+}
+
+// Sauvegarde automatique 2 s après la dernière modification.
+function planifierSauvegarde() {
+  if (sauvegardeEtat.suspendue) return;
+  clearTimeout(sauvegardeEtat.minuterie);
+  sauvegardeEtat.minuterie = setTimeout(() => sauvegarder(false), 2000);
+}
+
+// `interactif` : appelé depuis un clic, le navigateur peut donc demander l'autorisation.
+async function sauvegarder(interactif) {
+  const fichier = sauvegardeEtat.fichier;
+  if (!fichier) {
+    if (interactif) journaliser('Sauvegarde : choisissez d’abord un fichier');
+    return;
+  }
+  try {
+    sauvegardeEtat.autorisation = await sauvegarde.autorisation(fichier, interactif);
+    const enAttente = sauvegardeEtat.autorisation !== 'granted';
+    $('[data-action="reprendre-sauvegarde"]').hidden = !enAttente;
+    if (enAttente) {
+      journaliser(`Sauvegarde en attente : autorisation « ${sauvegardeEtat.autorisation} »`);
+      return;
+    }
+    const octets = await stockage.exporter();
+    await sauvegarde.ecrire(fichier, octets);
+    sauvegardeEtat.derniere = new Date();
+    sauvegardeEtat.suspendue = false;
+    journaliser(`Sauvegarde : ${Math.ceil(octets.length / 1024)} Ko écrits dans ${fichier.name}`);
+  } catch (e) {
+    journaliser(`Sauvegarde : échec (${e.message})`);
+  } finally {
+    afficherDonnees();
+  }
+}
+
+function afficherDonnees() {
+  const info = stockage?.info;
+  const f = sauvegardeEtat;
+  remplirListe($('#donnees'), [
+    ['Base', info?.mode ?? 'ouverture…'],
+    ['SQLite', info?.sqlite ?? '–'],
+    ['Devoirs', etat.devoirs ? String(etat.devoirs.length) : '–'],
+    ['Fichier de sauvegarde', !sauvegarde.disponible ? 'impossible dans ce navigateur' : f.fichier?.name ?? 'aucun'],
+    ['Autorisation d’écrire', f.fichier ? f.autorisation || '?' : '–'],
+    ['Dernière sauvegarde', f.derniere ? f.derniere.toLocaleTimeString('fr-FR') : 'aucune pendant cette session'],
+    ['Sauvegarde automatique', f.suspendue ? 'suspendue (après la perte simulée)' : 'après chaque modification'],
+  ]);
+}
+
+const actionsDonnees = {
+  'choisir-sauvegarde': async () => {
+    try {
+      sauvegardeEtat.fichier = await sauvegarde.choisirFichier();
+      journaliser(`Fichier de sauvegarde choisi : ${sauvegardeEtat.fichier.name}`);
+      await sauvegarder(true);
+    } catch (e) {
+      if (e.name !== 'AbortError') journaliser(`Choix du fichier : échec (${e.message})`);
+    }
+  },
+  sauvegarder: () => sauvegarder(true),
+  'reprendre-sauvegarde': () => sauvegarder(true),
+  restaurer: async () => {
+    try {
+      const { nom, octets } = await sauvegarde.lireFichierChoisi();
+      if (!confirm(`Remplacer les données actuelles par celles de « ${nom} » ?`)) return;
+      const { nombre } = await stockage.importer(octets);
+      await chargerDevoirs();
+      sauvegardeEtat.suspendue = false;
+      journaliser(`Restauration : ${nombre} devoirs repris de ${nom}`);
+    } catch (e) {
+      if (e.name !== 'AbortError') journaliser(`Restauration : échec (${e.message})`);
+    }
+    afficherDonnees();
+  },
+  perte: async () => {
+    if (!confirm('Essai : effacer toutes les données enregistrées dans le navigateur ?\nLe fichier de sauvegarde n’est pas touché.')) return;
+    // Sinon, la prochaine sauvegarde automatique écraserait le fichier avec une base vide.
+    clearTimeout(sauvegardeEtat.minuterie);
+    sauvegardeEtat.suspendue = true;
+    await stockage.effacer();
+    await chargerDevoirs();
+    journaliser('Perte simulée : la base est vide, la sauvegarde automatique est suspendue');
+    afficherDonnees();
+  },
+};
+Object.assign(actions, actionsDonnees);
+
+// Une seule fenêtre peut ouvrir la base. Le verrou (Web Locks) est gardé tant
+// que la page est ouverte et libéré automatiquement à sa fermeture.
+function prendreVerrou() {
+  if (!navigator.locks) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    navigator.locks.request('mydevoirs-base', { ifAvailable: true }, (verrou) => {
+      resolve(Boolean(verrou));
+      return verrou ? new Promise(() => {}) : undefined;
+    });
+  });
+}
+
+function alerter(texte, avecBouton = false) {
+  const zone = $('#alerte');
+  zone.replaceChildren(texte);
+  if (avecBouton) {
+    const bouton = document.createElement('button');
+    bouton.type = 'button';
+    bouton.dataset.action = 'recharger';
+    bouton.textContent = 'Réessayer';
+    zone.append(' ', bouton);
+  }
+  zone.hidden = false;
+}
+actions.recharger = () => location.reload();
+
+async function demarrerStockage() {
+  if (!(await prendreVerrou())) {
+    etat.messageDevoirs = 'Les devoirs sont ouverts dans une autre fenêtre.';
+    rendre(true);
+    alerter('MyDevoirs est déjà ouvert dans une autre fenêtre. Fermez-la, puis cliquez sur « Réessayer ».', true);
+    journaliser('Base : déjà ouverte dans une autre fenêtre');
+    return;
+  }
+  stockage = await ouvrirStockage(graineDemo());
+  const { info } = stockage;
+  journaliser(`Base : ${info.mode}${info.creee && info.persistant ? ', créée avec les devoirs de démonstration' : `, ${info.nombre} devoirs`}`);
+  if (!info.persistant) alerter(`Attention : rien de ce que vous saisissez ne sera enregistré (${info.mode}).`);
+  await chargerDevoirs();
+  if (sauvegarde.disponible) {
+    sauvegardeEtat.fichier = (await sauvegarde.fichierEnregistre()) ?? null;
+    if (sauvegardeEtat.fichier) {
+      // La question clé : le navigateur se souvient-il de l'autorisation ?
+      sauvegardeEtat.autorisation = await sauvegarde.autorisation(sauvegardeEtat.fichier);
+      journaliser(`Au démarrage : fichier ${sauvegardeEtat.fichier.name}, autorisation « ${sauvegardeEtat.autorisation} »`);
+      $('[data-action="reprendre-sauvegarde"]').hidden = sauvegardeEtat.autorisation === 'granted';
+    }
+  }
+  afficherDonnees();
+}
+
+demarrerStockage().catch((e) => journaliser(`Stockage : échec (${e.message})`));
 
 // Paramètres d'adresse, pour les essais dans un navigateur :
 // index.html?heure=2026-11-23T10:32&profil=primaire (heure figée).
