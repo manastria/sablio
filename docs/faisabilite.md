@@ -158,7 +158,7 @@ Contraintes découvertes :
 - **une seule fenêtre à la fois** peut ouvrir la base. Une deuxième fenêtre (onglet et application installée en même temps, par exemple) n'y a pas accès. Le prototype prend un verrou (Web Locks) et affiche « déjà ouvert dans une autre fenêtre », avec un bouton pour réessayer ;
 - **la sauvegarde automatique peut écraser une bonne sauvegarde** par une base vide ou abîmée (après un effacement, par exemple). Le prototype la suspend après une perte simulée. L'application devra **garder plusieurs sauvegardes datées** dans un dossier choisi, plutôt qu'un seul fichier.
 
-Test manuel réussi dans l'application installée (Edge, Windows 11) : choix du fichier de sauvegarde, sauvegarde automatique après une modification, fermeture puis réouverture, perte simulée, puis restauration depuis le fichier avec les devoirs cochés. Reste à préciser si Edge a gardé l'autorisation d'écrire à la réouverture (`granted`) ou l'a redemandée (`prompt`).
+Test manuel réussi dans l'application installée (Edge, Windows 11) : choix du fichier de sauvegarde, sauvegarde automatique après une modification, fermeture puis réouverture, perte simulée, puis restauration depuis le fichier avec les devoirs cochés. À la réouverture, **Edge a gardé l'autorisation d'écrire** dans le fichier (`granted`) : la sauvegarde automatique reprend sans rien demander à l'élève.
 
 **Décision provisoire** : mettre l'application au point en PWA, testée dans Edge sous Windows. Electron devient une enveloppe facultative, à ajouter si un besoin le justifie (rappels application fermée, fenêtre au premier plan, démarrage automatique). Conditions pour que ce passage reste peu coûteux :
 
