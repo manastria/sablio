@@ -1,0 +1,271 @@
+'use strict';
+
+// Processus principal : fenêtre, notifications, essai SQLite, captures d'écran.
+
+const {
+  app, BrowserWindow, Menu, Notification, clipboard, dialog, ipcMain, nativeTheme, screen,
+} = require('electron');
+const crypto = require('node:crypto');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { DatabaseSync } = require('node:sqlite');
+
+// Sous Windows, les notifications sont rattachées à cet identifiant.
+app.setAppUserModelId('fr.manastria.mydevoirs.prototype');
+// Le carillon de rappel doit pouvoir sonner sans clic préalable.
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+
+const depuisLancement = () => Math.round(process.uptime() * 1000);
+const mesures = {};
+const notificationsActives = new Set();
+let fenetre = null;
+let boundsNormaux = null;
+
+const dossierCaptures = (() => {
+  const i = process.argv.indexOf('--captures');
+  return i >= 0 ? path.resolve(process.argv[i + 1] ?? 'captures') : null;
+})();
+
+function creerFenetre() {
+  const zone = screen.getPrimaryDisplay().workArea;
+  // Les tailles sont en pixels logiques sur toutes les plateformes.
+  fenetre = new BrowserWindow({
+    width: Math.min(1100, zone.width),
+    height: Math.min(760, zone.height),
+    minWidth: 320,
+    minHeight: 240,
+    show: false,
+    title: 'MyDevoirs – prototype',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#141416' : '#f6f4ef',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+    },
+  });
+  fenetre.once('ready-to-show', () => {
+    mesures.fenetrePrete = depuisLancement();
+    fenetre.show();
+  });
+  fenetre.on('enter-full-screen', envoyerEtatFenetre);
+  fenetre.on('leave-full-screen', envoyerEtatFenetre);
+  fenetre.webContents.on('before-input-event', (_e, entree) => {
+    if (entree.type === 'keyDown' && entree.key === 'F12') fenetre.webContents.toggleDevTools();
+  });
+  fenetre.on('closed', () => { fenetre = null; });
+  fenetre.loadFile(path.join(__dirname, 'index.html'));
+}
+
+function envoyerEtatFenetre() {
+  fenetre?.webContents.send('fenetre', {
+    pleinEcran: fenetre.isFullScreen(),
+    compact: boundsNormaux !== null,
+  });
+}
+
+function quitterPleinEcran() {
+  if (!fenetre.isFullScreen()) return Promise.resolve();
+  return new Promise((resolve) => {
+    const secours = setTimeout(resolve, 1000);
+    fenetre.once('leave-full-screen', () => { clearTimeout(secours); resolve(); });
+    fenetre.setFullScreen(false);
+  });
+}
+
+// Petite fenêtre au premier plan, dans le coin de l'écran.
+async function basculerCompact() {
+  if (boundsNormaux) {
+    fenetre.setAlwaysOnTop(false);
+    fenetre.setMinimumSize(320, 240);
+    fenetre.setBounds(boundsNormaux);
+    boundsNormaux = null;
+  } else {
+    await quitterPleinEcran();
+    if (fenetre.isMaximized()) fenetre.unmaximize();
+    boundsNormaux = fenetre.getBounds();
+    const zone = screen.getDisplayMatching(boundsNormaux).workArea;
+    const demande = {
+      x: zone.x + zone.width - 360 - 16,
+      y: zone.y + zone.height - 180 - 16,
+      width: 360,
+      height: 180,
+    };
+    fenetre.setMinimumSize(240, 120);
+    fenetre.setBounds(demande);
+    fenetre.setAlwaysOnTop(true, 'floating');
+    // Certains gestionnaires de fenêtres (Wayland) ignorent la position demandée.
+    await new Promise((r) => setTimeout(r, 300));
+    mesures.compact = { demande, obtenu: fenetre.getBounds(), premierPlan: fenetre.isAlwaysOnTop() };
+  }
+  envoyerEtatFenetre();
+  return boundsNormaux !== null;
+}
+
+function notifier(titre, texte) {
+  return new Promise((resolve) => {
+    if (!Notification.isSupported()) {
+      resolve('non prise en charge par le système');
+      return;
+    }
+    // Le son est joué par l'application, pour être le même partout.
+    const n = new Notification({ title: titre, body: texte, silent: true });
+    notificationsActives.add(n); // garde une référence tant qu'elle est affichée
+    const fin = (resultat) => { clearTimeout(minuterie); resolve(resultat); };
+    const minuterie = setTimeout(() => fin('envoyée, sans confirmation d’affichage'), 3000);
+    n.once('show', () => fin('affichée'));
+    n.once('failed', (_e, erreur) => fin(`échec : ${erreur || 'aucun service de notification ne répond'}`));
+    n.once('close', () => notificationsActives.delete(n));
+    n.show();
+  });
+}
+
+// Écrit 1000 lignes dans un fichier temporaire, le renomme (écriture atomique),
+// relit le résultat puis efface le fichier.
+function testerSqlite(dossier) {
+  const final = path.join(dossier, 'mydevoirs-essai.sqlite');
+  const temporaire = `${final}.tmp`;
+  const debut = performance.now();
+  try {
+    fs.rmSync(temporaire, { force: true });
+    const db = new DatabaseSync(temporaire);
+    db.exec(`PRAGMA journal_mode = DELETE;
+      CREATE TABLE devoir (
+        id TEXT PRIMARY KEY, texte TEXT NOT NULL,
+        modifie_le INTEGER NOT NULL, supprime INTEGER NOT NULL DEFAULT 0)`);
+    const inserer = db.prepare('INSERT INTO devoir (id, texte, modifie_le) VALUES (?, ?, ?)');
+    db.exec('BEGIN');
+    for (let i = 0; i < 1000; i++) inserer.run(crypto.randomUUID(), `Devoir ${i}`, Date.now());
+    db.exec('COMMIT');
+    const { journal_mode: journal } = db.prepare('PRAGMA journal_mode').get();
+    db.close();
+    fs.renameSync(temporaire, final);
+    const lecture = new DatabaseSync(final, { readOnly: true });
+    const { n } = lecture.prepare('SELECT count(*) AS n FROM devoir').get();
+    lecture.close();
+    fs.rmSync(final, { force: true });
+    return { ok: n === 1000, dossier, lignes: n, journal, ms: Math.round(performance.now() - debut) };
+  } catch (e) {
+    try { fs.rmSync(temporaire, { force: true }); } catch { /* rien à nettoyer */ }
+    return { ok: false, dossier, erreur: e.message };
+  }
+}
+
+function environnement() {
+  const ecran = screen.getDisplayMatching(fenetre.getBounds());
+  const sqlite = new DatabaseSync(':memory:');
+  const { v: versionSqlite } = sqlite.prepare('SELECT sqlite_version() AS v').get();
+  sqlite.close();
+  return {
+    systeme: `${os.type()} ${os.release()} (${process.platform}, ${process.arch})`,
+    nomSysteme: typeof os.version === 'function' ? os.version() : '',
+    wsl: Boolean(process.env.WSL_DISTRO_NAME),
+    sessionGraphique: process.env.XDG_SESSION_TYPE
+      || (process.env.WAYLAND_DISPLAY ? 'wayland' : process.env.DISPLAY ? 'x11' : ''),
+    versions: {
+      electron: process.versions.electron,
+      chromium: process.versions.chrome,
+      node: process.versions.node,
+      sqlite: versionSqlite,
+    },
+    ecran: {
+      taille: ecran.size,
+      zoneUtile: ecran.workArea,
+      facteur: ecran.scaleFactor,
+      nombre: screen.getAllDisplays().length,
+    },
+    fenetre: { contenu: fenetre.getContentSize(), pleinEcran: fenetre.isFullScreen() },
+    notifications: Notification.isSupported(),
+    dossierDonnees: app.getPath('userData'),
+    mesures,
+  };
+}
+
+ipcMain.handle('environnement', () => environnement());
+ipcMain.handle('notifier', (_e, titre, texte) => notifier(String(titre), String(texte)));
+ipcMain.handle('tester-sqlite', () => testerSqlite(app.getPath('userData')));
+ipcMain.handle('tester-sqlite-dossier', async () => {
+  const choix = await dialog.showOpenDialog(fenetre, {
+    title: 'Choisir un dossier pour l’essai (clé USB, drive…)',
+    properties: ['openDirectory', 'createDirectory'],
+  });
+  return choix.canceled ? null : testerSqlite(choix.filePaths[0]);
+});
+ipcMain.handle('basculer-plein-ecran', () => {
+  fenetre.setFullScreen(!fenetre.isFullScreen());
+  return !fenetre.isFullScreen();
+});
+ipcMain.handle('basculer-compact', () => basculerCompact());
+ipcMain.handle('copier', (_e, texte) => { clipboard.writeText(String(texte)); return true; });
+ipcMain.on('premier-rendu', () => { mesures.premierRendu ??= depuisLancement(); });
+
+// --- Captures automatiques (npm run captures) ---
+
+const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function faireCaptures(dossier) {
+  fs.mkdirSync(dossier, { recursive: true });
+  const page = fenetre.webContents;
+  const proto = (code) => page.executeJavaScript(`window.prototypeMyDevoirs.${code}`);
+  const capturer = async (nom) => {
+    await attendre(500);
+    const image = await page.capturePage();
+    fs.writeFileSync(path.join(dossier, `${nom}.png`), image.toPNG());
+  };
+
+  fenetre.setContentSize(1100, 720);
+  // Lundi 23 novembre 2026 (semaine B).
+  const scenarios = [
+    ['1-cours-college', '2026-11-23T10:32', 'college'],
+    ['2-pause-college', '2026-11-23T12:20', 'college'],
+    ['3-fini-college', '2026-11-23T17:40', 'college'],
+    ['4-avant-college', '2026-11-24T07:35', 'college'],
+    ['5-cours-primaire', '2026-11-23T10:32', 'primaire'],
+    ['6-cours-superieur', '2026-11-23T10:57', 'superieur'],
+  ];
+  for (const [nom, heure, profil] of scenarios) {
+    await proto(`scenario(${JSON.stringify(heure)}, ${JSON.stringify(profil)})`);
+    await capturer(nom);
+  }
+
+  fenetre.setContentSize(420, 720);
+  await proto('scenario("2026-11-23T10:32", "college")');
+  await capturer('7-etroit');
+  fenetre.setContentSize(1100, 720);
+
+  await basculerCompact();
+  await capturer('8-compact');
+  await basculerCompact();
+
+  await proto('lancerTests()');
+  const rapport = await proto('rapport()');
+  fs.writeFileSync(path.join(dossier, 'rapport.txt'), rapport);
+  console.log(rapport);
+  app.quit();
+}
+
+// --- Démarrage ---
+
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (!fenetre) return;
+    if (fenetre.isMinimized()) fenetre.restore();
+    fenetre.focus();
+  });
+  app.whenReady().then(() => {
+    Menu.setApplicationMenu(null);
+    creerFenetre();
+    if (dossierCaptures) {
+      fenetre.webContents.once('did-finish-load', () => {
+        attendre(800).then(() => faireCaptures(dossierCaptures)).catch((e) => {
+          console.error(e);
+          app.exit(1);
+        });
+      });
+    }
+  });
+  app.on('window-all-closed', () => app.quit());
+}

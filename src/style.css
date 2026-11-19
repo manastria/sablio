@@ -1,0 +1,349 @@
+:root {
+  --fond: #f6f4ef;
+  --surface: #ffffff;
+  --surface-2: #ece8e0;
+  --texte: #1d1d1f;
+  --texte-doux: #5b5b63;
+  --bord: #dcd7cd;
+  --accent: #2f6fbf;
+  --alerte: #b3261e;
+  --ombre: 0 1px 2px rgb(0 0 0 / 0.06), 0 6px 20px rgb(0 0 0 / 0.05);
+  --echelle: 1;
+  --tick: 1s;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fond: #141416;
+    --surface: #1e1e22;
+    --surface-2: #2a2a30;
+    --texte: #f2f2f4;
+    --texte-doux: #a6a6b0;
+    --bord: #34343c;
+    --accent: #79a8ff;
+    --alerte: #ff8a80;
+    --ombre: none;
+  }
+}
+
+/* Profils : un seul code, une échelle et des textes différents. */
+html[data-profil="primaire"] { --echelle: 1.25; }
+html[data-profil="superieur"] { --echelle: 0.9; }
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--fond);
+  color: var(--texte);
+  font-family: system-ui, "Segoe UI", Ubuntu, Cantarell, "Noto Sans", sans-serif;
+  font-size: calc(16px * var(--echelle));
+  line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+}
+
+button, select, input { font: inherit; color: inherit; }
+
+button {
+  background: var(--surface);
+  border: 1px solid var(--bord);
+  border-radius: 8px;
+  padding: 0.35em 0.8em;
+  cursor: pointer;
+}
+button:hover { background: var(--surface-2); }
+button:focus-visible, select:focus-visible, input:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+select, input[type="datetime-local"] {
+  background: var(--surface);
+  border: 1px solid var(--bord);
+  border-radius: 8px;
+  padding: 0.3em 0.5em;
+}
+
+/* --- En-tête --- */
+
+.entete {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--bord);
+}
+
+.horloge { display: flex; align-items: baseline; gap: 0.6rem; }
+.heure {
+  font-size: 2em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.simulee {
+  font-size: 0.75em;
+  font-weight: 600;
+  color: var(--alerte);
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 0 0.6em;
+}
+.date { margin: 0; color: var(--texte-doux); font-size: 1.1em; }
+.date::first-letter { text-transform: uppercase; }
+.commandes { margin-left: auto; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.profil { display: flex; gap: 0.4rem; align-items: center; color: var(--texte-doux); }
+
+/* --- Tableau principal --- */
+
+.tableau {
+  flex: 1;
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  grid-template-areas:
+    "maintenant ensuite"
+    "frise frise"
+    "devoirs devoirs";
+  align-content: start;
+}
+
+.carte {
+  background: var(--surface);
+  border: 1px solid var(--bord);
+  border-radius: 14px;
+  box-shadow: var(--ombre);
+  padding: 1rem 1.25rem;
+  min-width: 0;
+}
+.carte-maintenant { grid-area: maintenant; border-left: 10px solid var(--couleur, var(--accent)); }
+.carte-ensuite { grid-area: ensuite; }
+.carte-frise { grid-area: frise; }
+.carte-devoirs { grid-area: devoirs; }
+
+.etiquette {
+  margin: 0 0 0.4rem;
+  font-size: 0.8em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texte-doux);
+}
+
+.titre-cours { display: flex; align-items: center; gap: 0.6rem; }
+.titre-cours h2, .titre-cours p { margin: 0; font-size: 1.5em; line-height: 1.2; }
+.carte-ensuite .titre-cours h2 { font-size: 1.25em; }
+
+.pastille {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  min-width: 2.3em;
+  height: 2.3em;
+  padding: 0 0.3em;
+  border-radius: 999px;
+  background: var(--couleur);
+  color: var(--sur-couleur);
+  font-weight: 700;
+  font-size: 0.85em;
+}
+
+.lieu, .detail { margin: 0.3rem 0 0; color: var(--texte-doux); }
+
+.grand {
+  margin: 0.6rem 0;
+  font-size: calc(clamp(2rem, 5.5vw, 5rem) * var(--echelle));
+  font-weight: 750;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.grand-texte { font-size: calc(clamp(1.5rem, 3.2vw, 2.8rem) * var(--echelle)); }
+.carte-ensuite .moyen {
+  margin: 0.6rem 0 0.2rem;
+  font-size: calc(clamp(1.4rem, 3vw, 2.6rem) * var(--echelle));
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* La barre se vide : ce qui reste, pas ce qui est passé. */
+.barre {
+  height: calc(20px * var(--echelle));
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.barre-reste {
+  height: 100%;
+  background: var(--couleur, var(--accent));
+  transform-origin: left center;
+  transform: scaleX(var(--fraction, 1));
+  transition: transform var(--tick) linear;
+}
+
+.bornes {
+  display: flex;
+  justify-content: space-between;
+  margin: 0.4rem 0 0;
+  color: var(--texte-doux);
+  font-variant-numeric: tabular-nums;
+}
+
+.carte-ensuite.imminent {
+  outline: 4px solid var(--couleur, var(--accent));
+  outline-offset: -2px;
+  animation: pulsation 2s ease-in-out infinite;
+}
+@keyframes pulsation {
+  50% { outline-color: transparent; }
+}
+
+/* --- Frise de la journée --- */
+
+.frise-piste {
+  position: relative;
+  height: calc(56px * var(--echelle));
+  margin-top: 0.8rem;
+  background: var(--surface-2);
+  border-radius: 10px;
+}
+.bloc {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: calc(var(--debut) * 1%);
+  width: calc(var(--largeur) * 1%);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+  border-radius: 6px;
+  background: var(--couleur);
+  color: var(--sur-couleur);
+  font-size: 0.85em;
+  font-weight: 700;
+}
+.bloc.passe { opacity: 0.3; }
+.bloc.actuel { box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px var(--texte); z-index: 1; }
+
+.repere {
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  left: calc(var(--position, 0) * 1%);
+  width: 3px;
+  margin-left: -1.5px;
+  background: var(--alerte);
+  border-radius: 2px;
+  z-index: 2;
+  transition: left var(--tick) linear;
+}
+.repere::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: -5px;
+  border: 6.5px solid transparent;
+  border-top-color: var(--alerte);
+}
+.repere[hidden] { display: none; }
+
+.graduations { position: relative; height: 1.6em; margin-top: 0.3rem; color: var(--texte-doux); font-size: 0.85em; }
+.graduations span { position: absolute; left: calc(var(--position) * 1%); transform: translateX(-50%); }
+
+/* --- Devoirs --- */
+
+.liste-devoirs { list-style: none; margin: 0.4rem 0 0; padding: 0; }
+.devoir label {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.2rem;
+  border-bottom: 1px solid var(--bord);
+  cursor: pointer;
+}
+.devoir:last-child label { border-bottom: 0; }
+.devoir input {
+  flex: none;
+  width: 1.4em;
+  height: 1.4em;
+  accent-color: var(--couleur);
+  cursor: pointer;
+}
+.devoir .texte { flex: 1; min-width: 0; }
+.echeance { color: var(--texte-doux); white-space: nowrap; }
+.echeance.proche { color: var(--alerte); font-weight: 650; }
+.faits summary { margin-top: 0.6rem; color: var(--texte-doux); cursor: pointer; }
+.faits .texte { text-decoration: line-through; color: var(--texte-doux); }
+.vide { color: var(--texte-doux); margin: 0.4rem 0 0; }
+
+/* --- Panneau d'outils --- */
+
+.outils {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(460px, 100vw);
+  overflow: auto;
+  padding: 1rem 1.25rem 2rem;
+  background: var(--surface);
+  border-left: 1px solid var(--bord);
+  box-shadow: -8px 0 30px rgb(0 0 0 / 0.15);
+  font-size: 15px;
+  z-index: 10;
+}
+.outils[hidden] { display: none; }
+.outils-tete { display: flex; justify-content: space-between; align-items: center; }
+.outils h2 { margin: 0; }
+.outils h3 { margin: 1.4rem 0 0.5rem; font-size: 1em; }
+.ligne { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
+.journal { margin: 0.5rem 0 0; padding-left: 1.2rem; color: var(--texte-doux); font-size: 0.9em; }
+.journal li { margin: 0.2rem 0; overflow-wrap: anywhere; }
+.environnement { display: grid; grid-template-columns: max-content 1fr; gap: 0.3rem 0.8rem; font-size: 0.9em; margin: 0 0 1rem; }
+.environnement dt { color: var(--texte-doux); }
+.environnement dd { margin: 0; overflow-wrap: anywhere; }
+
+/* --- Mode compact --- */
+
+.sortir-compact { display: none; }
+
+html[data-compact] .entete,
+html[data-compact] .carte-ensuite,
+html[data-compact] .carte-frise,
+html[data-compact] .carte-devoirs,
+html[data-compact] .outils { display: none; }
+html[data-compact] body { font-size: 15px; }
+html[data-compact] .tableau { grid-template-columns: 1fr; grid-template-areas: "maintenant"; padding: 0.4rem; }
+html[data-compact] .carte-maintenant { padding: 0.5rem 0.8rem; border-radius: 10px; }
+html[data-compact] .carte-maintenant .lieu,
+html[data-compact] .carte-maintenant .bornes { display: none; }
+html[data-compact] .titre-cours h2,
+html[data-compact] .titre-cours p { font-size: 1.1em; }
+html[data-compact] .grand { font-size: 2rem; margin: 0.25rem 0 0.4rem; }
+html[data-compact] .barre { height: 12px; }
+html[data-compact] .sortir-compact {
+  display: block;
+  position: fixed;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.15em 0.5em;
+  font-size: 0.8em;
+}
+
+/* --- Écrans étroits --- */
+
+@media (max-width: 760px) {
+  .tableau {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "maintenant" "ensuite" "frise" "devoirs";
+  }
+  .commandes { margin-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .barre-reste, .repere { transition: none; }
+  .carte-ensuite.imminent { animation: none; }
+}
