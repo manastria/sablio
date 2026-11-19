@@ -22,16 +22,24 @@ Dans la fenêtre :
 
 Un rappel (notification + carillon) part 5 minutes avant chaque cours.
 
-## Dans un navigateur
+## Version navigateur, installable (PWA)
 
-La même page fonctionne sans Electron (servie en HTTP, car les modules ES ne se chargent pas depuis `file://`) :
+La même page fonctionne sans Electron. Il faut la servir en HTTP : les modules ES ne se chargent pas depuis `file://`, et le *service worker* exige HTTPS ou `localhost`.
 
 ```sh
 python3 -m http.server 8765 --bind 127.0.0.1 -d src
-# puis http://localhost:8765/index.html?heure=2026-11-23T10:32&profil=primaire
 ```
 
-`heure` fige l'horloge, `profil` choisit le profil. SQLite et le mode compact sont alors indisponibles.
+Depuis WSL, le serveur est joignable par Edge sous Windows à l'adresse `http://localhost:8765/index.html`.
+
+- **Installer l'application** (bouton dans l'en-tête, ou icône dans la barre d'adresse d'Edge) : elle obtient sa fenêtre et une entrée dans le menu Démarrer.
+- **Activer les rappels** : le navigateur demande l'autorisation d'afficher des notifications.
+- **Hors ligne** : une fois la page ouverte une première fois, elle fonctionne serveur arrêté.
+- Les devoirs cochés et le profil sont gardés d'une session à l'autre.
+- `?heure=2026-11-23T10:32&profil=primaire` fige l'horloge et choisit le profil.
+- SQLite et le mode compact ne sont pas encore disponibles dans cette version.
+
+Les données sont liées à l'adresse : celles de `http://localhost:8765` ne seront pas visibles depuis une autre adresse.
 
 ## Version Windows portable
 
@@ -50,4 +58,7 @@ L'exécutable n'est **pas signé** : le Contrôle intelligent des applications d
 | `src/emploi-du-temps.js` | Données et calculs de temps, sans DOM (semaines A/B, états de la journée, textes) |
 | `src/app.js` | Interface |
 | `src/index.html`, `src/style.css` | Page et styles (thème clair et sombre) |
+| `src/manifest.json`, `src/icones/` | Rendent la page installable (nom, icônes, fenêtre dédiée) |
+| `src/sw.js` | *Service worker* : hors-ligne, retour à l'application au clic sur une notification |
 | `scripts/preparer-windows.mjs` | Assemble la version Windows portable depuis Linux |
+| `scripts/icones.py` | Dessine les icônes (Pillow) |

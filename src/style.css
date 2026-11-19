@@ -56,6 +56,9 @@ button {
   cursor: pointer;
 }
 button:hover { background: var(--surface-2); }
+button[hidden] { display: none; }
+button.mise-en-avant { background: var(--accent); border-color: var(--accent); color: var(--fond); font-weight: 600; }
+button.mise-en-avant:hover { filter: brightness(1.1); }
 button:focus-visible, select:focus-visible, input:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 2px;

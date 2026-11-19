@@ -136,6 +136,14 @@ Edge et Chrome sont signés : une application web installée depuis le navigateu
 
 Le code d'interface est le même dans les deux cas.
 
+Vérifié dans Edge 157 sous Windows 11 avec le prototype rendu installable : manifeste sans erreur, aucune erreur d'installabilité, *service worker* actif, page affichée réseau coupé. Test manuel de l'application installée (Edge 157, Windows 11) :
+
+- elle s'ouvre serveur arrêté, et les données (devoir coché) sont conservées ;
+- une notification de rappel s'est affichée, via le *service worker* ;
+- l'incrustation de document (pour le mode compact) est disponible ;
+- temps de rendu moyen : 1,2 ms ;
+- **stockage persistant refusé, même installée.** Sans persistance, Edge peut effacer les données de lui-même s'il manque de place sur le disque. Avec ou sans persistance, un effacement manuel des données de navigation les supprime. La sauvegarde dans un fichier reste donc la vraie protection. À revérifier sur l'adresse HTTPS définitive : le critère d'Edge pour accorder la persistance n'est pas documenté.
+
 **Décision provisoire** : mettre l'application au point en PWA, testée dans Edge sous Windows. Electron devient une enveloppe facultative, à ajouter si un besoin le justifie (rappels application fermée, fenêtre au premier plan, démarrage automatique). Conditions pour que ce passage reste peu coûteux :
 
 - tout accès au système passe par une couche « plateforme » unique, avec une implémentation par enveloppe ;

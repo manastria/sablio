@@ -4,7 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'">
+  <meta name="theme-color" content="#1f4f8f">
   <title>MyDevoirs – prototype</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icones/favicon.png">
   <link rel="stylesheet" href="style.css">
   <script type="module" src="app.js"></script>
 </head>
@@ -23,6 +26,8 @@
           <option value="superieur">Supérieur</option>
         </select>
       </label>
+      <button type="button" class="mise-en-avant" data-action="installer" hidden>Installer l’application</button>
+      <button type="button" class="mise-en-avant" data-action="activer-rappels" hidden>Activer les rappels</button>
       <button type="button" data-action="compact">Mode compact</button>
       <button type="button" data-action="plein-ecran" title="F11">Plein écran</button>
       <button type="button" data-action="outils" aria-expanded="false" aria-controls="outils">Outils</button>

@@ -5,20 +5,56 @@ import * as edt from './emploi-du-temps.js';
 const MINUTE = 60_000;
 const RAPPEL_AVANT = 5 * MINUTE;
 
-// Hors d'Electron (simple navigateur), on garde ce qui marche sur le web.
+// Couche « plateforme » : Electron fournit window.mydevoirs (voir preload.js) ;
+// dans un navigateur ou une fois installée en PWA, on utilise les API du web.
+const dansElectron = Boolean(window.mydevoirs);
+const enPWA = !dansElectron && 'serviceWorker' in navigator && location.protocol.startsWith('http');
+
+async function notifierNavigateur(titre, texte) {
+  if (!('Notification' in window)) return 'non prise en charge';
+  if (Notification.permission !== 'granted') {
+    return Notification.permission === 'denied' ? 'refusée par l’utilisateur' : 'pas encore autorisée';
+  }
+  const options = { body: texte, icon: 'icones/icone-192.png', tag: titre };
+  // Passer par le service worker permet de revenir à l'application d'un clic.
+  const enregistrement = enPWA ? await navigator.serviceWorker.getRegistration() : null;
+  if (enregistrement) {
+    await enregistrement.showNotification(titre, options);
+    return 'affichée (service worker)';
+  }
+  new Notification(titre, options);
+  return 'affichée (page)';
+}
+
+async function environnementNavigateur() {
+  const stockage = navigator.storage;
+  const estimation = await stockage?.estimate?.();
+  const mo = (octets) => `${(octets / 1e6).toFixed(1)} Mo`;
+  return {
+    systeme: navigator.userAgent,
+    versions: {},
+    mesures: {},
+    navigateur: {
+      'Mode d’affichage': matchMedia('(display-mode: standalone)').matches
+        ? 'application installée (fenêtre dédiée)' : 'onglet du navigateur',
+      'Service worker': navigator.serviceWorker?.controller ? 'actif (hors ligne possible)' : 'inactif',
+      'Réseau': navigator.onLine ? 'en ligne' : 'hors ligne',
+      'Stockage persistant': (await stockage?.persisted?.()) ? 'oui' : 'non (le navigateur peut effacer les données)',
+      'Stockage utilisé': estimation ? `${mo(estimation.usage)} sur ${mo(estimation.quota)} autorisés` : '?',
+      'Notifications': 'Notification' in window ? `autorisation : ${Notification.permission}` : 'non prises en charge',
+      'Incrustation (compact)': 'documentPictureInPicture' in window ? 'disponible' : 'indisponible',
+    },
+  };
+}
+
 const api = window.mydevoirs ?? {
-  environnement: async () => ({ systeme: navigator.userAgent, versions: {}, mesures: {} }),
-  notifier: async (titre, texte) => {
-    if (!('Notification' in window)) return 'non prise en charge';
-    if ((await Notification.requestPermission()) !== 'granted') return 'refusée';
-    new Notification(titre, { body: texte });
-    return 'envoyée (navigateur)';
-  },
-  testerSqlite: async () => ({ ok: false, erreur: 'indisponible dans un navigateur' }),
-  testerSqliteDossier: async () => ({ ok: false, erreur: 'indisponible dans un navigateur' }),
+  environnement: environnementNavigateur,
+  notifier: notifierNavigateur,
+  testerSqlite: async () => ({ ok: false, erreur: 'pas encore dans la version navigateur' }),
+  testerSqliteDossier: async () => ({ ok: false, erreur: 'pas encore dans la version navigateur' }),
   basculerPleinEcran: async () => (document.fullscreenElement
     ? document.exitFullscreen() : document.documentElement.requestFullscreen()),
-  basculerCompact: async () => false,
+  basculerCompact: null, // à faire : incrustation de document (Document Picture-in-Picture)
   copier: (texte) => navigator.clipboard.writeText(texte),
   premierRendu: () => {},
   surFenetre: () => {},
@@ -55,7 +91,8 @@ function reglerHorloge({ date = maintenant(), vitesse = horloge.vitesse, simulee
 
 const etat = {
   profil: PROFILS[lirePreference('profil', '')] ? lirePreference('profil', '') : 'college',
-  faits: new Set(),
+  // Gardés d'une session à l'autre, pour vérifier que les données survivent.
+  faits: new Set(lirePreference('faits', '').split(',').filter(Boolean).map(Number)),
   rappels: new Set(),
   journal: [],
   durees: [],
@@ -290,10 +327,22 @@ function verifierRappels(s, n, profil) {
   ).then((r) => journaliser(`Rappel ${prochain.matiere.nom} : ${r}`));
 }
 
+// Les navigateurs n'autorisent le son qu'après une première interaction :
+// on prépare le contexte audio au premier clic ou à la première touche.
 let audio = null;
+function deverrouillerSon() {
+  try {
+    audio ??= new AudioContext();
+    if (audio.state === 'suspended') audio.resume();
+  } catch { /* pas de son disponible */ }
+}
+document.addEventListener('pointerdown', deverrouillerSon, { once: true });
+document.addEventListener('keydown', deverrouillerSon, { once: true });
+
 function jouerCarillon() {
   try {
     audio ??= new AudioContext();
+    if (audio.state === 'suspended') audio.resume();
     const t = audio.currentTime + 0.05;
     for (const [frequence, decalage] of [[659.25, 0], [880, 0.2]]) {
       const oscillateur = audio.createOscillator();
@@ -355,7 +404,15 @@ function statistiquesRendu() {
 
 async function lignesEnvironnement() {
   const e = await api.environnement();
-  const taille = (t) => (t ? `${t.width} × ${t.height}` : '?');
+  const taille = (t) => `${t.width} × ${t.height}`;
+  const page = [
+    ['Page', `${innerWidth} × ${innerHeight}, devicePixelRatio ${devicePixelRatio}`],
+    ['Écran', `${screen.width} × ${screen.height}`],
+    ['Temps de rendu', statistiquesRendu()],
+  ];
+  if (!dansElectron) {
+    return [['Navigateur', e.systeme], ...Object.entries(e.navigateur), ...page];
+  }
   const lignes = [
     ['Système', [e.systeme, e.nomSysteme].filter(Boolean).join(' – ')],
     ['WSL', e.wsl ? 'oui' : 'non'],
@@ -364,15 +421,14 @@ async function lignesEnvironnement() {
     ['Chromium', e.versions.chromium],
     ['Node', e.versions.node],
     ['SQLite', e.versions.sqlite],
-    ['Écran (logique)', e.ecran ? `${taille(e.ecran.taille)}, facteur ${e.ecran.facteur}, ${e.ecran.nombre} écran(s)` : '?'],
-    ['Zone utile', taille(e.ecran?.zoneUtile)],
-    ['Fenêtre (contenu)', e.fenetre ? `${e.fenetre.contenu.join(' × ')}${e.fenetre.pleinEcran ? ', plein écran' : ''}` : '?'],
-    ['Page', `${innerWidth} × ${innerHeight}, devicePixelRatio ${devicePixelRatio}`],
-    ['Notifications', e.notifications === undefined ? '?' : e.notifications ? 'prises en charge' : 'non prises en charge'],
+    ['Écran (logique)', `${taille(e.ecran.taille)}, facteur ${e.ecran.facteur}, ${e.ecran.nombre} écran(s)`],
+    ['Zone utile', taille(e.ecran.zoneUtile)],
+    ['Fenêtre (contenu)', `${e.fenetre.contenu.join(' × ')}${e.fenetre.pleinEcran ? ', plein écran' : ''}`],
+    ...page,
+    ['Notifications', e.notifications ? 'prises en charge' : 'non prises en charge'],
     ['Fenêtre prête', e.mesures.fenetrePrete ? `${e.mesures.fenetrePrete} ms après le lancement` : '?'],
     ['Premier affichage', e.mesures.premierRendu ? `${e.mesures.premierRendu} ms après le lancement` : '?'],
-    ['Temps de rendu', statistiquesRendu()],
-    ['Dossier des données', e.dossierDonnees ?? '–'],
+    ['Dossier des données', e.dossierDonnees],
   ];
   if (e.mesures.compact) {
     const { demande, obtenu, premierPlan } = e.mesures.compact;
@@ -441,8 +497,10 @@ function changerProfil(profil) {
 
 const actions = {
   'plein-ecran': () => api.basculerPleinEcran(),
-  compact: () => api.basculerCompact(),
+  compact: () => api.basculerCompact?.(),
   outils: basculerOutils,
+  installer: installer,
+  'activer-rappels': activerRappels,
   'heure-appliquer': () => {
     const valeur = $('#heure-simulee').value;
     if (valeur) reglerHorloge({ date: new Date(valeur) });
@@ -452,7 +510,11 @@ const actions = {
     $('#vitesse').value = '1';
     reglerHorloge({ date: new Date(), vitesse: 1, simulee: false });
   },
-  'test-notification': async () => journaliser(`Notification : ${await api.notifier('Essai de notification', 'Si ce message s’affiche, les rappels fonctionnent.')}`),
+  'test-notification': async () => {
+    // Le clic sur le bouton permet au navigateur de demander l'autorisation.
+    if (!dansElectron && window.Notification?.permission === 'default') await activerRappels();
+    journaliser(`Notification : ${await api.notifier('Essai de notification', 'Si ce message s’affiche, les rappels fonctionnent.')}`);
+  },
   'test-son': () => journaliser(`Son : ${jouerCarillon()}`),
   'test-fluidite': async () => journaliser(`Fluidité : ${await mesurerFluidite()}`),
   'test-sqlite': async () => journaliser(`SQLite : ${resumeSqlite(await api.testerSqlite())}`),
@@ -473,6 +535,7 @@ document.addEventListener('change', (e) => {
     const id = Number(e.target.dataset.devoir);
     if (e.target.checked) etat.faits.add(id);
     else etat.faits.delete(id);
+    ecrirePreference('faits', [...etat.faits].join(','));
     rendre();
   } else if (e.target.id === 'profil') {
     changerProfil(e.target.value);
@@ -502,6 +565,54 @@ window.prototypeMyDevoirs = {
   lancerTests,
   rapport,
 };
+
+// --- Version navigateur : installation, hors-ligne, rappels ---
+
+let invitationInstallation = null;
+
+async function installer() {
+  if (!invitationInstallation) return;
+  invitationInstallation.prompt();
+  const { outcome } = await invitationInstallation.userChoice;
+  journaliser(`Installation : ${outcome === 'accepted' ? 'acceptée' : 'refusée'}`);
+  invitationInstallation = null;
+  $('[data-action="installer"]').hidden = true;
+}
+
+// Les navigateurs n'acceptent de demander l'autorisation qu'après un clic.
+async function activerRappels() {
+  const reponse = await Notification.requestPermission();
+  journaliser(`Autorisation des notifications : ${reponse}`);
+  $('[data-action="activer-rappels"]').hidden = reponse !== 'default';
+}
+
+function preparerNavigateur() {
+  for (const bouton of document.querySelectorAll('[data-action="compact"]')) bouton.hidden = true;
+  if ('Notification' in window && Notification.permission === 'default') {
+    $('[data-action="activer-rappels"]').hidden = false;
+  }
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault(); // on garde l'invitation pour notre propre bouton
+    invitationInstallation = e;
+    $('[data-action="installer"]').hidden = false;
+  });
+  window.addEventListener('appinstalled', () => {
+    $('[data-action="installer"]').hidden = true;
+    journaliser('Application installée');
+  });
+  if (!enPWA) return;
+  // Une nouvelle version du service worker a pris la main : on recharge une fois.
+  const avaitUnServiceWorker = Boolean(navigator.serviceWorker.controller);
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (avaitUnServiceWorker) location.reload();
+  });
+  navigator.serviceWorker.register('./sw.js')
+    .catch((e) => journaliser(`Service worker : échec (${e.message})`));
+  // Demande au navigateur de ne pas effacer les données de lui-même.
+  navigator.storage?.persist?.().then((ok) => journaliser(`Stockage persistant : ${ok ? 'accordé' : 'refusé'}`));
+}
+
+if (!dansElectron) preparerNavigateur();
 
 // Paramètres d'adresse, pour les essais dans un navigateur :
 // index.html?heure=2026-11-23T10:32&profil=primaire (heure figée).
