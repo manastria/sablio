@@ -7,6 +7,7 @@
 import sqlite3InitModule from './vendor/sqlite/index.mjs';
 
 const NOM = '/mydevoirs.sqlite3';
+const VERSION = 2;
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS devoir (
     id TEXT PRIMARY KEY,
@@ -17,8 +18,17 @@ const SCHEMA = `
     modifie_le INTEGER NOT NULL,
     supprime INTEGER NOT NULL DEFAULT 0
   );
-  PRAGMA user_version = 1;
 `;
+
+// Migrations numérotées : la version du schéma est dans PRAGMA user_version.
+const MIGRATIONS = {
+  // 2 : le devoir suit son cours (série + date d'origine) ; jour de travail facultatif.
+  2: `
+    ALTER TABLE devoir ADD COLUMN serie TEXT;
+    ALTER TABLE devoir ADD COLUMN date_origine TEXT;
+    ALTER TABLE devoir ADD COLUMN a_faire_le TEXT;
+  `,
+};
 
 let sqlite3 = null;
 let pool = null;
@@ -28,6 +38,16 @@ let mode = '';
 function ouvrirBase() {
   db = pool ? new pool.OpfsSAHPoolDb(NOM) : new sqlite3.oo1.DB(':memory:');
   db.exec(SCHEMA);
+  const version = db.selectValue('PRAGMA user_version');
+  if (version > VERSION) {
+    db.close();
+    throw new Error(`base créée par une version plus récente (schéma ${version})`);
+  }
+  // Une base de la version 1 a déjà user_version = 1 ; une base neuve, 0.
+  db.transaction(() => {
+    for (let v = Math.max(version, 1) + 1; v <= VERSION; v++) db.exec(MIGRATIONS[v]);
+    db.exec(`PRAGMA user_version = ${VERSION}`);
+  });
 }
 
 function compter() {
@@ -38,8 +58,9 @@ function inserer(devoirs) {
   db.transaction(() => {
     for (const d of devoirs) {
       db.exec({
-        sql: 'INSERT INTO devoir (id, matiere, texte, pour, modifie_le) VALUES (?, ?, ?, ?, ?)',
-        bind: [d.id, d.matiere, d.texte, d.pour, Date.now()],
+        sql: `INSERT INTO devoir (id, matiere, texte, pour, serie, date_origine, a_faire_le, modifie_le)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        bind: [d.id, d.matiere, d.texte, d.pour, d.serie ?? null, d.dateOrigine ?? null, d.aFaireLe ?? null, Date.now()],
       });
     }
   });
@@ -71,7 +92,8 @@ const operations = {
 
   devoirs() {
     return db.selectObjects(
-      'SELECT id, matiere, texte, pour, fait FROM devoir WHERE supprime = 0 ORDER BY pour, rowid',
+      `SELECT id, matiere, texte, pour, fait, serie, date_origine AS dateOrigine, a_faire_le AS aFaireLe
+       FROM devoir WHERE supprime = 0 ORDER BY pour, rowid`,
     );
   },
 
@@ -81,6 +103,27 @@ const operations = {
       bind: [fait ? 1 : 0, Date.now(), id],
     });
     return true;
+  },
+
+  ajouter({ devoir }) {
+    inserer([devoir]);
+    return true;
+  },
+
+  // Rattache le devoir à une autre séance (report après une annulation).
+  rattacher({ id, serie, dateOrigine, pour }) {
+    db.exec({
+      sql: 'UPDATE devoir SET serie = ?, date_origine = ?, pour = ?, modifie_le = ? WHERE id = ?',
+      bind: [serie ?? null, dateOrigine ?? null, pour, Date.now(), id],
+    });
+    return true;
+  },
+
+  // Démonstration : efface tout et remet les devoirs fournis.
+  async reinitialiser({ graine }) {
+    await operations.effacer();
+    inserer(graine);
+    return { nombre: compter() };
   },
 
   exporter() {

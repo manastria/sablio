@@ -33,6 +33,9 @@ html[data-profil="superieur"] { --echelle: 0.9; }
 
 * { box-sizing: border-box; }
 
+/* Un élément masqué reste masqué, même si une règle lui donne un display. */
+[hidden] { display: none !important; }
+
 html, body { height: 100%; }
 
 body {
@@ -100,6 +103,20 @@ select, input[type="datetime-local"] {
 .date::first-letter { text-transform: uppercase; }
 .commandes { margin-left: auto; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .profil { display: flex; gap: 0.4rem; align-items: center; color: var(--texte-doux); }
+
+.vues { display: flex; gap: 0.25rem; padding: 0.2rem; background: var(--surface-2); border-radius: 10px; }
+.vues button { border: 0; background: transparent; font-weight: 600; color: var(--texte-doux); }
+.vues button[aria-current="page"] { background: var(--surface); color: var(--texte); box-shadow: var(--ombre); }
+
+/* Mode discret : l'état doit se voir d'un coup d'œil. */
+button.discret[aria-pressed="true"] { background: var(--texte); border-color: var(--texte); color: var(--fond); font-weight: 600; }
+button.discret[aria-pressed="true"]::before { content: "● "; }
+
+button.lien { border: 0; background: none; padding: 0.1em 0.2em; color: var(--accent); font-weight: 600; }
+button.lien:hover { text-decoration: underline; }
+
+.entete-carte { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+.entete-carte .etiquette { margin-bottom: 0.4rem; }
 
 .alerte-globale {
   margin: 1rem 1rem 0;
@@ -288,11 +305,118 @@ select, input[type="datetime-local"] {
   cursor: pointer;
 }
 .devoir .texte { flex: 1; min-width: 0; }
+.precision { display: block; color: var(--texte-doux); font-size: 0.85em; }
+.avertissement {
+  margin: 0 0 0.4rem;
+  padding: 0.5rem 0.7rem;
+  border-left: 4px solid var(--alerte);
+  background: var(--surface-2);
+  border-radius: 6px;
+  color: var(--alerte);
+  font-weight: 600;
+}
+.avertissement button { margin-top: 0.4rem; display: block; color: var(--texte); font-weight: 500; }
 .echeance { color: var(--texte-doux); white-space: nowrap; }
 .echeance.proche { color: var(--alerte); font-weight: 650; }
 .faits summary { margin-top: 0.6rem; color: var(--texte-doux); cursor: pointer; }
-.faits .texte { text-decoration: line-through; color: var(--texte-doux); }
+.faits .texte, .devoir.fait .texte { text-decoration: line-through; color: var(--texte-doux); }
 .vide { color: var(--texte-doux); margin: 0.4rem 0 0; }
+
+/* --- Vue Jour --- */
+
+.vue-jour {
+  flex: 1;
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "entete entete"
+    "edt devoirs"
+    "edt sac";
+  align-content: start;
+  align-items: start;
+}
+.jour-entete { grid-area: entete; display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem 0.75rem; }
+.jour-nav { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
+.jour-entete h2 { margin: 0; font-size: 1.5em; min-width: 0; }
+.jour-entete .semaine { color: var(--texte-doux); }
+.jour-entete .espace { flex: 1; }
+.jour-edt { grid-area: edt; }
+.jour-devoirs { grid-area: devoirs; }
+.jour-sac { grid-area: sac; }
+.sous-titre { margin-top: 1.2rem; }
+
+.seances { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; gap: 0.4rem; }
+.seance {
+  display: grid;
+  grid-template-columns: 4.2em auto 1fr auto;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.45rem 0.6rem;
+  border-left: 8px solid var(--couleur);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+.seance .horaire { font-variant-numeric: tabular-nums; font-size: 0.85em; color: var(--texte-doux); line-height: 1.25; }
+.seance-texte { min-width: 0; }
+.seance.passe { opacity: 0.45; }
+.seance.actuel { outline: 3px solid var(--texte); outline-offset: 1px; }
+.seance.annule strong { text-decoration: line-through; }
+.statut { display: block; font-size: 0.85em; font-weight: 650; color: var(--alerte); }
+.seance.deplace .statut { color: var(--accent); }
+.badge {
+  white-space: nowrap;
+  padding: 0.1em 0.6em;
+  border-radius: 999px;
+  background: var(--couleur);
+  color: var(--sur-couleur);
+  font-size: 0.8em;
+  font-weight: 700;
+}
+.ici { display: flex; align-items: center; gap: 0.5rem; color: var(--alerte); font-size: 0.85em; font-weight: 700; }
+.ici::before, .ici::after { content: ""; flex: 1; height: 3px; border-radius: 2px; background: var(--alerte); }
+.ici::before { flex: 0 0 1.5rem; }
+
+.progression { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--texte-doux); font-variant-numeric: tabular-nums; }
+.mini-barre { width: 5rem; height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.mini-barre::before {
+  content: "";
+  display: block;
+  height: 100%;
+  width: calc(var(--fait, 0) * 100%);
+  background: var(--accent);
+}
+
+.sac { list-style: none; margin: 0.4rem 0 0; padding: 0; }
+.sac label { display: flex; align-items: center; gap: 0.6rem; padding: 0.35rem 0.2rem; cursor: pointer; }
+.sac input { width: 1.3em; height: 1.3em; accent-color: var(--couleur); flex: none; }
+.sac input:checked ~ span { color: var(--texte-doux); text-decoration: line-through; }
+
+/* --- Saisie d'un devoir --- */
+
+dialog {
+  width: min(30rem, calc(100vw - 2rem));
+  padding: 1.25rem;
+  border: 1px solid var(--bord);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--texte);
+}
+dialog::backdrop { background: rgb(0 0 0 / 0.35); }
+.formulaire { display: grid; gap: 0.8rem; }
+.formulaire h2 { margin: 0; font-size: 1.25em; }
+.formulaire label { display: grid; gap: 0.25rem; font-weight: 600; }
+.formulaire input:not([type="checkbox"]), .formulaire select {
+  width: 100%;
+  font-weight: 400;
+  background: var(--surface);
+  border: 1px solid var(--bord);
+  border-radius: 8px;
+  padding: 0.4em 0.5em;
+}
+.facultatif { font-weight: 400; color: var(--texte-doux); }
+.boutons { margin: 0.4rem 0 0; }
 
 /* --- Panneau d'outils --- */
 
@@ -327,6 +451,7 @@ html[data-compact] .entete,
 html[data-compact] .carte-ensuite,
 html[data-compact] .carte-frise,
 html[data-compact] .carte-devoirs,
+html[data-compact] .vue-jour,
 html[data-compact] .outils { display: none; }
 html[data-compact] body { font-size: 15px; }
 html[data-compact] .tableau { grid-template-columns: 1fr; grid-template-areas: "maintenant"; padding: 0.4rem; }
@@ -353,6 +478,14 @@ html[data-compact] .sortir-compact {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "maintenant" "ensuite" "frise" "devoirs";
   }
+  .vue-jour {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "entete" "edt" "devoirs" "sac";
+  }
+  .jour-nav { flex: 1 1 100%; }
+  .jour-nav h2 { flex: 1; font-size: 1.2em; text-align: center; }
+  .seance { grid-template-columns: 4.2em auto 1fr; }
+  .seance .badge { grid-column: 3; justify-self: start; }
   .commandes { margin-left: 0; }
 }
 

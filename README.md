@@ -1,8 +1,8 @@
-# Prototype jetable : « Maintenant / Ensuite »
+# Prototype jetable de Sablio : « Maintenant / Ensuite » et vue Jour
 
-But : juger la pile technique (Electron, interface web, SQLite intégré) et l'ergonomie de la vue principale avant d'écrire l'application. Le code n'est pas destiné à être conservé tel quel.
+But : juger la pile technique (Electron, interface web, SQLite intégré) et l'ergonomie des vues avant d'écrire l'application. Le code n'est pas destiné à être conservé tel quel. Les fonctions sont décrites dans `docs/refonte/specification.md`.
 
-Données en dur : une semaine type de collégien avec semaines A/B, six devoirs. Rien n'est enregistré, sauf le profil choisi.
+Emploi du temps en dur : une semaine type de collégien avec semaines A/B, un créneau « DS » sans matière fixe (mercredi matin) et quatre activités personnelles (football, psychologue, orthophonie, piano). Les devoirs sont enregistrés (voir plus bas).
 
 ## Lancer
 
@@ -10,7 +10,7 @@ Données en dur : une semaine type de collégien avec semaines A/B, six devoirs.
 cd refonte/prototype
 npm install
 npm start            # fenêtre normale
-npm run captures     # 8 captures d'écran + rapport.txt dans captures/, puis quitte
+npm run captures     # 17 captures d'écran + rapport.txt dans captures/, puis quitte
 ```
 
 Dans la fenêtre :
@@ -21,6 +21,25 @@ Dans la fenêtre :
 - **Outils** : heure simulée (avance rapide, vitesse × 60), essais (notification, son, SQLite, fluidité), relevé de l'environnement, copie du rapport.
 
 Un rappel (notification + carillon) part 5 minutes avant chaque cours.
+
+## Vues
+
+- **Maintenant** (accueil) : séance en cours, temps restant, séance suivante, frise du jour, devoirs à faire. Après le dernier cours, la frise laisse la place à « Préparer le sac » pour le prochain jour de classe.
+- **Jour** : emploi du temps du jour avec le repère « Vous êtes ici », devoirs à rendre ce jour (avec leur progression), travail du soir, sac à préparer. Flèches `←` `→` (ou boutons) pour changer de jour.
+
+Ce que la démonstration montre :
+
+- **le devoir suit son cours** : le cours d'histoire-géographie du premier lundi est déplacé au lendemain 16 h 35, et son devoir le suit ;
+- **cours annulé** : la SVT du vendredi suivant est annulée ; son devoir affiche un avertissement et un bouton « Reporter au prochain cours de SVT » ;
+- **créneau à matière variable** : le DS du mercredi prend la matière et la couleur du devoir qui lui est rattaché (« DS · Mathématiques ») ;
+- **« à faire le »** : l'exercice de physique pour jeudi est prévu le mardi (le mercredi après-midi est pris par le football) ;
+- **mode discret** (bouton dans l'en-tête) : le psychologue et l'orthophonie deviennent « Rendez-vous ». Le psychologue garde sa couleur, l'orthophonie passe en gris. Les notifications sont toujours neutres pour ces activités.
+
+**+ Devoir** ouvre la saisie : la matière proposée est celle du cours en cours ou qui vient de finir, et la date proposée le prochain cours de cette matière. On peut aussi choisir un DS ou une date libre.
+
+Dans **Outils → Réglages du profil** : mode discret manuel, automatique (pendant les cours, par défaut) ou toujours actif (une désactivation dure 30 minutes, ou jusqu'à la réouverture) ; champ « à faire le » proposé ou non.
+
+**Outils → Réinitialiser la démonstration** remplace les devoirs par ceux de la démonstration, calculés à partir d'aujourd'hui. C'est utile avec une base créée par une version précédente du prototype : ses devoirs sont conservés, mais rattachés à une date et non à un cours.
 
 ## Version navigateur, installable (PWA)
 
@@ -35,12 +54,12 @@ Depuis WSL, le serveur est joignable par Edge sous Windows à l'adresse `http://
 - **Installer l'application** (bouton dans l'en-tête, ou icône dans la barre d'adresse d'Edge) : elle obtient sa fenêtre et une entrée dans le menu Démarrer.
 - **Activer les rappels** : le navigateur demande l'autorisation d'afficher des notifications.
 - **Hors ligne** : une fois la page ouverte une première fois, elle fonctionne serveur arrêté.
-- `?heure=2026-11-23T10:32&profil=primaire` fige l'horloge et choisit le profil.
+- `?heure=2026-11-23T10:32&profil=primaire` fige l'horloge et choisit le profil ; `&vue=jour&jour=2026-11-24` ouvre la vue Jour sur ce jour.
 - Le mode compact n'est pas encore disponible dans cette version.
 
 ## Données et sauvegarde
 
-Les devoirs sont dans une base SQLite (WebAssembly) enregistrée dans le stockage privé du navigateur (OPFS), dans Electron comme dans Edge. `npm install` copie SQLite dans `src/vendor/sqlite/` (fichiers non versionnés) : il faut l'avoir lancé avant de servir `src/`.
+Les devoirs sont dans une base SQLite (WebAssembly) enregistrée dans le stockage privé du navigateur (OPFS), dans Electron comme dans Edge. Le schéma est en version 2 (`PRAGMA user_version`) : une base de la version 1 est migrée à l'ouverture, et une base plus récente que le prototype est refusée. `npm install` copie SQLite dans `src/vendor/sqlite/` (fichiers non versionnés) : il faut l'avoir lancé avant de servir `src/`.
 
 Dans **Outils → Données** :
 
@@ -68,7 +87,7 @@ L'exécutable n'est **pas signé** : le Contrôle intelligent des applications d
 |---|---|
 | `src/main.js` | Processus principal : fenêtre, mode compact, notifications, essai SQLite, captures |
 | `src/preload.js` | Pont minimal entre la page et le système |
-| `src/emploi-du-temps.js` | Données et calculs de temps, sans DOM (semaines A/B, états de la journée, textes) |
+| `src/emploi-du-temps.js` | Données et calculs de temps, sans DOM : séries, exceptions, occurrences, semaines A/B, états de la journée, temps relatif, démonstration |
 | `src/app.js` | Interface |
 | `src/index.html`, `src/style.css` | Page et styles (thème clair et sombre) |
 | `src/stockage.js`, `src/stockage-worker.js` | Base SQLite (WebAssembly, OPFS) dans un worker, avec repli en mémoire |

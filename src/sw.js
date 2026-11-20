@@ -4,7 +4,7 @@
 // tout de suite pendant la mise au point), le cache si le réseau ne répond pas.
 // L'application définitive mettra plutôt tout en cache d'un bloc, par version.
 
-const CACHE = 'mydevoirs-prototype-2';
+const CACHE = 'mydevoirs-prototype-3';
 const DELAI_RESEAU = 3000;
 const FICHIERS = [
   './',

@@ -27,6 +27,14 @@ const dossierCaptures = (() => {
   return i >= 0 ? path.resolve(process.argv[i + 1] ?? 'captures') : null;
 })();
 
+// Les captures travaillent sur des données à part, recréées à chaque fois :
+// elles ne touchent pas à la base du prototype.
+if (dossierCaptures) {
+  const donnees = path.join(dossierCaptures, 'donnees');
+  fs.rmSync(donnees, { recursive: true, force: true });
+  app.setPath('userData', donnees);
+}
+
 function creerFenetre() {
   const zone = screen.getPrimaryDisplay().workArea;
   // Les tailles sont en pixels logiques sur toutes les plateformes.
@@ -233,6 +241,32 @@ async function faireCaptures(dossier) {
   await proto('scenario("2026-11-23T10:32", "college")');
   await capturer('7-etroit');
   fenetre.setContentSize(1100, 720);
+
+  // Vue Jour. Le mode discret est automatique : actif pendant les cours.
+  const jours = [
+    ['9-jour-lundi-en-cours', '2026-11-23T10:32', '2026-11-23'],
+    ['10-jour-mardi-discret', '2026-11-23T10:32', '2026-11-24'],
+    ['11-jour-mardi-soir', '2026-11-23T19:00', '2026-11-24'],
+    ['12-jour-mercredi-ds', '2026-11-23T19:00', '2026-11-25'],
+    ['13-jour-vendredi-annule', '2026-11-23T19:00', '2026-11-27'],
+    ['14-jour-lundi-soir', '2026-11-23T19:00', '2026-11-23'],
+  ];
+  for (const [nom, heure, jour] of jours) {
+    await proto(`scenario(${JSON.stringify(heure)}, "college", "jour", ${JSON.stringify(jour)})`);
+    await capturer(nom);
+  }
+  fenetre.setContentSize(420, 900);
+  await proto('scenario("2026-11-23T10:32", "primaire", "jour", "2026-11-24")');
+  await capturer('15-jour-etroit-primaire');
+  fenetre.setContentSize(1100, 720);
+  await proto('scenario("2026-11-23T10:58", "college", "jour", "2026-11-23")');
+  await proto('ouvrirAjout()');
+  await capturer('16-saisie');
+  await proto('fermerAjout()');
+  await proto('essaisInterface()');
+  await proto('scenario("2026-11-23T19:00", "college", "jour", "2026-11-27")');
+  await capturer('17-apres-report');
+  await proto('scenario("2026-11-23T17:40", "college")');
 
   await basculerCompact();
   await capturer('8-compact');

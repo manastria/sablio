@@ -1,4 +1,5 @@
-// Interface : vue « Maintenant / Ensuite », frise, devoirs, panneau d'outils.
+// Interface : vue « Maintenant / Ensuite » (accueil), vue Jour, mode discret,
+// saisie des devoirs, panneau d'outils.
 
 import * as edt from './emploi-du-temps.js';
 import * as sauvegarde from './sauvegarde.js';
@@ -6,6 +7,10 @@ import { ouvrirStockage } from './stockage.js';
 
 const MINUTE = 60_000;
 const RAPPEL_AVANT = 5 * MINUTE;
+const DISCRET_PAUSE = 30 * MINUTE; // mode « toujours » : durée d'une désactivation manuelle
+const LIBELLE_NEUTRE = 'Rendez-vous';
+const PICTO_NEUTRE = '📍';
+const GRIS = '#8a8a8a';
 
 // Couche « plateforme » : Electron fournit window.mydevoirs (voir preload.js) ;
 // dans un navigateur ou une fois installée en PWA, on utilise les API du web.
@@ -63,13 +68,14 @@ const api = window.mydevoirs ?? {
 };
 
 const PROFILS = {
-  primaire: { devoirs: 2, motsLongs: true },
-  college: { devoirs: 4, motsLongs: false },
-  superieur: { devoirs: 8, motsLongs: false },
+  primaire: { devoirs: 2, motsLongs: true, nuits: true },
+  college: { devoirs: 4, motsLongs: false, nuits: false },
+  superieur: { devoirs: 8, motsLongs: false, nuits: false },
 };
 
 const $ = (selecteur) => document.querySelector(selecteur);
 const echapper = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
 
 function lirePreference(cle, defaut) {
   try { return localStorage.getItem(cle) ?? defaut; } catch { return defaut; }
@@ -91,10 +97,19 @@ function reglerHorloge({ date = maintenant(), vitesse = horloge.vitesse, simulee
 
 // --- État de l'interface ---
 
+const MODES_DISCRET = ['manuel', 'automatique', 'toujours'];
+
 const etat = {
   profil: PROFILS[lirePreference('profil', '')] ? lirePreference('profil', '') : 'college',
+  vue: 'maintenant', // l'accueil est toujours « Maintenant / Ensuite »
+  jour: null, // jour affiché par la vue Jour
   devoirs: null, // chargés depuis la base (null tant qu'elle n'est pas ouverte)
   versionDevoirs: 0,
+  discret: false, // mode discret actif à cet instant (recalculé à chaque rendu)
+  reglages: {
+    discret: MODES_DISCRET.includes(lirePreference('sablio-discret', '')) ? lirePreference('sablio-discret', '') : 'automatique',
+    aFaireLe: lirePreference('sablio-a-faire-le', '1') === '1',
+  },
   rappels: new Set(),
   journal: [],
   durees: [],
@@ -110,6 +125,91 @@ function planifier() {
   if (horloge.vitesse !== 0) minuteur = setInterval(() => rendre(), pas);
 }
 
+// --- Mode discret ---
+// manuel : inactif sauf si on l'active ; automatique : actif pendant les heures
+// de classe, le bouton force l'inverse jusqu'au prochain basculement ;
+// toujours : actif, le bouton le suspend 30 minutes (ou jusqu'à la réouverture).
+
+const discret = {
+  // Le choix manuel est retenu : un élève qui l'a activé en classe ne doit
+  // pas le voir disparaître parce que l'application a redémarré.
+  manuel: lirePreference('sablio-discret-manuel', '0') === '1',
+  forcage: null, // { valeur, base } (automatique) ou { jusqua } (toujours)
+};
+
+function discretDeBase(n) {
+  if (etat.reglages.discret === 'toujours') return true;
+  if (etat.reglages.discret === 'manuel') return discret.manuel;
+  const classe = edt.heuresDeClasse(n);
+  return Boolean(classe) && classe.debut <= n && n < classe.fin;
+}
+
+function discretActif(n) {
+  const base = discretDeBase(n);
+  const f = discret.forcage;
+  if (f && etat.reglages.discret === 'automatique') {
+    if (f.base === base) return f.valeur;
+    discret.forcage = null; // basculement automatique : le forçage s'arrête
+  }
+  if (f && etat.reglages.discret === 'toujours') {
+    if (n < f.jusqua) return false;
+    discret.forcage = null;
+  }
+  return base;
+}
+
+function basculerDiscret() {
+  const n = maintenant();
+  const actif = discretActif(n);
+  if (etat.reglages.discret === 'manuel') {
+    discret.manuel = !actif;
+    ecrirePreference('sablio-discret-manuel', discret.manuel ? '1' : '0');
+  } else if (etat.reglages.discret === 'automatique') {
+    discret.forcage = { valeur: !actif, base: discretDeBase(n) };
+  } else {
+    discret.forcage = actif ? { jusqua: new Date(n.getTime() + DISCRET_PAUSE) } : null;
+  }
+  rendre(true);
+}
+
+function changerModeDiscret(mode) {
+  if (!MODES_DISCRET.includes(mode)) return;
+  etat.reglages.discret = mode;
+  discret.forcage = null;
+  ecrirePreference('sablio-discret', mode);
+  rendre(true);
+}
+
+// Une activité masquée n'apparaît pas du tout en mode discret.
+const visible = (o) => !(etat.discret && o.nature === 'perso' && o.categorie.confidentialite === 'masque');
+
+// --- Affichage d'une séance : nom, pictogramme, couleur ---
+
+const devoirsDe = (o) => (etat.devoirs ?? []).filter((d) => d.serie === o.serie && d.dateOrigine === o.dateOrigine);
+
+// `prudent` : pour les notifications, qui s'affichent par-dessus tout, même en
+// classe : une activité non « visible » y est toujours neutre.
+function affichage(o, { prudent = false } = {}) {
+  const lieu = o.salle ? `Salle ${o.salle}` : '';
+  if (o.nature === 'ecole') {
+    const m = o.categorie;
+    return { nom: m.nom, court: m.court, picto: m.picto, couleur: m.couleur, lieu };
+  }
+  if (o.nature === 'creneau') {
+    // Un créneau à matière variable (DS) prend la matière du devoir qui lui est rattaché.
+    const m = devoirsDe(o)[0]?.matiere;
+    if (m) return { nom: `${o.titre} · ${m.nom}`, court: `${o.titre} ${m.court}`, picto: m.picto, couleur: m.couleur, lieu };
+    return { nom: o.titre, court: o.titre, picto: o.picto, couleur: GRIS, lieu };
+  }
+  const a = o.categorie;
+  const neutre = a.confidentialite !== 'visible' && (prudent || etat.discret);
+  if (!neutre) return { nom: a.nom, court: a.court, picto: a.picto, couleur: a.couleur, lieu: o.salle ?? '', perso: true };
+  return {
+    nom: LIBELLE_NEUTRE, court: LIBELLE_NEUTRE, picto: PICTO_NEUTRE,
+    couleur: a.garderCouleur ? a.couleur : GRIS, lieu: '', perso: true,
+  };
+}
+
 // Applique les attributs data-css="--a:1;--b:#fff" via le CSSOM
 // (la politique de sécurité interdit les attributs style dans le HTML).
 function appliquerStyles(racine) {
@@ -121,8 +221,8 @@ function appliquerStyles(racine) {
   }
 }
 
-const couleurs = (m) => `--couleur:${m.couleur};--sur-couleur:${edt.texteSur(m.couleur)}`;
-const pastille = (m) => `<span class="pastille" data-css="${couleurs(m)}">${echapper(m.court)}</span>`;
+const couleurs = (a) => `--couleur:${a.couleur};--sur-couleur:${edt.texteSur(a.couleur)}`;
+const pastille = (a) => `<span class="pastille" data-css="${couleurs(a)}" title="${echapper(a.nom)}" aria-hidden="true">${a.picto}</span>`;
 
 // --- Rendu ---
 
@@ -131,34 +231,57 @@ const pastille = (m) => `<span class="pastille" data-css="${couleurs(m)}">${echa
 function rendre(forcer = false) {
   const debut = performance.now();
   const n = maintenant();
-  const s = edt.situation(n);
+  etat.discret = discretActif(n);
+  const s = edt.situation(n, visible);
   const profil = PROFILS[etat.profil];
   const cle = [
-    s.etat, s.actuel?.id, s.suivant?.id, s.demain?.jour?.getTime(),
-    edt.debutJour(n).getTime(), etat.profil, etat.versionDevoirs,
+    etat.vue, s.etat, s.actuel?.id, s.suivant?.id, s.demain?.jour?.getTime(),
+    edt.debutJour(n).getTime(), etat.profil, etat.versionDevoirs, etat.discret,
+    etat.vue === 'jour' ? cleJour(n) : '',
   ].join('|');
   if (forcer || cle !== cleStructure) {
     cleStructure = cle;
-    construire(s, n, profil);
+    afficherVue();
+    if (etat.vue === 'jour') construireJour(n, profil);
+    else construire(s, n, profil);
   }
   mettreAJour(s, n, profil);
-  verifierRappels(s, n, profil);
+  verifierRappels(edt.situation(n), n, profil);
   etat.durees.push(performance.now() - debut);
   if (etat.durees.length > 300) etat.durees.shift();
+}
+
+function afficherVue() {
+  $('#vue-maintenant').hidden = etat.vue !== 'maintenant';
+  $('#vue-jour').hidden = etat.vue !== 'jour';
+  for (const b of document.querySelectorAll('[data-action="vue"]')) {
+    if (b.dataset.vue === etat.vue) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  }
+  const bouton = $('[data-action="discret"]');
+  bouton.setAttribute('aria-pressed', String(etat.discret));
+  bouton.title = {
+    manuel: 'Masquer les activités personnelles',
+    automatique: 'Automatique pendant les cours ; cliquer pour forcer',
+    toujours: `Toujours actif ; cliquer pour le suspendre ${DISCRET_PAUSE / MINUTE} minutes`,
+  }[etat.reglages.discret];
 }
 
 function construire(s, n, profil) {
   const carteMaintenant = $('#maintenant');
   const carteEnsuite = $('#ensuite');
-  const couleur = s.actuel?.matiere.couleur ?? s.suivant?.matiere.couleur ?? '';
-  carteMaintenant.style.setProperty('--couleur', couleur || 'var(--accent)');
+  const enCours = s.actuel ?? s.suivant;
+  carteMaintenant.style.setProperty('--couleur', enCours ? affichage(enCours).couleur : 'var(--accent)');
   carteMaintenant.innerHTML = htmlMaintenant(s, n, profil);
-  carteEnsuite.innerHTML = htmlEnsuite(s, n, profil);
+  carteEnsuite.innerHTML = htmlEnsuite(s, n);
   const prochain = prochainCours(s);
-  carteEnsuite.style.setProperty('--couleur', prochain?.matiere.couleur ?? 'var(--accent)');
-  $('#frise').innerHTML = htmlFrise(s);
+  carteEnsuite.style.setProperty('--couleur', prochain ? affichage(prochain).couleur : 'var(--accent)');
+  // Journée finie : la frise laisse la place au sac du prochain jour de classe.
+  $('#frise').innerHTML = s.etat === 'fini' && s.demain
+    ? htmlSac(s.demain.jour, `Préparer le sac pour ${edt.jourRelatif(s.demain.jour, n)}`, true)
+    : htmlFrise(s);
   $('#devoirs').innerHTML = htmlDevoirs(n, profil);
-  for (const id of ['#maintenant', '#ensuite', '#frise', '#devoirs']) appliquerStyles($(id));
+  appliquerStyles($('#vue-maintenant'));
 }
 
 const prochainCours = (s) => (s.etat === 'fini' ? s.demain?.cours[0] : s.suivant) ?? null;
@@ -167,30 +290,40 @@ function htmlMaintenant(s, n, profil) {
   const barre = '<div class="barre" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="barre-reste"></div></div>';
   if (s.etat === 'cours') {
     const c = s.actuel;
+    const a = affichage(c);
     return `
       <p class="etiquette">${profil.motsLongs ? 'En ce moment' : 'Maintenant'}</p>
-      <div class="titre-cours">${pastille(c.matiere)}<h2>${echapper(c.matiere.nom)}</h2></div>
-      <p class="lieu">Salle ${echapper(c.salle)}</p>
+      <div class="titre-cours">${pastille(a)}<h2>${echapper(a.nom)}</h2></div>
+      <p class="lieu">${echapper(a.lieu)}</p>
       <p class="grand" data-champ="restant"></p>
       ${barre}
       <p class="bornes"><span>Début ${edt.heureTexte(c.debut)}</span><span>Fin ${edt.heureTexte(c.fin)}</span></p>`;
   }
   if (s.etat === 'pause' || s.etat === 'avant') {
+    const perso = s.suivant.nature === 'perso';
+    const etiquette = s.etat === 'avant' ? (perso ? 'Avant' : 'Avant les cours') : perso ? 'Temps libre' : 'Pause';
+    const texte = perso
+      ? `${affichage(s.suivant).nom} à ${edt.heureTexte(s.suivant.debut)}`
+      : `${s.etat === 'avant' ? 'Premier cours' : 'Reprise'} à ${edt.heureTexte(s.suivant.debut)}`;
     return `
-      <p class="etiquette">${s.etat === 'avant' ? 'Avant les cours' : 'Pause'}</p>
-      <div class="titre-cours"><p>${s.etat === 'avant' ? 'Premier cours' : 'Reprise'} à ${edt.heureTexte(s.suivant.debut)}</p></div>
+      <p class="etiquette">${etiquette}</p>
+      <div class="titre-cours"><p>${echapper(texte)}</p></div>
       <p class="grand" data-champ="restant"></p>
       ${barre}
       <p class="bornes"><span>${s.precedent ? `Depuis ${edt.heureTexte(s.precedent.fin)}` : ''}</span><span>${edt.heureTexte(s.suivant.debut)}</span></p>`;
   }
-  const pourDemain = (etat.devoirs ?? []).filter((d) => !d.fait && edt.ecartJours(n, d.pour) === 1).length;
-  const texteDevoirs = pourDemain === 0
-    ? 'Rien à faire pour demain.'
-    : `${pourDemain} devoir${pourDemain > 1 ? 's' : ''} à faire pour demain.`;
+  const lendemain = s.demain?.jour;
+  const aRendre = lendemain
+    ? (etat.devoirs ?? []).filter((d) => !d.fait && edt.memeJour(d.rendu, lendemain)).length : 0;
+  const quand = lendemain ? edt.jourRelatif(lendemain, n) : 'demain';
+  const texteDevoirs = aRendre === 0
+    ? `Rien à rendre pour ${quand}.`
+    : `${pluriel(aRendre, 'devoir')} à rendre pour ${quand}.`;
   return `
     <p class="etiquette">Journée terminée</p>
     <div class="titre-cours"><p>Plus de cours aujourd’hui</p></div>
-    <p class="grand grand-texte">${echapper(texteDevoirs)}</p>`;
+    <p class="grand grand-texte">${echapper(texteDevoirs)}</p>
+    ${lendemain ? `<button type="button" data-action="voir-jour" data-date="${edt.isoLocal(lendemain)}">Voir la journée de ${echapper(quand)}</button>` : ''}`;
 }
 
 function htmlEnsuite(s, n) {
@@ -198,29 +331,31 @@ function htmlEnsuite(s, n) {
   if (s.etat === 'cours' && !prochain) {
     return `
       <p class="etiquette">Ensuite</p>
-      <div class="titre-cours"><h2>Dernier cours de la journée</h2></div>
-      <p class="detail">Fin des cours à ${edt.heureTexte(s.actuel.fin)}.</p>`;
+      <div class="titre-cours"><h2>Plus rien après</h2></div>
+      <p class="detail">Fin à ${edt.heureTexte(s.actuel.fin)}.</p>`;
   }
   if (!prochain) {
     return '<p class="etiquette">Ensuite</p><p class="vide">Pas de cours dans les deux semaines.</p>';
   }
+  const a = affichage(prochain);
   const etiquette = s.etat === 'fini'
     ? edt.majuscule(edt.jourRelatif(prochain.debut, n))
-    : s.etat === 'cours' ? 'Ensuite' : 'Prochain cours';
+    : s.etat === 'cours' ? 'Ensuite' : 'Prochain';
   // Pendant un cours, on dit quand vient le suivant ; en pause, la carte
   // « Maintenant » montre déjà le temps d'attente, on donne donc l'heure.
   const enchaine = s.etat === 'cours' && prochain.debut.getTime() === s.actuel.fin.getTime();
   const quand = s.etat === 'cours'
     ? `<p class="moyen"${enchaine ? '>juste après' : ' data-champ="avant-suivant">'}</p>`
     : `<p class="moyen">${edt.heureTexte(prochain.debut)}</p>`;
-  const salle = `salle ${echapper(prochain.salle)}`;
-  const detail = s.etat === 'cours' ? `À ${edt.heureTexte(prochain.debut)} · ${salle}`
-    : s.etat === 'fini' ? `Premier cours · ${salle}` : edt.majuscule(salle);
+  const detail = [
+    s.etat === 'cours' ? `À ${edt.heureTexte(prochain.debut)}` : s.etat === 'fini' ? 'Premier cours' : '',
+    a.lieu,
+  ].filter(Boolean).join(' · ');
   return `
     <p class="etiquette">${etiquette}</p>
-    <div class="titre-cours">${pastille(prochain.matiere)}<h2>${echapper(prochain.matiere.nom)}</h2></div>
+    <div class="titre-cours">${pastille(a)}<h2>${echapper(a.nom)}</h2></div>
     ${quand}
-    <p class="detail">${detail}</p>`;
+    <p class="detail">${echapper(detail)}</p>`;
 }
 
 function bornesFrise(cours) {
@@ -230,14 +365,15 @@ function bornesFrise(cours) {
 }
 
 function htmlFrise(s) {
-  if (!s.cours.length) {
-    return '<p class="etiquette">Aujourd’hui</p><p class="vide">Pas de cours aujourd’hui.</p>';
-  }
+  const entete = `<div class="entete-carte"><p class="etiquette">Aujourd’hui</p>
+    <button type="button" class="lien" data-action="vue" data-vue="jour">Voir la journée</button></div>`;
+  if (!s.cours.length) return `${entete}<p class="vide">Pas de cours aujourd’hui.</p>`;
   const { debut, fin, pct } = bornesFrise(s.cours);
   const blocs = s.cours.map((c) => {
-    const titre = `${c.matiere.nom}, ${edt.heureTexte(c.debut)} – ${edt.heureTexte(c.fin)}, salle ${c.salle}`;
+    const a = affichage(c);
+    const titre = [a.nom, `${edt.heureTexte(c.debut)} – ${edt.heureTexte(c.fin)}`, a.lieu].filter(Boolean).join(', ');
     return `<div class="bloc" data-id="${c.id}" title="${echapper(titre)}"
-      data-css="${couleurs(c.matiere)};--debut:${pct(c.debut).toFixed(3)};--largeur:${(pct(c.fin) - pct(c.debut)).toFixed(3)}">${echapper(c.matiere.court)}</div>`;
+      data-css="${couleurs(a)};--debut:${pct(c.debut).toFixed(3)};--largeur:${(pct(c.fin) - pct(c.debut)).toFixed(3)}">${a.picto} ${echapper(a.court)}</div>`;
   }).join('');
   const heures = [];
   const h = new Date(debut);
@@ -246,39 +382,216 @@ function htmlFrise(s) {
     heures.push(`<span data-css="--position:${pct(h.getTime()).toFixed(3)}">${h.getHours()} h</span>`);
   }
   return `
-    <p class="etiquette">Aujourd’hui</p>
+    ${entete}
     <div class="frise-piste">${blocs}<div class="repere" data-champ="repere"></div></div>
     <div class="graduations">${heures.join('')}</div>`;
 }
 
+// --- Devoirs ---
+
+// Une ligne de devoir. `precision` : sous le texte ; `droite` : l'échéance.
+function ligneDevoir(d, { precision = '', droite = '', proche = false }) {
+  const o = d.seance;
+  let alerte = '';
+  if (o?.statut === 'annule' && !d.fait) {
+    const nom = o.nature === 'creneau' ? o.titre : o.categorie.nom;
+    alerte = `<p class="avertissement">⚠ Le cours de ${echapper(nom)} du ${echapper(edt.dateLongue(o.debut))} est annulé${o.motif ? ` (${echapper(o.motif)})` : ''} : à rendre quand ?
+      <button type="button" data-reporter="${d.id}">Reporter au prochain cours de ${echapper(nom)}</button></p>`;
+  }
+  return `<li class="devoir${d.fait ? ' fait' : ''}"><label data-css="${couleurs(d.matiere)}">
+      <input type="checkbox" data-devoir="${d.id}" ${d.fait ? 'checked' : ''}>
+      ${pastille(d.matiere)}
+      <span class="texte">${echapper(d.texte)}${precision ? `<span class="precision">${echapper(precision)}</span>` : ''}</span>
+      ${droite ? `<span class="echeance${proche && !d.fait ? ' proche' : ''}">${echapper(droite)}</span>` : ''}
+    </label>${alerte}</li>`;
+}
+
+// Échéance relative et soirs restants, pour les listes de devoirs à faire.
+function ligneAFaire(d, n, profil) {
+  const ecart = edt.ecartJours(n, d.rendu);
+  const precision = [
+    d.aFaireLe && ecart > 0 ? `à faire ${edt.quandTexte(d.aFaireLe, n, profil)}` : '',
+    !d.fait && !d.aFaireLe ? edt.soirsTexte(d.rendu, n) : '',
+  ].filter(Boolean).join(' · ');
+  return ligneDevoir(d, { precision, droite: edt.echeanceTexte(d.rendu, n, profil), proche: ecart <= 1 });
+}
+
 function htmlDevoirs(n, profil) {
   if (!etat.devoirs) return `<p class="etiquette">Devoirs à faire</p><p class="vide">${echapper(etat.messageDevoirs ?? 'Chargement…')}</p>`;
-  const tous = [...etat.devoirs].sort((a, b) => a.pour - b.pour);
+  const tous = [...etat.devoirs].sort((a, b) => a.rendu - b.rendu);
   const aFaire = tous.filter((d) => !d.fait);
   const faits = tous.filter((d) => d.fait);
-  const ligne = (d, coche) => {
-    const proche = edt.ecartJours(n, d.pour) <= 1;
-    return `<li class="devoir"><label data-css="${couleurs(d.matiere)}">
-      <input type="checkbox" data-devoir="${d.id}" ${coche ? 'checked' : ''}>
-      ${pastille(d.matiere)}
-      <span class="texte">${echapper(d.texte)}</span>
-      <span class="echeance${proche && !coche ? ' proche' : ''}">${echapper(edt.echeanceTexte(d.pour, n))}</span>
-    </label></li>`;
-  };
   const visibles = aFaire.slice(0, profil.devoirs);
   const caches = aFaire.length - visibles.length;
   return `
-    <p class="etiquette">Devoirs à faire</p>
-    ${visibles.length ? `<ul class="liste-devoirs">${visibles.map((d) => ligne(d, false)).join('')}</ul>` : '<p class="vide">Tout est fait. Bravo !</p>'}
+    <div class="entete-carte"><p class="etiquette">Devoirs à faire</p>
+      <button type="button" class="lien" data-action="ajouter">+ Ajouter un devoir</button></div>
+    ${visibles.length ? `<ul class="liste-devoirs">${visibles.map((d) => ligneAFaire(d, n, profil)).join('')}</ul>` : '<p class="vide">Tout est fait. Bravo !</p>'}
     ${caches > 0 ? `<p class="vide">Et ${caches} autre${caches > 1 ? 's' : ''} plus tard.</p>` : ''}
-    ${faits.length ? `<details class="faits"><summary>${faits.length} devoir${faits.length > 1 ? 's' : ''} fait${faits.length > 1 ? 's' : ''}</summary>
-      <ul class="liste-devoirs">${faits.map((d) => ligne(d, true)).join('')}</ul></details>` : ''}`;
+    ${faits.length ? `<details class="faits"><summary>${pluriel(faits.length, 'devoir')} fait${faits.length > 1 ? 's' : ''}</summary>
+      <ul class="liste-devoirs">${faits.map((d) => ligneDevoir(d, { droite: edt.echeanceTexte(d.rendu, n, profil) })).join('')}</ul></details>` : ''}`;
 }
+
+// --- Préparer le sac ---
+// Matières du jour (déduites de l'emploi du temps) et matériel habituel.
+// Les cases cochées ne valent que pour ce jour.
+
+const cleSac = (jour) => `sablio-sac-${edt.isoLocal(jour)}`;
+
+function lireSac(jour) {
+  try { return new Set(JSON.parse(lirePreference(cleSac(jour), '[]'))); } catch { return new Set(); }
+}
+
+function htmlSac(jour, titre, avecLien = false) {
+  const coches = lireSac(jour);
+  const matieres = new Map();
+  for (const o of edt.coursDuJour(jour, edt.estEcole)) {
+    const m = o.nature === 'ecole' ? o.categorie : devoirsDe(o)[0]?.matiere;
+    if (m && !matieres.has(m.cle)) matieres.set(m.cle, m);
+  }
+  const lien = avecLien ? `<button type="button" class="lien" data-action="voir-jour" data-date="${edt.isoLocal(jour)}">Voir la journée</button>` : '';
+  const entete = `<div class="entete-carte"><p class="etiquette">${echapper(titre)}</p>${lien}</div>`;
+  if (!matieres.size) return `${entete}<p class="vide">Pas de cours : rien à préparer.</p>`;
+  const lignes = [...matieres.values()].map((m) => `<li><label data-css="${couleurs(m)}">
+      <input type="checkbox" data-sac="${edt.isoLocal(jour)}" value="${m.cle}" ${coches.has(m.cle) ? 'checked' : ''}>
+      ${pastille(m)} <span>${echapper(m.nom)}${m.materiel ? `<span class="precision">+ ${echapper(m.materiel)}</span>` : ''}</span>
+    </label></li>`).join('');
+  return `${entete}<ul class="sac">${lignes}</ul>`;
+}
+
+// --- Vue Jour ---
+
+// Change quand la vue Jour doit être reconstruite : jour affiché, et position
+// du repère « vous êtes ici » parmi les séances (pas à chaque seconde).
+function cleJour(n) {
+  if (!etat.jour) return '';
+  const passees = edt.memeJour(etat.jour, n)
+    ? edt.occurrencesDuJour(etat.jour).map((o) => (o.fin <= n ? 2 : o.debut <= n ? 1 : 0)).join('') : '';
+  return `${edt.isoLocal(etat.jour)}:${passees}`;
+}
+
+function construireJour(n, profil) {
+  etat.jour ??= edt.debutJour(n);
+  const jour = etat.jour;
+  const aujourdhui = edt.memeJour(jour, n);
+  $('#jour-entete').innerHTML = `
+    <div class="jour-nav">
+      <button type="button" data-action="jour-decaler" data-jours="-1" aria-label="Jour précédent" title="Jour précédent (flèche gauche)">←</button>
+      <h2>${echapper(edt.titreJour(jour, n))}</h2>
+      <button type="button" data-action="jour-decaler" data-jours="1" aria-label="Jour suivant" title="Jour suivant (flèche droite)">→</button>
+    </div>
+    <span class="semaine">Semaine ${edt.lettreSemaine(jour)}</span>
+    <span class="espace"></span>
+    ${aujourdhui ? '' : '<button type="button" data-action="jour-aujourdhui">Aujourd’hui</button>'}
+    <button type="button" class="mise-en-avant" data-action="ajouter">+ Devoir</button>`;
+  $('#jour-edt').innerHTML = htmlJourEdt(jour, n);
+  $('#jour-devoirs').innerHTML = htmlJourDevoirs(jour, n, profil);
+  $('#jour-sac').innerHTML = htmlSac(jour, `Dans le sac pour ${edt.jourRelatif(jour, n)}`);
+  appliquerStyles($('#vue-jour'));
+}
+
+function htmlJourEdt(jour, n) {
+  const liste = edt.occurrencesDuJour(jour).filter(visible);
+  const titre = '<p class="etiquette">Emploi du temps</p>';
+  if (!liste.length) return `${titre}<p class="vide">Pas de cours ce jour.</p>`;
+  const ecart = edt.ecartJours(n, jour);
+  let repere = ecart !== 0; // le repère « vous êtes ici » n'existe qu'aujourd'hui
+  const lignes = [];
+  const ici = '<li class="ici" aria-label="Vous êtes ici"><span>Vous êtes ici</span></li>';
+  for (const o of liste) {
+    if (!repere && o.debut > n) {
+      lignes.push(ici);
+      repere = true;
+    }
+    lignes.push(ligneSeance(o, n, ecart));
+  }
+  if (!repere) lignes.push(ici);
+  return `${titre}<ol class="seances">${lignes.join('')}</ol>`;
+}
+
+function ligneSeance(o, n, ecart) {
+  const a = affichage(o);
+  const classes = ['seance'];
+  if (ecart < 0 || (ecart === 0 && o.fin <= n)) classes.push('passe');
+  if (ecart === 0 && o.debut <= n && n < o.fin && (o.statut === 'normal' || o.statut === 'deplace')) classes.push('actuel');
+  let statut = '';
+  if (o.statut === 'annule') {
+    classes.push('annule');
+    statut = `Annulé${o.motif ? ` · ${o.motif}` : ''}`;
+  } else if (o.statut === 'parti') {
+    classes.push('annule');
+    statut = `Déplacé ${edt.quandTexte(o.versDebut, n)} à ${edt.heureTexte(o.versDebut)}`;
+  } else if (o.statut === 'deplace') {
+    classes.push('deplace');
+    statut = `Déplacé${o.motif ? ` (${o.motif})` : ''} · prévu ${edt.jourRelatif(o.origine.debut, n)} à ${edt.heureTexte(o.origine.debut)}`;
+  }
+  const devoirs = o.nature === 'perso' ? [] : devoirsDe(o).filter((d) => !d.fait);
+  const badge = devoirs.length && o.statut !== 'parti'
+    ? `<span class="badge" title="${echapper(devoirs.map((d) => d.texte).join(' ; '))}">${pluriel(devoirs.length, 'devoir')}</span>` : '';
+  return `<li class="${classes.join(' ')}" data-css="${couleurs(a)}">
+      <span class="horaire">${edt.heureTexte(o.debut)}<br>${edt.heureTexte(o.fin)}</span>
+      ${pastille(a)}
+      <span class="seance-texte"><strong>${echapper(a.nom)}</strong>
+        ${a.lieu ? `<span class="precision">${echapper(a.lieu)}</span>` : ''}
+        ${statut ? `<span class="statut">${echapper(statut)}</span>` : ''}</span>
+      ${badge}
+    </li>`;
+}
+
+function htmlJourDevoirs(jour, n, profil) {
+  if (!etat.devoirs) return `<p class="etiquette">Devoirs</p><p class="vide">${echapper(etat.messageDevoirs ?? 'Chargement…')}</p>`;
+  const aRendre = etat.devoirs.filter((d) => edt.memeJour(d.rendu, jour)).sort((a, b) => quandRendre(a) - quandRendre(b));
+  const faits = aRendre.filter((d) => d.fait).length;
+  const progression = aRendre.length
+    ? `<span class="progression"><span class="mini-barre" data-css="--fait:${faits / aRendre.length}"></span>${faits}/${aRendre.length}</span>` : '';
+  const lignesRendre = aRendre.map((d) => ligneDevoir(d, { precision: precisionRendu(d, n) })).join('');
+
+  // Travail du soir : les devoirs prévus ce jour (« à faire le »), et ceux
+  // à rendre au prochain jour de classe qui n'ont pas de jour prévu.
+  const suivant = edt.prochainJourDeCours(jour, visible)?.jour;
+  const soir = etat.devoirs.filter((d) => !d.fait && edt.ecartJours(jour, d.rendu) > 0 && (d.aFaireLe
+    ? edt.memeJour(d.aFaireLe, jour)
+    : suivant && edt.memeJour(d.rendu, suivant))).sort((a, b) => a.rendu - b.rendu);
+  const ecart = edt.ecartJours(n, jour);
+  // Les échéances restent comptées depuis aujourd'hui, comme l'en-tête.
+  const titreSoir = ecart === 0 ? 'Ce soir' : ecart === 1 ? 'Demain soir'
+    : `${edt.majuscule(jour.toLocaleDateString('fr-FR', { weekday: 'long' }))} soir`;
+  const lignesSoir = soir.map((d) => ligneDevoir(d, {
+    precision: d.aFaireLe ? 'prévu ce soir-là' : '',
+    droite: edt.echeanceTexte(d.rendu, n, profil),
+    proche: true,
+  })).join('');
+
+  return `
+    <div class="entete-carte"><p class="etiquette">À rendre ce jour</p>${progression}</div>
+    ${aRendre.length ? `<ul class="liste-devoirs">${lignesRendre}</ul>` : '<p class="vide">Rien à rendre ce jour.</p>'}
+    <p class="etiquette sous-titre">${echapper(titreSoir)}</p>
+    ${soir.length ? `<ul class="liste-devoirs">${lignesSoir}</ul>` : '<p class="vide">Pas de travail prévu.</p>'}`;
+}
+
+const quandRendre = (d) => (d.seance ? d.seance.debut : d.rendu);
+
+function precisionRendu(d, n) {
+  const o = d.seance;
+  if (!o) return '';
+  if (o.statut === 'deplace') return `cours déplacé à ${edt.heureTexte(o.debut)}`;
+  if (o.statut === 'annule') return '';
+  return o.nature === 'creneau' ? `${o.titre} de ${edt.heureTexte(o.debut)}` : `cours de ${edt.heureTexte(o.debut)}`;
+}
+
+function allerAuJour(jour) {
+  etat.jour = edt.debutJour(jour);
+  etat.vue = 'jour';
+  rendre(true);
+}
+
+// --- Mise à jour fine (chaque seconde) ---
 
 function mettreAJour(s, n, profil) {
   $('[data-champ="heure"]').textContent = edt.heureTexte(n);
   $('[data-champ="simulee"]').hidden = !horloge.simulee;
   $('[data-champ="date"]').textContent = `${edt.dateLongue(n)} · semaine ${edt.lettreSemaine(n)}`;
+  if (etat.vue !== 'maintenant') return;
 
   const restant = $('[data-champ="restant"]');
   if (restant) {
@@ -297,20 +610,23 @@ function mettreAJour(s, n, profil) {
   $('#ensuite').classList.toggle('imminent', Boolean(prochain) && prochain.debut - n <= RAPPEL_AVANT);
 
   const repere = $('[data-champ="repere"]');
-  if (repere) {
+  if (repere && s.cours.length) {
     const { pct } = bornesFrise(s.cours);
     const position = pct(n.getTime());
     repere.hidden = position < 0 || position > 100;
     repere.style.setProperty('--position', position.toFixed(3));
     for (const bloc of document.querySelectorAll('.bloc')) {
       const c = s.cours.find((x) => x.id === bloc.dataset.id);
+      if (!c) continue;
       bloc.classList.toggle('passe', c.fin <= n);
       bloc.classList.toggle('actuel', c.debut <= n && n < c.fin);
     }
   }
 }
 
-// --- Rappels : notification système + carillon, 5 min avant chaque cours ---
+// --- Rappels : notification système + carillon, 5 min avant chaque séance ---
+// Calculés sur toutes les séances, même masquées : le rappel reste utile,
+// mais il est toujours neutre pour une activité qui n'est pas « visible ».
 
 function verifierRappels(s, n, profil) {
   const prochain = s.etat === 'fini' ? null : s.suivant;
@@ -318,11 +634,12 @@ function verifierRappels(s, n, profil) {
   const avant = prochain.debut - n;
   if (avant <= 0 || avant > RAPPEL_AVANT) return;
   etat.rappels.add(prochain.id);
+  const a = affichage(prochain, { prudent: true });
   jouerCarillon();
   api.notifier(
-    `Dans ${edt.dureeTexte(avant, profil.motsLongs)} : ${prochain.matiere.nom}`,
-    `À ${edt.heureTexte(prochain.debut)}, salle ${prochain.salle}`,
-  ).then((r) => journaliser(`Rappel ${prochain.matiere.nom} : ${r}`));
+    `Dans ${edt.dureeTexte(avant, profil.motsLongs)} : ${a.nom}`,
+    [`À ${edt.heureTexte(prochain.debut)}`, a.lieu].filter(Boolean).join(', '),
+  ).then((r) => journaliser(`Rappel ${a.nom} : ${r}`));
 }
 
 // Les navigateurs n'autorisent le son qu'après une première interaction :
@@ -357,6 +674,110 @@ function jouerCarillon() {
     return `joué (état audio : ${audio.state})`;
   } catch (e) {
     return `échec : ${e.message}`;
+  }
+}
+
+// --- Saisie d'un devoir ---
+
+function ouvrirAjout() {
+  if (!etat.devoirs) return;
+  const n = maintenant();
+  const matiere = $('#ajout-matiere');
+  if (!matiere.options.length) {
+    matiere.innerHTML = Object.values(edt.MATIERES)
+      .map((m) => `<option value="${m.cle}">${m.picto} ${echapper(m.nom)}</option>`).join('');
+  }
+  // Matière par défaut : celle du cours en cours ou qui vient de finir,
+  // puisqu'on note le travail à la fin du cours.
+  const s = edt.situation(n, edt.estEcole);
+  const recent = s.actuel ?? s.precedent ?? (s.etat === 'fini' ? s.cours.at(-1) : null);
+  if (recent?.nature === 'ecole') matiere.value = recent.cle;
+  $('#ajout-texte').value = '';
+  $('#ajout-afaire').value = '';
+  $('#ajout-date').value = edt.isoLocal(etat.vue === 'jour' && etat.jour ? etat.jour : edt.ajouterJours(n, 1));
+  $('#ajout-champ-afaire').hidden = !etat.reglages.aFaireLe;
+  remplirRendu();
+  const dialogue = $('#ajout');
+  dialogue.returnValue = '';
+  dialogue.showModal();
+  $('#ajout-texte').focus();
+}
+
+// Choix de la séance : les prochains cours de la matière (le premier est
+// proposé), les prochains créneaux à matière variable (DS), ou une date.
+function remplirRendu() {
+  const n = maintenant();
+  const cle = $('#ajout-matiere').value;
+  const m = edt.MATIERES[cle];
+  const cours = edt.prochainesOccurrences(n, (o) => o.cle === cle, 4);
+  const creneaux = edt.prochainesOccurrences(n, (o) => o.nature === 'creneau', 2);
+  const option = (o, prefixe = '') => `<option value="o|${o.serie}|${o.dateOrigine}">${echapper(prefixe)}${echapper(edt.majuscule(edt.quandTexte(o.debut, n)))} · ${edt.heureTexte(o.debut)}</option>`;
+  let html = '';
+  if (cours.length) html += `<optgroup label="Cours de ${echapper(m.nom)}">${cours.map((o) => option(o)).join('')}</optgroup>`;
+  if (creneaux.length) html += `<optgroup label="Créneaux sans matière fixe">${creneaux.map((o) => option(o, `${o.titre} · `)).join('')}</optgroup>`;
+  html += '<option value="date">Autre date…</option>';
+  const choix = $('#ajout-rendu');
+  choix.innerHTML = html;
+  choix.selectedIndex = 0;
+  majDateLibre();
+}
+
+function majDateLibre() {
+  const libre = $('#ajout-rendu').value === 'date';
+  $('#ajout-champ-date').hidden = !libre;
+  $('#ajout-date').required = libre;
+}
+
+async function enregistrerAjout() {
+  const choix = $('#ajout-rendu').value;
+  let serie = null;
+  let dateOrigine = null;
+  let pour;
+  if (choix.startsWith('o|')) {
+    [, serie, dateOrigine] = choix.split('|');
+    pour = edt.isoLocal(edt.trouverOccurrence(serie, dateOrigine).debut);
+  } else {
+    pour = $('#ajout-date').value;
+  }
+  const devoir = {
+    id: crypto.randomUUID(),
+    matiere: $('#ajout-matiere').value,
+    texte: $('#ajout-texte').value.trim(),
+    pour,
+    serie,
+    dateOrigine,
+    aFaireLe: (etat.reglages.aFaireLe && $('#ajout-afaire').value) || null,
+  };
+  if (!devoir.texte || !pour) return;
+  try {
+    await stockage.ajouter(devoir);
+    await chargerDevoirs();
+    planifierSauvegarde();
+    journaliser(`Devoir ajouté : ${devoir.texte} (${serie ? 'rattaché au cours' : 'rattaché à une date'})`);
+  } catch (e) {
+    journaliser(`Ajout : échec (${e.message})`);
+  }
+}
+
+// Cours annulé : on rattache le devoir à la séance suivante de la même série
+// de cours (même matière, ou même créneau pour un DS).
+async function reporter(id) {
+  const d = etat.devoirs?.find((x) => x.id === id);
+  const o = d?.seance;
+  if (!o) return;
+  const filtre = o.nature === 'creneau' ? (x) => x.serie === o.serie : (x) => x.cle === o.cle;
+  const [suivante] = edt.prochainesOccurrences(o.fin, filtre, 1);
+  if (!suivante) {
+    journaliser('Report : pas de cours suivant dans les cinq semaines');
+    return;
+  }
+  try {
+    await stockage.rattacher(id, { serie: suivante.serie, dateOrigine: suivante.dateOrigine, pour: edt.isoLocal(suivante.debut) });
+    await chargerDevoirs();
+    planifierSauvegarde();
+    journaliser(`Report : « ${d.texte} » pour ${edt.dateLongue(suivante.debut)}`);
+  } catch (e) {
+    journaliser(`Report : échec (${e.message})`);
   }
 }
 
@@ -455,7 +876,7 @@ async function afficherEnvironnement() {
 async function rapport() {
   const lignes = await lignesEnvironnement();
   return [
-    'MyDevoirs – rapport du prototype',
+    'Sablio – rapport du prototype',
     `Date : ${new Date().toLocaleString('fr-FR')}`,
     '',
     ...lignes.map(([cle, valeur]) => `${cle} : ${valeur}`),
@@ -507,6 +928,8 @@ function basculerOutils() {
     const n = maintenant();
     const p = (x) => String(x).padStart(2, '0');
     $('#heure-simulee').value = `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}T${p(n.getHours())}:${p(n.getMinutes())}`;
+    $('#discret-mode').value = etat.reglages.discret;
+    $('#reglage-afaire').checked = etat.reglages.aFaireLe;
     afficherEnvironnement();
     afficherDonnees();
   }
@@ -527,6 +950,16 @@ const actions = {
   outils: basculerOutils,
   installer: installer,
   'activer-rappels': activerRappels,
+  discret: basculerDiscret,
+  vue: (bouton) => {
+    etat.vue = bouton.dataset.vue;
+    if (etat.vue === 'jour') etat.jour = edt.debutJour(maintenant());
+    rendre(true);
+  },
+  'voir-jour': (bouton) => allerAuJour(edt.dateDepuisIso(bouton.dataset.date)),
+  'jour-decaler': (bouton) => allerAuJour(edt.ajouterJours(etat.jour, Number(bouton.dataset.jours))),
+  'jour-aujourdhui': () => allerAuJour(maintenant()),
+  ajouter: ouvrirAjout,
   'heure-appliquer': () => {
     const valeur = $('#heure-simulee').value;
     if (valeur) reglerHorloge({ date: new Date(valeur) });
@@ -552,33 +985,96 @@ const actions = {
 };
 
 document.addEventListener('click', (e) => {
+  const reporterBouton = e.target.closest('[data-reporter]');
+  if (reporterBouton) {
+    reporter(reporterBouton.dataset.reporter);
+    return;
+  }
   const bouton = e.target.closest('[data-action]');
   if (bouton) actions[bouton.dataset.action]?.(bouton);
 });
 
 document.addEventListener('change', (e) => {
-  if (e.target.matches('[data-devoir]')) {
-    const id = e.target.dataset.devoir;
+  const cible = e.target;
+  if (cible.matches('[data-devoir]')) {
+    const id = cible.dataset.devoir;
     const devoir = etat.devoirs?.find((d) => d.id === id);
     if (!devoir) return;
     // L'écran change tout de suite ; l'enregistrement suit.
-    devoir.fait = e.target.checked;
+    devoir.fait = cible.checked;
     etat.versionDevoirs += 1;
     rendre();
     stockage.marquer(id, devoir.fait)
       .then(planifierSauvegarde)
       .catch((erreur) => journaliser(`Enregistrement : échec (${erreur.message})`));
-  } else if (e.target.id === 'profil') {
-    changerProfil(e.target.value);
-  } else if (e.target.id === 'vitesse') {
-    reglerHorloge({ vitesse: Number(e.target.value), simulee: horloge.simulee || e.target.value !== '1' });
+  } else if (cible.matches('[data-sac]')) {
+    const jour = edt.dateDepuisIso(cible.dataset.sac);
+    const coches = lireSac(jour);
+    if (cible.checked) coches.add(cible.value);
+    else coches.delete(cible.value);
+    ecrirePreference(cleSac(jour), JSON.stringify([...coches]));
+  } else if (cible.id === 'profil') {
+    changerProfil(cible.value);
+  } else if (cible.id === 'vitesse') {
+    reglerHorloge({ vitesse: Number(cible.value), simulee: horloge.simulee || cible.value !== '1' });
+  } else if (cible.id === 'discret-mode') {
+    changerModeDiscret(cible.value);
+  } else if (cible.id === 'reglage-afaire') {
+    etat.reglages.aFaireLe = cible.checked;
+    ecrirePreference('sablio-a-faire-le', cible.checked ? '1' : '0');
+  } else if (cible.id === 'ajout-matiere') {
+    remplirRendu();
+  } else if (cible.id === 'ajout-rendu') {
+    majDateLibre();
   }
 });
+
+// L'événement « submit » part tout de suite et dit quel bouton a servi ;
+// « close » part plus tard, et deux fermetures rapprochées se confondent.
+let ajoutEnCours = Promise.resolve();
+$('#ajout form').addEventListener('submit', (e) => {
+  if (e.submitter?.value === 'ok') ajoutEnCours = enregistrerAjout();
+});
+
+// Essai des actions sans clic, pour les captures automatiques : saisie,
+// report d'un devoir dont le cours est annulé, bouton du mode discret.
+async function essaisInterface() {
+  const avant = etat.devoirs.length;
+  ouvrirAjout();
+  $('#ajout-texte').value = 'Essai automatique';
+  const choix = $('#ajout-rendu').selectedOptions[0].textContent;
+  $('#ajout form').requestSubmit($('#ajout button[value="ok"]'));
+  await ajoutEnCours;
+  const ajoute = etat.devoirs.find((d) => d.texte === 'Essai automatique');
+  journaliser(`Essai saisie : ${etat.devoirs.length - avant} devoir ajouté (${ajoute?.matiere.nom}, « ${choix} »), à rendre ${ajoute ? edt.dateLongue(ajoute.rendu) : '?'}, rattaché ${ajoute?.serie ? 'au cours' : 'à une date'}`);
+  const annule = etat.devoirs.find((d) => d.seance?.statut === 'annule');
+  if (annule) {
+    await reporter(annule.id);
+    const apres = etat.devoirs.find((d) => d.id === annule.id);
+    journaliser(`Essai report : « ${apres.texte} » ${edt.dateLongue(annule.rendu)} → ${edt.dateLongue(apres.rendu)} à ${edt.heureTexte(apres.seance.debut)} (${apres.seance.statut})`);
+  } else {
+    journaliser('Essai report : aucun devoir sur un cours annulé');
+  }
+  const etats = [etat.discret];
+  basculerDiscret();
+  etats.push(etat.discret);
+  basculerDiscret();
+  etats.push(etat.discret);
+  journaliser(`Essai mode discret (${etat.reglages.discret}) : ${etats.map((x) => (x ? 'actif' : 'inactif')).join(' → ')}`);
+}
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'F11') {
     e.preventDefault();
     api.basculerPleinEcran();
+    return;
+  }
+  // Flèches gauche et droite : jour précédent ou suivant dans la vue Jour.
+  const champ = e.target.closest?.('input, select, textarea, dialog');
+  if (etat.vue === 'jour' && !champ && !e.altKey && !e.ctrlKey && !e.metaKey
+    && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+    e.preventDefault();
+    allerAuJour(edt.ajouterJours(etat.jour, e.key === 'ArrowLeft' ? -1 : 1));
   }
 });
 
@@ -589,10 +1085,16 @@ api.surFenetre(({ compact }) => {
 
 // Accès pour les captures automatiques (main.js).
 window.prototypeMyDevoirs = {
-  scenario(iso, profil) {
+  scenario(iso, profil, vue = 'maintenant', jour = null) {
     changerProfil(profil);
+    etat.vue = vue;
+    etat.jour = jour ? edt.dateDepuisIso(jour) : edt.debutJour(new Date(iso));
     reglerHorloge({ date: new Date(iso), vitesse: 0 });
   },
+  modeDiscret: changerModeDiscret,
+  ouvrirAjout,
+  fermerAjout: () => $('#ajout').close(),
+  essaisInterface,
   lancerTests,
   rapport,
 };
@@ -651,25 +1153,39 @@ if (!dansElectron) preparerNavigateur();
 let stockage = null;
 const sauvegardeEtat = { fichier: null, autorisation: '', derniere: null, minuterie: null, suspendue: false };
 
-function graineDemo() {
-  const jour = edt.debutJour(new Date());
-  return edt.DEVOIRS.map((d) => ({
-    id: crypto.randomUUID(),
-    matiere: d.matiere,
-    texte: d.texte,
-    pour: edt.isoLocal(edt.ajouterJours(jour, d.dans)),
-  }));
+// Démonstration : exceptions (un cours annulé, un cours déplacé) et devoirs
+// rattachés aux prochains cours, calculés à partir d'un jour de référence
+// retenu pour que les deux restent cohérents d'une ouverture à l'autre.
+const CLE_REFERENCE = 'sablio-demo-reference';
+
+function preparerDemo(reference) {
+  // Devoirs et exceptions sont calculés sur l'emploi du temps sans exception :
+  // un devoir de démonstration peut ainsi tomber sur le cours qui sera annulé.
+  edt.definirExceptions([]);
+  const exceptions = edt.exceptionsDemo(reference);
+  const devoirs = edt.devoirsDemo(reference).map((d) => ({ id: crypto.randomUUID(), ...d }));
+  edt.definirExceptions(exceptions);
+  return devoirs;
 }
 
 async function chargerDevoirs() {
   const lignes = await stockage.devoirs();
-  etat.devoirs = lignes.map((l) => ({
-    id: l.id,
-    texte: l.texte,
-    fait: Boolean(l.fait),
-    pour: edt.dateDepuisIso(l.pour),
-    matiere: edt.MATIERES[l.matiere] ?? { nom: l.matiere, court: '?', couleur: '#888888' },
-  }));
+  etat.devoirs = lignes.map((l) => {
+    const d = {
+      id: l.id,
+      texte: l.texte,
+      fait: Boolean(l.fait),
+      pour: edt.dateDepuisIso(l.pour),
+      serie: l.serie ?? null,
+      dateOrigine: l.dateOrigine ?? null,
+      aFaireLe: l.aFaireLe ? edt.dateDepuisIso(l.aFaireLe) : null,
+      matiere: edt.MATIERES[l.matiere] ?? { cle: l.matiere, nom: l.matiere, court: '?', picto: '❔', couleur: GRIS },
+    };
+    // Le devoir suit son cours ; sans cours retrouvé, il garde sa date.
+    d.seance = d.serie ? edt.trouverOccurrence(d.serie, d.dateOrigine) : null;
+    d.rendu = d.seance ? edt.debutJour(d.seance.debut) : d.pour;
+    return d;
+  });
   etat.versionDevoirs += 1;
   rendre(true);
 }
@@ -757,6 +1273,21 @@ const actionsDonnees = {
     journaliser('Perte simulée : la base est vide, la sauvegarde automatique est suspendue');
     afficherDonnees();
   },
+  reinitialiser: async () => {
+    if (!confirm('Remplacer tous les devoirs par ceux de la démonstration, recalculés à partir d’aujourd’hui ?')) return;
+    try {
+      const reference = edt.debutJour(maintenant());
+      const graine = preparerDemo(reference);
+      await stockage.reinitialiser(graine);
+      ecrirePreference(CLE_REFERENCE, edt.isoLocal(reference));
+      await chargerDevoirs();
+      planifierSauvegarde();
+      journaliser(`Démonstration réinitialisée : ${graine.length} devoirs`);
+    } catch (e) {
+      journaliser(`Réinitialisation : échec (${e.message})`);
+    }
+    afficherDonnees();
+  },
 };
 Object.assign(actions, actionsDonnees);
 
@@ -787,15 +1318,19 @@ function alerter(texte, avecBouton = false) {
 actions.recharger = () => location.reload();
 
 async function demarrerStockage() {
+  const enregistree = lirePreference(CLE_REFERENCE, '');
+  const reference = enregistree ? edt.dateDepuisIso(enregistree) : edt.debutJour(maintenant());
+  const graine = preparerDemo(reference);
   if (!(await prendreVerrou())) {
     etat.messageDevoirs = 'Les devoirs sont ouverts dans une autre fenêtre.';
     rendre(true);
-    alerter('MyDevoirs est déjà ouvert dans une autre fenêtre. Fermez-la, puis cliquez sur « Réessayer ».', true);
+    alerter('Sablio est déjà ouvert dans une autre fenêtre. Fermez-la, puis cliquez sur « Réessayer ».', true);
     journaliser('Base : déjà ouverte dans une autre fenêtre');
     return;
   }
-  stockage = await ouvrirStockage(graineDemo());
+  stockage = await ouvrirStockage(graine);
   const { info } = stockage;
+  if (info.creee && info.persistant) ecrirePreference(CLE_REFERENCE, edt.isoLocal(reference));
   journaliser(`Base : ${info.mode}${info.creee && info.persistant ? ', créée avec les devoirs de démonstration' : `, ${info.nombre} devoirs`}`);
   if (!info.persistant) alerter(`Attention : rien de ce que vous saisissez ne sera enregistré (${info.mode}).`);
   await chargerDevoirs();
@@ -811,12 +1346,18 @@ async function demarrerStockage() {
   afficherDonnees();
 }
 
-demarrerStockage().catch((e) => journaliser(`Stockage : échec (${e.message})`));
-
 // Paramètres d'adresse, pour les essais dans un navigateur :
-// index.html?heure=2026-11-23T10:32&profil=primaire (heure figée).
+// index.html?heure=2026-11-23T10:32&profil=primaire&vue=jour (heure figée).
+// Lus avant d'ouvrir la base : la démonstration se cale sur l'heure simulée.
 const parametres = new URLSearchParams(location.search);
+if (parametres.get('heure')) {
+  Object.assign(horloge, { reelBase: Date.now(), simBase: new Date(parametres.get('heure')).getTime(), vitesse: 0, simulee: true });
+}
+if (parametres.get('vue') === 'jour') {
+  etat.vue = 'jour';
+  etat.jour = parametres.get('jour') ? edt.dateDepuisIso(parametres.get('jour')) : edt.debutJour(maintenant());
+}
 changerProfil(parametres.get('profil') ?? etat.profil);
-if (parametres.get('heure')) reglerHorloge({ date: new Date(parametres.get('heure')), vitesse: 0 });
-else planifier();
+planifier();
+demarrerStockage().catch((e) => journaliser(`Stockage : échec (${e.message})`));
 requestAnimationFrame(() => api.premierRendu());

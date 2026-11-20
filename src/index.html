@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'">
   <meta name="theme-color" content="#1f4f8f">
-  <title>MyDevoirs – prototype</title>
+  <title>Sablio – prototype</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icones/favicon.png">
   <link rel="stylesheet" href="style.css">
@@ -18,7 +18,12 @@
       <span class="simulee" data-champ="simulee" hidden>heure simulée</span>
     </div>
     <p class="date" data-champ="date"></p>
+    <nav class="vues" aria-label="Vues">
+      <button type="button" data-action="vue" data-vue="maintenant" aria-current="page">Maintenant</button>
+      <button type="button" data-action="vue" data-vue="jour">Jour</button>
+    </nav>
     <div class="commandes">
+      <button type="button" class="discret" data-action="discret" aria-pressed="false">Mode discret</button>
       <label class="profil">Profil
         <select id="profil">
           <option value="primaire">Primaire</option>
@@ -37,12 +42,34 @@
 
   <p class="alerte-globale" id="alerte" role="alert" hidden></p>
 
-  <main class="tableau">
+  <main class="tableau" id="vue-maintenant">
     <section id="maintenant" class="carte carte-maintenant" aria-live="polite"></section>
     <section id="ensuite" class="carte carte-ensuite"></section>
     <section id="frise" class="carte carte-frise" aria-label="Frise de la journée"></section>
     <section id="devoirs" class="carte carte-devoirs"></section>
   </main>
+
+  <main class="vue-jour" id="vue-jour" hidden>
+    <div class="jour-entete" id="jour-entete"></div>
+    <section id="jour-edt" class="carte jour-edt" aria-label="Emploi du temps du jour"></section>
+    <section id="jour-devoirs" class="carte jour-devoirs" aria-label="Devoirs du jour"></section>
+    <section id="jour-sac" class="carte jour-sac" aria-label="Sac à préparer"></section>
+  </main>
+
+  <dialog id="ajout" aria-labelledby="ajout-titre">
+    <form method="dialog" class="formulaire">
+      <h2 id="ajout-titre">Nouveau devoir</h2>
+      <label>Matière <select id="ajout-matiere"></select></label>
+      <label>Travail <input id="ajout-texte" required autocomplete="off" placeholder="Exercices 4 et 5 p. 82"></label>
+      <label>À rendre <select id="ajout-rendu"></select></label>
+      <label id="ajout-champ-date" hidden>Date <input type="date" id="ajout-date"></label>
+      <label id="ajout-champ-afaire"><span>À faire le <span class="facultatif">(facultatif)</span></span> <input type="date" id="ajout-afaire"></label>
+      <div class="ligne boutons">
+        <button value="ok" class="mise-en-avant">Ajouter</button>
+        <button value="annuler" formnovalidate>Annuler</button>
+      </div>
+    </form>
+  </dialog>
 
   <button type="button" class="sortir-compact" data-action="compact" title="Revenir à la fenêtre normale">Agrandir</button>
 
@@ -50,6 +77,20 @@
     <div class="outils-tete">
       <h2>Outils</h2>
       <button type="button" data-action="outils">Fermer</button>
+    </div>
+
+    <h3>Réglages du profil</h3>
+    <div class="ligne">
+      <label>Mode discret
+        <select id="discret-mode">
+          <option value="manuel">Manuel</option>
+          <option value="automatique">Automatique (pendant les cours)</option>
+          <option value="toujours">Toujours actif</option>
+        </select>
+      </label>
+    </div>
+    <div class="ligne">
+      <label><input type="checkbox" id="reglage-afaire"> Proposer « à faire le » à la saisie d’un devoir</label>
     </div>
 
     <h3>Heure simulée</h3>
@@ -83,6 +124,9 @@
     <div class="ligne">
       <button type="button" data-action="restaurer">Restaurer depuis un fichier…</button>
       <button type="button" data-action="perte">Simuler une perte de données</button>
+    </div>
+    <div class="ligne">
+      <button type="button" data-action="reinitialiser">Réinitialiser la démonstration</button>
     </div>
 
     <h3>Essais</h3>
