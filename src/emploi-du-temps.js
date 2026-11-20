@@ -206,7 +206,18 @@ export function semaineRelative(date, maintenant) {
   return ecart > 1 ? `dans ${ecart} semaines` : `il y a ${-ecart} semaines`;
 }
 
-export function lettreSemaine(date, reference = REFERENCE_AB, libelles = LIBELLES_AB) {
+// Cycle de semaines (A/B, ou 1/2/3…) : la semaine de `reference` porte le
+// premier libellé. Désactivé, il n'y a pas de lettre et les cours réservés
+// à une semaine ont lieu toutes les semaines.
+let cycle = { actif: true, libelles: LIBELLES_AB, reference: REFERENCE_AB };
+
+export function definirCycle({ actif = true, libelles = LIBELLES_AB, reference = REFERENCE_AB } = {}) {
+  cycle = { actif: Boolean(actif) && libelles.length > 0, libelles, reference: lundi(reference) };
+}
+export const cycleActuel = () => cycle;
+
+export function lettreSemaine(date, reference = cycle.reference, libelles = cycle.libelles) {
+  if (!cycle.actif) return '';
   const semaines = Math.round((lundi(date) - lundi(reference)) / (7 * JOUR));
   const n = libelles.length;
   return libelles[((semaines % n) + n) % n];
@@ -271,7 +282,7 @@ function occurrencesDuMotif(jour) {
   const lettre = lettreSemaine(jour);
   const date = isoLocal(jour);
   return (seriesParJour.get(jour.getDay()) ?? [])
-    .filter((x) => (!x.semaine || x.semaine === lettre)
+    .filter((x) => (!x.semaine || !lettre || x.semaine === lettre)
       && (!x.valideDu || x.valideDu <= date) && (!x.valideAu || date <= x.valideAu)
       // Toutes les N semaines, à compter de la première date.
       && (!(x.intervalle > 1) || !x.valideDu

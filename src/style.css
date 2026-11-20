@@ -694,6 +694,7 @@ details.carte.faits summary { margin: 0; }
 /* --- Écran « Emploi du temps » --- */
 
 .vue-edt { flex: 1; display: grid; gap: 1rem; padding: 1rem; align-content: start; }
+.cycle-resume { gap: 0.8rem; margin: 0; }
 .grille-edt { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); align-items: start; }
 .liste-edt { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; gap: 0.35rem; }
 .ligne-edt {

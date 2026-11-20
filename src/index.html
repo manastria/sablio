@@ -115,13 +115,9 @@
         <label>à <input type="time" id="serie-fin" required></label>
       </div>
       <label><span>Salle ou lieu <span class="facultatif">(facultatif)</span></span> <input id="serie-salle" autocomplete="off"></label>
-      <fieldset class="rendu">
+      <fieldset class="rendu" id="serie-champ-semaines">
         <legend>Semaines</legend>
-        <div class="choix-seances" role="radiogroup" aria-label="Semaines">
-          <label class="choix-seance"><input type="radio" name="serie-semaine" value=""><span><strong>Toutes</strong></span></label>
-          <label class="choix-seance"><input type="radio" name="serie-semaine" value="A"><span><strong>Semaine A</strong><span class="precision">une semaine sur deux</span></span></label>
-          <label class="choix-seance"><input type="radio" name="serie-semaine" value="B"><span><strong>Semaine B</strong><span class="precision">une semaine sur deux</span></span></label>
-        </div>
+        <div class="choix-seances" id="serie-semaines" role="radiogroup" aria-label="Semaines"></div>
       </fieldset>
       <div class="ligne champs-courts">
         <label><span>À partir du <span class="facultatif">(facultatif)</span></span> <input type="date" id="serie-du"></label>
@@ -133,6 +129,28 @@
         <button value="annuler" formnovalidate>Annuler</button>
         <span class="espace"></span>
         <button type="button" data-action="serie-supprimer" id="serie-supprimer">Supprimer ce cours</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="edt-cycle" class="large" aria-labelledby="cycle-titre">
+    <form method="dialog" class="formulaire">
+      <h2 id="cycle-titre">Semaines alternées</h2>
+      <label class="bascule-fait"><input type="checkbox" id="cycle-actif"> Alterner les semaines (A/B, 1/2/3…)</label>
+      <div class="formulaire" id="cycle-details">
+        <label><span>Libellés <span class="facultatif">(dans l’ordre, séparés par des virgules)</span></span>
+          <input id="cycle-libelles" placeholder="A, B" autocomplete="off"></label>
+        <fieldset class="rendu">
+          <legend id="cycle-legende">Cette semaine est la semaine</legend>
+          <div class="choix-seances" id="cycle-courante" role="radiogroup" aria-labelledby="cycle-legende"></div>
+          <p class="vide" id="cycle-apercu" aria-live="polite"></p>
+        </fieldset>
+      </div>
+      <p class="avertissement" id="cycle-orphelins" hidden></p>
+      <p class="erreur" id="cycle-erreur" hidden></p>
+      <div class="ligne boutons">
+        <button value="ok" class="mise-en-avant">Enregistrer</button>
+        <button value="annuler" formnovalidate>Annuler</button>
       </div>
     </form>
   </dialog>

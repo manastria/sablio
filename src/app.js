@@ -622,7 +622,14 @@ function construireEdt(n) {
   zone.innerHTML = `
     <div class="afaire-entete">
       <h2>Emploi du temps</h2>
-      <p class="afaire-resume">Semaine type. Cette semaine est une semaine ${edt.lettreSemaine(n)}. Pour une seule séance (annulée, déplacée), passez par la vue Jour.</p>
+      <p class="afaire-resume">Semaine type. Pour une seule séance (annulée, déplacée), passez par la vue Jour.</p>
+    </div>
+    <div class="ligne cycle-resume">
+      ${badgeSemaine(n, n)}
+      <span>${edt.cycleActuel().actif
+    ? `Semaines alternées : ${echapper(edt.cycleActuel().libelles.join(', '))}. Cette semaine est la semaine ${echapper(edt.lettreSemaine(n))}.`
+    : 'Pas de semaines alternées.'}</span>
+      <button type="button" class="lien" data-action="cycle-modifier">Modifier</button>
     </div>
     ${etat.discret ? '<p class="avertissement">Mode discret actif : les activités personnelles ne sont pas modifiables.</p>' : ''}
     <div class="grille-edt">${cartes}</div>
@@ -645,6 +652,76 @@ function construireEdt(n) {
     </div>`;
   appliquerStyles(zone);
 }
+
+// --- Cycle de semaines (comme MyDevoirs : libellés et semaine en cours) ---
+
+const lireLibelles = () => [...new Set($('#cycle-libelles').value.split(/[,;]/).map((x) => x.trim()).filter(Boolean))];
+
+function ouvrirCycle() {
+  const n = maintenant();
+  const { actif, libelles } = edt.cycleActuel();
+  $('#cycle-actif').checked = actif;
+  $('#cycle-libelles').value = libelles.join(', ');
+  $('#cycle-legende').textContent = `Cette semaine (semaine ${edt.numeroSemaine(n).semaine}) est la semaine`;
+  $('#cycle-erreur').hidden = true;
+  majCycle(actif ? edt.lettreSemaine(n) : libelles[0]);
+  $('#edt-cycle').showModal();
+}
+
+// Libellés modifiés : on reconstruit le choix de la semaine en cours, l'aperçu
+// des semaines suivantes et l'alerte sur les cours dont la semaine disparaît.
+function majCycle(courante = document.querySelector('input[name="cycle-courante"]:checked')?.value) {
+  const actif = $('#cycle-actif').checked;
+  $('#cycle-details').hidden = !actif;
+  const libelles = lireLibelles();
+  const choisie = libelles.includes(courante) ? courante : libelles[0];
+  $('#cycle-courante').innerHTML = libelles.map((x) => `<label class="choix-seance">
+    <input type="radio" name="cycle-courante" value="${echapper(x)}" ${x === choisie ? 'checked' : ''}><span><strong>${echapper(x)}</strong></span></label>`).join('');
+  const n = maintenant();
+  const i = libelles.indexOf(choisie);
+  $('#cycle-apercu').textContent = libelles.length > 1
+    ? [1, 2, 3].map((k) => `semaine ${edt.numeroSemaine(edt.ajouterJours(n, 7 * k)).semaine} : ${libelles[(i + k) % libelles.length]}`).join(' · ')
+    : '';
+  const orphelins = actif ? edt.semaineType().filter((x) => x.semaine && !libelles.includes(x.semaine)) : [];
+  const reserves = actif ? [] : edt.semaineType().filter((x) => x.semaine);
+  const alerte = $('#cycle-orphelins');
+  alerte.hidden = !orphelins.length && !reserves.length;
+  alerte.textContent = orphelins.length
+    ? `${pluriel(orphelins.length, 'cours')} ${orphelins.length > 1 ? 'utilisent' : 'utilise'} une semaine qui n’existera plus (${[...new Set(orphelins.map((x) => x.semaine))].join(', ')}) : ${orphelins.length > 1 ? 'ils n’auront plus lieu' : 'il n’aura plus lieu'}. Modifiez-${orphelins.length > 1 ? 'les' : 'le'} ensuite.`
+    : `${pluriel(reserves.length, 'cours')} ${reserves.length > 1 ? 'sont réservés' : 'est réservé'} à une semaine : sans alternance, ${reserves.length > 1 ? 'ils auront' : 'il aura'} lieu chaque semaine.`;
+}
+
+async function enregistrerCycle() {
+  const n = maintenant();
+  const libelles = lireLibelles();
+  const actif = $('#cycle-actif').checked && libelles.length > 0;
+  const courante = document.querySelector('input[name="cycle-courante"]:checked')?.value ?? libelles[0];
+  // La semaine de référence porte le premier libellé.
+  const reference = edt.ajouterJours(edt.lundi(n), -7 * Math.max(0, libelles.indexOf(courante)));
+  const valeur = { actif, libelles: libelles.length ? libelles : edt.cycleActuel().libelles, reference: edt.isoLocal(reference) };
+  try {
+    await stockage.enregistrerReglage('cycle', valeur);
+    await rechargerTout();
+    planifierSauvegarde();
+    journaliser(`Cycle : ${actif ? `${libelles.join(', ')}, cette semaine ${courante}` : 'pas d’alternance'}`);
+  } catch (e) {
+    journaliser(`Cycle : échec (${e.message})`);
+  }
+}
+
+let cycleEnCours = Promise.resolve();
+$('#edt-cycle form').addEventListener('submit', (e) => {
+  if (e.submitter?.value !== 'ok') return;
+  if ($('#cycle-actif').checked && lireLibelles().length < 2) {
+    e.preventDefault();
+    $('#cycle-erreur').textContent = 'Il faut au moins deux libellés, par exemple « A, B ».';
+    $('#cycle-erreur').hidden = false;
+    return;
+  }
+  cycleEnCours = enregistrerCycle();
+});
+$('#edt-cycle').addEventListener('input', (e) => { if (e.target.id === 'cycle-libelles') majCycle(); });
+$('#edt-cycle').addEventListener('change', (e) => { if (e.target.id === 'cycle-actif') majCycle(); });
 
 // Un cours de la semaine type.
 let serieEditee = null;
@@ -669,7 +746,14 @@ function ouvrirSerie(id = null, jour = 1) {
   $('#serie-debut').value = debut;
   $('#serie-fin').value = x?.fin ?? finDefaut;
   $('#serie-salle').value = x?.salle ?? '';
-  document.querySelector(`input[name="serie-semaine"][value="${x?.semaine ?? ''}"]`).checked = true;
+  // Les semaines possibles viennent du cycle (A/B, 1/2/3…).
+  const { actif, libelles } = edt.cycleActuel();
+  const valeurs = ['', ...(actif ? libelles : [])];
+  if (x?.semaine && !valeurs.includes(x.semaine)) valeurs.push(x.semaine); // libellé disparu
+  $('#serie-semaines').innerHTML = valeurs.map((v) => `<label class="choix-seance">
+    <input type="radio" name="serie-semaine" value="${echapper(v)}" ${(x?.semaine ?? '') === v ? 'checked' : ''}>
+    <span><strong>${v ? `Semaine ${echapper(v)}` : 'Toutes'}</strong>${v ? `<span class="precision">${!libelles.includes(v) || !actif ? 'n’existe plus' : `une semaine sur ${libelles.length}`}</span>` : ''}</span></label>`).join('');
+  $('#serie-champ-semaines').hidden = valeurs.length === 1;
   $('#serie-du').value = x?.valideDu ?? '';
   $('#serie-au').value = x?.valideAu ?? '';
   $('#serie-supprimer').hidden = !x;
@@ -696,7 +780,7 @@ async function enregistrerSerieFormulaire() {
     jour: Number($('#serie-jour').value),
     debut: $('#serie-debut').value,
     fin: $('#serie-fin').value,
-    semaine: document.querySelector('input[name="serie-semaine"]:checked').value || null,
+    semaine: document.querySelector('input[name="serie-semaine"]:checked')?.value || null,
     valideDu: $('#serie-du').value || null,
     valideAu: $('#serie-au').value || null,
   };
@@ -1072,7 +1156,8 @@ function construireJour(n, profil) {
 function texteSemaine(jour, n) {
   const { semaine, annee } = edt.numeroSemaine(jour);
   const autreAnnee = annee !== n.getFullYear() ? ` de ${annee}` : '';
-  return `Semaine ${semaine}${autreAnnee} (${edt.lettreSemaine(jour)}) · ${edt.semaineRelative(jour, n)}`;
+  const lettre = edt.lettreSemaine(jour);
+  return `Semaine ${semaine}${autreAnnee}${lettre ? ` (${lettre})` : ''} · ${edt.semaineRelative(jour, n)}`;
 }
 
 // Le numéro de semaine en élément graphique : « S48 » et la lettre du cycle.
@@ -1081,7 +1166,7 @@ function badgeSemaine(jour, n, variante = '') {
   const texte = texteSemaine(jour, n);
   const { semaine } = edt.numeroSemaine(jour);
   return `<span class="badge-semaine ${variante}" role="img" aria-label="${echapper(texte)}" title="${echapper(texte)}">
-    <span class="bs-num"><small>${variante === 'carre' ? 'sem.' : 'S'}</small>${semaine}</span><span class="bs-lettre">${echapper(edt.lettreSemaine(jour))}</span></span>`;
+    <span class="bs-num"><small>${variante === 'carre' ? 'sem.' : 'S'}</small>${semaine}</span>${edt.lettreSemaine(jour) ? `<span class="bs-lettre">${echapper(edt.lettreSemaine(jour))}</span>` : ''}</span>`;
 }
 
 // Champs « Aller à » (vues Jour et Semaine) : une semaine, une date ou un jour.
@@ -1964,6 +2049,7 @@ const actions = {
   ajouter: () => ouvrirAjout(),
   'fermer-detail': () => $('#detail').close(),
   'serie-nouvelle': (bouton) => ouvrirSerie(null, Number(bouton.dataset.jour)),
+  'cycle-modifier': () => ouvrirCycle(),
   'serie-supprimer': supprimerSerieEditee,
   'categorie-nouvelle': (bouton) => ouvrirCategorie(null, bouton.dataset.nature),
   'categorie-supprimer': supprimerCategorieEditee,
@@ -2311,6 +2397,21 @@ async function essaisInterface() {
   window.confirm = confirmerClic;
   journaliser(`Essai clic à côté : détail ${detailFerme ? 'fermé' : 'resté ouvert'} ; saisie modifiée ${saisieGardee ? 'gardée si on refuse' : 'fermée à tort'}, ${$('#ajout').open ? 'restée ouverte à tort' : 'fermée si on accepte'}`);
 
+  // Cycle : on dit que cette semaine est la A, puis on revient au réglage d'origine.
+  const lettreAvant = edt.lettreSemaine(maintenant());
+  ouvrirCycle();
+  majCycle(lettreAvant === 'A' ? 'B' : 'A');
+  $('#edt-cycle form').requestSubmit($('#edt-cycle button[value="ok"]'));
+  await cycleEnCours;
+  const lettreApres = edt.lettreSemaine(maintenant());
+  const lundiSemaine = edt.lundi(maintenant());
+  const svtOuPc = edt.coursDuJour(lundiSemaine).filter((o) => o.cle === 'svt' || o.cle === 'pc').map((o) => o.cle).join('+');
+  ouvrirCycle();
+  majCycle(lettreAvant);
+  $('#edt-cycle form').requestSubmit($('#edt-cycle button[value="ok"]'));
+  await cycleEnCours;
+  journaliser(`Essai cycle : semaine ${lettreAvant} → ${lettreApres} (lundi 13 h 30 : ${svtOuPc}) → ${edt.lettreSemaine(maintenant())}`);
+
   // Modification : on ouvre le devoir, on le modifie, on enregistre.
   afficherDetail(ajoute.id);
   actions['modifier-devoir']();
@@ -2446,6 +2547,8 @@ async function chargerEmploiDuTemps() {
   const donnees = await stockage.emploiDuTemps();
   edt.definirEmploiDuTemps(donnees);
   edt.definirExceptions(donnees.exceptions);
+  const cycle = donnees.reglages?.cycle;
+  edt.definirCycle(cycle ? { ...cycle, reference: edt.dateDepuisIso(cycle.reference) } : undefined);
 }
 
 async function rechargerTout() {

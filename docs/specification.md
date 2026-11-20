@@ -85,6 +85,16 @@ Repris de MyDevoirs : semaine suivante affichée le week-end, numéro et lettre 
 - En mode discret, les activités non visibles restent neutres et ne sont pas modifiables.
 - Enregistré dans la base (tables `categorie`, `serie`, `exception`), avec suppression douce pour la fusion entre appareils.
 
+### Semaines alternées
+
+Comme dans MyDevoirs, dans l'écran Emploi du temps (« Modifier » à côté du badge de semaine) :
+
+- alterner ou non les semaines ;
+- les libellés, dans l'ordre : « A, B », « 1, 2, 3 »… ;
+- « Cette semaine (semaine 48) est la semaine… » : on choisit la lettre de la semaine en cours, les autres s'en déduisent (semaine de référence, jamais la parité du numéro ISO). Un aperçu donne les trois semaines suivantes.
+
+Si des cours utilisent une lettre qui disparaît, la fenêtre le signale (ils n'auraient plus lieu). Sans alternance, les cours réservés à une semaine ont lieu chaque semaine. Le réglage est enregistré dans la base (table `reglage`), avec l'emploi du temps.
+
 ### Agenda
 
 À côté de la semaine type, des **événements datés** : « RDV psy le mercredi 25/11 à 17 h 30, pendant 3 semaines », « Dentiste le 2 décembre ».

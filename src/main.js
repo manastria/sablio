@@ -292,6 +292,11 @@ async function faireCaptures(dossier) {
   await proto('fermerSeance()');
   await proto('scenario("2026-11-23T19:00", "college", "edt")');
   await capturer('27-emploi-du-temps');
+  await page.executeJavaScript(`document.querySelector('[data-action="cycle-modifier"]').click();
+    document.querySelector('#cycle-libelles').value = 'A, B, C';
+    document.querySelector('#cycle-libelles').dispatchEvent(new Event('input', { bubbles: true }));`);
+  await capturer('34-cycle');
+  await page.executeJavaScript(`document.querySelector('#edt-cycle').close()`);
   await page.executeJavaScript(`document.querySelector('[data-serie="s3-1005-creneau"]').click()`);
   await capturer('28-cours');
   await page.executeJavaScript(`document.querySelector('#edt-serie').close()`);

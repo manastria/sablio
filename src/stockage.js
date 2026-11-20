@@ -27,7 +27,7 @@ function client(worker) {
 
 function stockageMemoire(raison, graine) {
   const devoirs = [];
-  const edt = { categories: graine?.categories ?? [], series: graine?.series ?? [], exceptions: graine?.exceptions ?? [] };
+  const edt = { categories: graine?.categories ?? [], series: graine?.series ?? [], exceptions: graine?.exceptions ?? [], reglages: {} };
   const remplacer = (liste, cle, x) => {
     const i = liste.findIndex((y) => cle(y) === cle(x));
     if (i >= 0) liste[i] = x; else liste.push(x);
@@ -44,6 +44,7 @@ function stockageMemoire(raison, graine) {
     rattacher: async (id, champs) => { Object.assign(devoirs.find((x) => x.id === id) ?? {}, champs); },
     reinitialiser: indisponible,
     emploiDuTemps: async () => structuredClone(edt),
+    enregistrerReglage: async (cle, valeur) => { edt.reglages[cle] = valeur; },
     enregistrerCategorie: async (x) => remplacer(edt.categories, (y) => y.cle, x),
     enregistrerSerie: async (x) => remplacer(edt.series, (y) => y.id, x),
     enregistrerException: async (x) => remplacer(edt.exceptions, (y) => `${y.serie}@${y.dateOrigine}`, x),
@@ -79,6 +80,7 @@ export async function ouvrirStockage(graine) {
       rattacher: (id, champs) => appeler('rattacher', { id, ...champs }),
       reinitialiser: (graine) => appeler('reinitialiser', { graine }),
       emploiDuTemps: () => appeler('emploiDuTemps'),
+      enregistrerReglage: (cle, valeur) => appeler('enregistrerReglage', { cle, valeur }),
       enregistrerCategorie: (categorie) => appeler('enregistrerCategorie', { categorie }),
       enregistrerSerie: (serie) => appeler('enregistrerSerie', { serie }),
       enregistrerException: (exception) => appeler('enregistrerException', { exception }),

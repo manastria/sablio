@@ -7,7 +7,7 @@
 import sqlite3InitModule from './vendor/sqlite/index.mjs';
 
 const NOM = '/mydevoirs.sqlite3';
-const VERSION = 5;
+const VERSION = 6;
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS devoir (
     id TEXT PRIMARY KEY,
@@ -82,6 +82,15 @@ const MIGRATIONS = {
     ALTER TABLE serie ADD COLUMN intervalle INTEGER;
     ALTER TABLE serie ADD COLUMN couleur TEXT;
     ALTER TABLE serie ADD COLUMN confidentialite TEXT;
+  `,
+  // 6 : réglages partagés avec l'emploi du temps (cycle de semaines…), en JSON.
+  6: `
+    CREATE TABLE reglage (
+      cle TEXT PRIMARY KEY,
+      valeur TEXT,
+      modifie_le INTEGER NOT NULL,
+      supprime INTEGER NOT NULL DEFAULT 0
+    );
   `,
 };
 
@@ -226,7 +235,18 @@ const operations = {
       `SELECT serie, date_origine AS dateOrigine, statut, motif, nouvelle_date AS nouvelleDate, debut, fin
        FROM exception WHERE supprime = 0`,
     );
-    return { categories, series, exceptions };
+    const reglages = Object.fromEntries(
+      db.selectObjects('SELECT cle, valeur FROM reglage WHERE supprime = 0').map((x) => [x.cle, JSON.parse(x.valeur)]),
+    );
+    return { categories, series, exceptions, reglages };
+  },
+
+  enregistrerReglage({ cle, valeur }) {
+    db.exec({
+      sql: 'INSERT OR REPLACE INTO reglage (cle, valeur, modifie_le, supprime) VALUES (?, ?, ?, 0)',
+      bind: [cle, JSON.stringify(valeur), Date.now()],
+    });
+    return true;
   },
 
   enregistrerCategorie({ categorie }) { ecrireCategorie(categorie); return true; },
