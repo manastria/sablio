@@ -13,6 +13,20 @@ npm start            # fenêtre normale
 npm run captures     # 39 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
 ```
 
+## Tests
+
+```sh
+npm test             # tests de la logique sans affichage (Node, node:test, sans dépendance)
+npm run captures     # essais d'interface dans Electron + captures ; échoue si un essai échoue
+npm run verifier     # les deux
+```
+
+- `tests/schema.test.mjs` : migrations de la base (versions 1 et 3 vers la dernière, base trop récente refusée), avec le SQLite de Node ;
+- `tests/emploi-du-temps.test.mjs` : semaines ISO, cycle A/B, séances, exceptions, vacances et jours fériés, événements répétés, « Aller à », temps relatif ;
+- `tests/secours.test.mjs`, `tests/vacances.test.mjs` : code de secours, cohérence des dates de vacances.
+
+Le nettoyage du texte mis en forme (`contenu.js`) a besoin du DOM : il est vérifié par les essais d'interface (`src/app/essais.js`), comme la saisie, le report, le verrou, les sauvegardes datées et l'échange d'emploi du temps. Les captures demandent un affichage (WSLg, ou `xvfb-run -a` sur une machine sans écran).
+
 Dans la fenêtre :
 
 - **Plein écran** : icône de l'en-tête ou `F11`. `F12` ouvre les outils de développement.
@@ -122,6 +136,7 @@ L'exécutable n'est **pas signé** : le Contrôle intelligent des applications d
 | `src/vacances.js` | Vacances scolaires officielles (zones A, B, C), à mettre à jour chaque année |
 | `src/contenu.js` | Nettoyage du texte mis en forme d'un devoir, version brute |
 | `src/index.html`, `src/style.css` | Page et styles (thème clair et sombre) |
+| `src/schema.js` | Schéma de la base et migrations numérotées (partagé avec les tests) |
 | `src/stockage.js`, `src/stockage-worker.js` | Base SQLite (WebAssembly, OPFS) dans un worker, avec repli en mémoire |
 | `src/sauvegarde.js` | Sauvegarde et restauration dans un fichier choisi |
 | `scripts/copier-sqlite.mjs` | Copie SQLite WebAssembly dans `src/vendor/` (après `npm install`) |

@@ -359,6 +359,16 @@ async function faireCaptures(dossier) {
   const rapport = await proto('rapport()');
   fs.writeFileSync(path.join(dossier, 'rapport.txt'), rapport);
   console.log(rapport);
+  // Un essai d'interface qui échoue fait échouer la commande. Les
+  // notifications sont exclues : sous WSL, aucun service ne les affiche.
+  const echecs = rapport.split('\n').filter((l) => /Essai|Stockage aller-retour/.test(l)
+    && /ÉCHEC|échec|NON |BLOQUÉ|à tort|DIFFÉRENTE|resté ouvert|restée ouverte/.test(l));
+  if (echecs.length) {
+    console.error(`\n${echecs.length} essai(s) en échec :\n${echecs.join('\n')}`);
+    app.exit(1);
+    return;
+  }
+  console.log('\nTous les essais d’interface passent.');
   app.quit();
 }
 
