@@ -1,0 +1,38 @@
+# Sablio sur sablio.manastria.fr (hébergement Infomaniak, Apache).
+# Publié par scripts/publier.sh : ne pas modifier sur le serveur.
+
+# --- Repris de la configuration d'Infomaniak ---
+SetOutputFilter DEFLATE
+AddOutputFilterByType DEFLATE "application/atom+xml" "application/javascript" "application/json" "application/ld+json" "application/manifest+json" "application/rdf+xml" "application/rss+xml" "application/schema+json" "application/vnd.geo+json" "application/vnd.ms-fontobject" "application/x-font-ttf" "application/x-javascript" "application/x-web-app-manifest+json" "application/xhtml+xml" "application/xml" "font/eot" "font/opentype" "image/bmp" "image/svg+xml" "image/vnd.microsoft.icon" "image/x-icon" "text/cache-manifest" "text/css" "text/html" "text/javascript" "text/plain" "text/vcard" "text/vnd.rim.location.xloc" "text/vtt" "text/x-component" "text/x-cross-domain-policy" "text/xml"
+
+# SECTION BEGIN GIT PROTECTION
+RedirectMatch 404 /\.git
+# SECTION END GIT PROTECTION
+
+# --- Propre à Sablio ---
+
+# Types MIME : les modules (.mjs) et SQLite (.wasm) ne se chargent pas sans eux.
+AddType text/javascript .js .mjs
+AddType application/wasm .wasm
+AddType application/manifest+json .webmanifest
+AddCharset utf-8 .html .js .mjs .css .json
+
+RewriteEngine On
+
+# Toujours en HTTPS : le service worker et l'accès aux fichiers l'exigent.
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# Adresse courte de la page de secours (code adulte oublié).
+RewriteRule ^secours/?$ secours.html [L]
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "no-referrer"
+  # La page, le manifeste et le service worker : toujours revalidés, pour que
+  # les mises à jour arrivent ; le service worker gère ensuite le hors-ligne.
+  <FilesMatch "^(index\.html|secours\.html|sw\.js|manifest\.json)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>

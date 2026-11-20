@@ -109,6 +109,20 @@ Une seule fenêtre à la fois peut ouvrir la base ; les autres affichent un aver
 
 Les données sont liées à l'adresse : celles de `http://localhost:8765` ne seront pas visibles depuis une autre adresse.
 
+## En ligne : https://sablio.manastria.fr/
+
+Hébergement Infomaniak (Apache), envoi par rclone (partage SFTP `infomaniak-web`, dossier `sites/sablio.manastria.fr`).
+
+```sh
+scripts/publier.sh --essai   # ce qui serait envoyé ou supprimé
+npm run publier              # tests, assemblage dans dist/web, envoi
+npm run verifier-en-ligne    # contrôle dans Chromium : console, base, service worker, secours
+```
+
+- `web/.htaccess` : HTTPS obligatoire, types MIME de `.mjs` et `.wasm` (sans eux, SQLite ne se charge pas), pas de cache pour la page et le service worker, adresse courte `/secours`. Il reprend la configuration d'Infomaniak (compression, protection de `.git`).
+- `main.js` et `preload.js` (Electron) ne sont pas publiés ; `.user.ini` et la page de maintenance d'Infomaniak restent sur le serveur.
+- Les données d'un navigateur sont liées à l'adresse : celles de `http://localhost:8765` ne sont pas visibles sur `https://sablio.manastria.fr`. On passe de l'une à l'autre par une sauvegarde, puis « Restaurer depuis un autre fichier ».
+
 ## Version Windows portable
 
 ```sh
@@ -142,5 +156,6 @@ L'exécutable n'est **pas signé** : le Contrôle intelligent des applications d
 | `scripts/copier-sqlite.mjs` | Copie SQLite WebAssembly dans `src/vendor/` (après `npm install`) |
 | `src/manifest.json`, `src/icones/` | Rendent la page installable (nom, icônes, fenêtre dédiée) |
 | `src/sw.js` | *Service worker* : hors-ligne, retour à l'application au clic sur une notification |
+| `scripts/publier.sh`, `scripts/verifier-en-ligne.js`, `web/.htaccess` | Publication sur sablio.manastria.fr et contrôle en ligne |
 | `scripts/preparer-windows.mjs` | Assemble la version Windows portable depuis Linux |
 | `scripts/icones.py` | Dessine les icônes : un sablier (Pillow) |
