@@ -96,6 +96,8 @@ L'ergothérapeute (ou un parent) prépare l'emploi du temps dans son propre Sabl
 - Les matières et activités de même nom, et les cours identiques (même matière, jour, heures, semaine), sont **reconnus** : pas de doublon, et les devoirs restent rattachés à leurs cours. Un devoir rattaché à un cours retiré reste rattaché à sa date.
 - Export et import demandent le mode adulte quand le verrou est actif.
 
+**Plusieurs enfants** : pas nécessaire dans une famille, chaque enfant a sa session Windows (donc son Sablio). Pour un professionnel (ergothérapeute, enseignant) qui prépare plusieurs élèves : **un fichier par élève** (importer en remplaçant, modifier, exporter). Un « mode professionnel » avec une liste d'élèves dans un même Sablio n'est envisagé que si cette façon de faire s'avère pénible : il mettrait sur un même poste des données de santé de plusieurs enfants.
+
 ### Verrou de la configuration
 
 **Facultatif** (pas de verrou par défaut), activé dans « Réglages et outils » avec un **code à 4 chiffres**. On ne garde que son empreinte (SHA-256 salée), dans la base avec les réglages. Ce n'est pas une vraie sécurité (les données sont locales) : il évite les modifications par erreur ou par jeu.
