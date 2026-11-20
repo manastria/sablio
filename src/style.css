@@ -362,7 +362,37 @@ button.lien:hover { text-decoration: underline; }
   align-items: start;
 }
 .jour-entete { grid-area: entete; display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem 0.75rem; }
+/* La partie reconstruite se fond dans la mise en page de l'en-tête. */
+.jour-entete-dyn { display: contents; }
 .jour-nav { display: flex; align-items: center; gap: 0.4rem; flex: none; }
+.aller { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; }
+.aller label { color: var(--texte-doux); }
+.aller input {
+  width: 10.5em;
+  background: var(--surface);
+  border: 1px solid var(--bord);
+  border-radius: 8px;
+  padding: 0.35em 0.5em;
+}
+.aller input[aria-invalid="true"] { border-color: var(--alerte); }
+.aller .erreur { flex-basis: 100%; font-size: 0.9em; }
+/* Ligne 1 : navigation, titre, + Devoir ; ligne 2 : semaine et « Aller à » ;
+   ligne 3 : bande des jours. */
+.jour-entete .saut { order: 1; flex-basis: 100%; height: 0; }
+.jour-entete .semaine { order: 2; flex: 1; }
+.aller { order: 2; }
+.bande-jours { order: 3; }
+.numero-semaine {
+  flex: none;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  padding: 0 0.4rem;
+  font-weight: 700;
+  font-size: 1.15em;
+  line-height: 1.1;
+}
+.numero-semaine span { font-size: 0.65em; font-weight: 400; color: var(--texte-doux); }
 .jour-entete h2 { margin: 0; font-size: 1.5em; min-width: 0; flex: 1; }
 
 .bande-jours { flex: 1 1 100%; display: flex; gap: 0.35rem; }

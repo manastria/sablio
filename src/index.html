@@ -50,7 +50,18 @@
   </main>
 
   <main class="vue-jour" id="vue-jour" hidden>
-    <div class="jour-entete" id="jour-entete"></div>
+    <div class="jour-entete">
+      <!-- Partie reconstruite à chaque changement ; le formulaire reste en place
+           pour ne pas perdre ce qu'on est en train de taper. -->
+      <div class="jour-entete-dyn" id="jour-entete"></div>
+      <form class="aller" id="aller" autocomplete="off">
+        <label for="aller-saisie">Aller à</label>
+        <input id="aller-saisie" placeholder="48, 25/12, demain…" aria-describedby="aller-erreur"
+          title="Semaine (48, 48/2027), date (25/12, 25 décembre) ou jour (demain, lundi)">
+        <button type="submit">Aller</button>
+        <span class="erreur" id="aller-erreur" role="alert" hidden></span>
+      </form>
+    </div>
     <section id="jour-edt" class="carte jour-edt" aria-label="Emploi du temps du jour"></section>
     <section id="jour-devoirs" class="carte jour-devoirs" aria-label="Devoirs du jour"></section>
     <section id="jour-sac" class="carte jour-sac" aria-label="Sac à préparer"></section>

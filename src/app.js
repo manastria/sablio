@@ -530,14 +530,44 @@ function construireJour(n, profil) {
       <button type="button" data-action="jour-decaler" data-jours="1" aria-label="Jour suivant" title="Jour suivant (flèche droite)">→</button>
     </div>
     <h2>${echapper(edt.titreJour(jour, n))}</h2>
-    <span class="semaine">Semaine ${edt.lettreSemaine(jour)}</span>
     <button type="button" class="mise-en-avant" data-action="ajouter">+ Devoir</button>
+    <span class="saut"></span>
+    <span class="semaine">${echapper(texteSemaine(jour, n))}</span>
     ${htmlBandeJours(jour, n)}`;
   $('#jour-edt').innerHTML = htmlJourEdt(jour, n);
   $('#jour-devoirs').innerHTML = htmlJourDevoirs(jour, n, profil);
   $('#jour-sac').innerHTML = htmlSac(jour, `Dans le sac pour ${edt.jourRelatif(jour, n)}`);
   appliquerStyles($('#vue-jour'));
 }
+
+// « Semaine 48 (B) · semaine prochaine », comme l'en-tête de MyDevoirs.
+function texteSemaine(jour, n) {
+  const { semaine, annee } = edt.numeroSemaine(jour);
+  const autreAnnee = annee !== n.getFullYear() ? ` de ${annee}` : '';
+  return `Semaine ${semaine}${autreAnnee} (${edt.lettreSemaine(jour)}) · ${edt.semaineRelative(jour, n)}`;
+}
+
+// Champ « Aller à » : un numéro de semaine, une date ou un jour.
+$('#aller').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const saisie = $('#aller-saisie');
+  const erreur = $('#aller-erreur');
+  try {
+    const jour = edt.interpreterSaisie(saisie.value, maintenant());
+    erreur.hidden = true;
+    saisie.removeAttribute('aria-invalid');
+    saisie.value = '';
+    allerAuJour(jour);
+  } catch (err) {
+    erreur.textContent = err.message;
+    erreur.hidden = false;
+    saisie.setAttribute('aria-invalid', 'true');
+  }
+});
+$('#aller-saisie').addEventListener('input', () => {
+  $('#aller-erreur').hidden = true;
+  $('#aller-saisie').removeAttribute('aria-invalid');
+});
 
 // Les sept jours de la semaine affichée, avec le nombre de devoirs à rendre.
 function htmlBandeJours(jour, n) {
@@ -557,8 +587,10 @@ function htmlBandeJours(jour, n) {
       <span class="jour-nom">${echapper(nom)}</span><span class="jour-num">${d.getDate()}</span>
       <span class="jour-nb">${nb || ''}</span></button>`);
   }
-  return `<nav class="bande-jours" aria-label="Jours de la semaine">
+  const { semaine } = edt.numeroSemaine(jour);
+  return `<nav class="bande-jours" aria-label="Jours de la semaine ${semaine}">
     <button type="button" class="puce-semaine" data-action="jour-decaler" data-jours="-7" aria-label="Semaine précédente" title="Semaine précédente">«</button>
+    <span class="numero-semaine" aria-hidden="true"><span>sem.</span>${semaine}</span>
     ${puces.join('')}
     <button type="button" class="puce-semaine" data-action="jour-decaler" data-jours="7" aria-label="Semaine suivante" title="Semaine suivante">»</button>
   </nav>`;
@@ -664,7 +696,7 @@ function allerAuJour(jour) {
 function mettreAJour(s, n, profil) {
   $('[data-champ="heure"]').textContent = edt.heureTexte(n);
   $('[data-champ="simulee"]').hidden = !horloge.simulee;
-  $('[data-champ="date"]').textContent = `${edt.dateLongue(n)} · semaine ${edt.lettreSemaine(n)}`;
+  $('[data-champ="date"]').textContent = `${edt.dateLongue(n)} · semaine ${edt.numeroSemaine(n).semaine} (${edt.lettreSemaine(n)})`;
   if (etat.vue !== 'maintenant') return;
 
   const restant = $('[data-champ="restant"]');
@@ -1195,6 +1227,18 @@ $('#ajout').addEventListener('cancel', () => { etat.edition = null; });
 // report d'un devoir dont le cours est annulé, bouton du mode discret.
 async function essaisInterface() {
   const avant = etat.devoirs.length;
+  // Aller à : une semaine, puis une saisie fausse.
+  etat.vue = 'jour';
+  rendre(true);
+  $('#aller-saisie').value = '50';
+  $('#aller').requestSubmit();
+  const apresSemaine = `${edt.isoLocal(etat.jour)} (${texteSemaine(etat.jour, maintenant())})`;
+  $('#aller-saisie').value = '31/02';
+  $('#aller').requestSubmit();
+  journaliser(`Essai aller à : « 50 » → ${apresSemaine} ; « 31/02 » → ${$('#aller-erreur').hidden ? 'accepté à tort' : `refusé (${$('#aller-erreur').textContent})`}`);
+  $('#aller-saisie').value = '';
+  $('#aller-erreur').hidden = true;
+
   // Nettoyage : un contenu dangereux, analysé sans être exécuté.
   const piege = '<p onclick="x()">Texte <b>gras</b><script>alert(1)</script><img src="x" onerror="alert(1)"> <a href="javascript:alert(1)">lien</a> <a href="https://exemple.fr">site</a></p>';
   journaliser(`Essai nettoyage : ${nettoyerHtml(piege)}`);

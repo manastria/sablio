@@ -123,6 +123,31 @@ export function ecartJours(a, b) {
 
 export const memeJour = (a, b) => ecartJours(a, b) === 0;
 
+// Numéro de semaine ISO 8601 (celui des agendas et de MyDevoirs) et son année,
+// qui peut différer de l'année civile autour du 1er janvier.
+export function numeroSemaine(date) {
+  const jeudi = ajouterJours(lundi(date), 3); // le jeudi décide de l'année
+  const annee = jeudi.getFullYear();
+  const premierJeudi = ajouterJours(lundi(new Date(annee, 0, 4)), 3);
+  return { semaine: Math.round((jeudi - premierJeudi) / (7 * JOUR)) + 1, annee };
+}
+
+// Lundi de la semaine ISO `semaine` de `annee` ; null si elle n'existe pas.
+export function lundiDeSemaine(annee, semaine) {
+  const resultat = ajouterJours(lundi(new Date(annee, 0, 4)), (semaine - 1) * 7);
+  const n = numeroSemaine(resultat);
+  return n.semaine === semaine && n.annee === annee ? resultat : null;
+}
+
+// Comme MyDevoirs : « cette semaine », « semaine prochaine », « dans 3 semaines »…
+export function semaineRelative(date, maintenant) {
+  const ecart = Math.round((lundi(date) - lundi(maintenant)) / (7 * JOUR));
+  if (ecart === 0) return 'cette semaine';
+  if (ecart === 1) return 'semaine prochaine';
+  if (ecart === -1) return 'semaine dernière';
+  return ecart > 1 ? `dans ${ecart} semaines` : `il y a ${-ecart} semaines`;
+}
+
 export function lettreSemaine(date, reference = REFERENCE_AB, libelles = LIBELLES_AB) {
   const semaines = Math.round((lundi(date) - lundi(reference)) / (7 * JOUR));
   const n = libelles.length;
@@ -366,6 +391,85 @@ export function devoirsDemo(reference) {
       aFaireLe: aFaire && aFaire >= debutJour(reference) ? isoLocal(aFaire) : null,
     };
   });
+}
+
+// --- Aller à une date ---
+
+const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const sansAccents = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+// Parmi l'année d'avant, celle-ci et la suivante, la date la plus proche
+// d'aujourd'hui : « 2/1 » tapé en décembre veut dire janvier prochain.
+function plusProche(fabriquer, maintenant) {
+  const annee = maintenant.getFullYear();
+  return [annee - 1, annee, annee + 1]
+    .map(fabriquer)
+    .filter(Boolean)
+    .sort((a, b) => Math.abs(a - maintenant) - Math.abs(b - maintenant))[0] ?? null;
+}
+
+function dateValide(annee, mois, jour) {
+  const d = new Date(annee, mois - 1, jour);
+  return d.getFullYear() === annee && d.getMonth() === mois - 1 && d.getDate() === jour ? d : null;
+}
+
+const annee4 = (a) => (a < 100 ? 2000 + a : a);
+const ANNEE_MIN = 1900;
+const ANNEE_MAX = 2100;
+
+// Date visée par le champ « Aller à » ; lève une erreur au message lisible.
+// Formats : semaine (`48`, `s48`, `semaine 48`, `48/2027`), date (`25/12`,
+// `25/12/2026`, `2026-12-25`, `25 décembre`), jour (`aujourd'hui`, `demain`,
+// `après-demain`, `hier`, `lundi` = le prochain lundi).
+export function interpreterSaisie(texte, maintenant) {
+  const t = sansAccents(String(texte).trim().toLowerCase()).replace(/[’']/g, '').replace(/\s+/g, ' ');
+  const aujourdhui = debutJour(maintenant);
+  if (!t) throw new Error('Tapez un numéro de semaine, une date ou un jour.');
+  const relatifs = { aujourdhui: 0, auj: 0, demain: 1, 'apres-demain': 2, 'apres demain': 2, hier: -1 };
+  if (t in relatifs) return ajouterJours(aujourdhui, relatifs[t]);
+  const jourSemaine = JOURS.findIndex((j) => j === t);
+  if (jourSemaine >= 0) return ajouterJours(aujourdhui, ((jourSemaine - aujourdhui.getDay() + 6) % 7) + 1);
+
+  const borner = (a) => {
+    if (a < ANNEE_MIN || a > ANNEE_MAX) throw new Error(`Année entre ${ANNEE_MIN} et ${ANNEE_MAX}.`);
+    return a;
+  };
+  let m = t.match(/^(?:s|sem|semaine)? ?(\d{1,2})(?:\/(\d{4}))?$/);
+  if (m) {
+    const n = Number(m[1]);
+    if (m[2]) {
+      const lundiVise = lundiDeSemaine(borner(Number(m[2])), n);
+      if (!lundiVise) throw new Error(`${m[2]} n’a pas de semaine ${n}.`);
+      return lundiVise;
+    }
+    const lundiVise = plusProche((a) => lundiDeSemaine(a, n), aujourdhui);
+    if (!lundiVise) throw new Error(`Il n’y a pas de semaine ${n}.`);
+    return lundiVise;
+  }
+  m = t.match(/^(\d{1,2})[/.-](\d{1,2})(?:[/.-](\d{2}|\d{4}))?$/);
+  if (m) {
+    const [jour, mois] = [Number(m[1]), Number(m[2])];
+    const d = m[3] ? dateValide(borner(annee4(Number(m[3]))), mois, jour) : plusProche((a) => dateValide(a, mois, jour), aujourdhui);
+    if (!d) throw new Error(`Le ${jour}/${mois} n’existe pas.`);
+    return d;
+  }
+  m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) {
+    const d = dateValide(borner(Number(m[1])), Number(m[2]), Number(m[3]));
+    if (!d) throw new Error('Cette date n’existe pas.');
+    return d;
+  }
+  m = t.match(/^(?:[a-z]+ )?(\d{1,2}|1er) ([a-z]+)\.?(?: (\d{4}))?$/);
+  if (m) {
+    const mois = MOIS.findIndex((nom) => m[2].length >= 3 && sansAccents(nom).startsWith(m[2])) + 1;
+    if (mois) {
+      const jour = m[1] === '1er' ? 1 : Number(m[1]);
+      const d = m[3] ? dateValide(borner(Number(m[3])), mois, jour) : plusProche((a) => dateValide(a, mois, jour), aujourdhui);
+      if (!d) throw new Error(`Le ${jour} ${MOIS[mois - 1]} n’existe pas.`);
+      return d;
+    }
+  }
+  throw new Error('Non reconnu. Exemples : 48, 25/12, 25 décembre, demain, lundi.');
 }
 
 // --- Textes ---

@@ -33,6 +33,8 @@ L'environnement de l'enfant varie beaucoup : âge, activités, présence d'un ad
 
 - En-tête en temps relatif (« Demain · mardi 21 novembre »).
 - Navigation à gauche, **à une place fixe** quelle que soit la longueur du titre : jour précédent, « Aujourd'hui » (grisé si on y est déjà), jour suivant.
+- **Numéro de semaine** (ISO, comme MyDevoirs), lettre du cycle et position relative : « Semaine 48 (B) · semaine prochaine ».
+- **Aller à** : un champ qui accepte un numéro de semaine (`48`, `s48`, `48/2027` : on va au lundi), une date (`25/12`, `25/12/2026`, `2026-12-25`, `25 décembre`) ou un jour (`demain`, `après-demain`, `hier`, `lundi` = le prochain lundi). Sans année, on prend la plus proche d'aujourd'hui : `2` tapé en décembre vise janvier. Une saisie invalide (`31/02`) est refusée avec un message.
 - **Bande des jours** de la semaine affichée, sous l'en-tête : un clic pour aller deux ou trois jours plus loin, le nombre de devoirs à rendre sur chaque jour, « « » et « » » pour changer de semaine. Les jours sans cours sont grisés.
 - Un cours porte une pastille (`•1`) quand un devoir est à lui rendre.
 - Les exceptions se voient : cours annulé barré, cours déplacé avec une pastille.

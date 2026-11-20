@@ -25,7 +25,7 @@ Un rappel (notification + carillon) part 5 minutes avant chaque cours.
 ## Vues
 
 - **Maintenant** (accueil) : séance en cours, temps restant, séance suivante, frise du jour, devoirs à faire. Après le dernier cours, la frise laisse la place à « Préparer le sac » pour le prochain jour de classe.
-- **Jour** : emploi du temps du jour avec le repère « Vous êtes ici », devoirs à rendre ce jour (avec leur progression), travail du soir, sac à préparer. Pour changer de jour : les boutons `←` `Aujourd’hui` `→`, les touches `←` `→`, ou la bande des jours de la semaine (`«` `»` pour changer de semaine).
+- **Jour** : emploi du temps du jour avec le repère « Vous êtes ici », devoirs à rendre ce jour (avec leur progression), travail du soir, sac à préparer. Pour changer de jour : les boutons `←` `Aujourd’hui` `→`, les touches `←` `→`, ou la bande des jours de la semaine (`«` `»` pour changer de semaine). Le champ **Aller à** accepte un numéro de semaine (`48`, `48/2027`), une date (`25/12`, `25 décembre`) ou un jour (`demain`, `lundi`).
 
 Un clic sur un devoir l'ouvre (texte complet, échéance, cours, boutons **Modifier** et **Supprimer**) ; seule la case le marque fait. Le devoir de français de la démonstration montre une longue consigne mise en forme, comme sur l'ENT.
 
