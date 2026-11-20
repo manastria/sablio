@@ -98,6 +98,8 @@ Le risque de conflit est faible : l'emploi du temps change rarement et surtout p
 
 Cela se règle par **profil** (densité, vocabulaire, pictogrammes, rappels), pas par du code dupliqué.
 
+Les écrans et les fonctions sont décrits dans [specification.md](specification.md).
+
 Voir aussi [modele-recurrence.md](modele-recurrence.md) : les cours qui ne reviennent pas à intervalle fixe imposent un modèle plus riche que les semaines A/B actuelles.
 
 ## Plan de faisabilité

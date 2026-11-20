@@ -27,7 +27,7 @@ Avantages : peu de données, simple à fusionner entre appareils, et on peut cha
 | Champ | Sens |
 |---|---|
 | `id` | UUID |
-| `titre`, `matiere`, `couleur`, `lieu`, `intervenant` | description |
+| `titre`, `matiere`, `couleur`, `lieu`, `intervenant` | description ; `matiere` vide pour un créneau à matière variable (DS), voir [specification.md](specification.md) |
 | `motif` | voir ci-dessous |
 | `duree` | durée d'une séance |
 | `valide_du`, `valide_au` | période de validité du motif |

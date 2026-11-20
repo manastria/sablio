@@ -1,0 +1,196 @@
+# Sablio : spécification des fonctions
+
+État : **en cours de rédaction**. Décisions du 20 novembre 2026. Les points marqués « à valider » sont des propositions.
+
+Voir aussi [faisabilite.md](faisabilite.md) (contraintes, choix techniques) et [modele-recurrence.md](modele-recurrence.md) (séries, exceptions).
+
+## Principe
+
+L'environnement de l'enfant varie beaucoup : âge, activités, présence d'un adulte pour la saisie. Une fonction utile à l'un encombre l'autre. Règle générale : **rien n'impose une saisie de plus**. Les fonctions qui en demandent une sont facultatives et se règlent par profil. Ce que l'application peut déduire de l'emploi du temps, elle le déduit.
+
+## Écrans
+
+| Écran | Rôle |
+|---|---|
+| **Maintenant / Ensuite** | **Écran d'accueil.** Cours en cours, temps restant, cours suivant, frise du jour. Après le dernier cours : « Préparer le sac » et le travail du soir. |
+| **Jour** | Emploi du temps du jour et devoirs du jour. Navigation jour par jour. |
+| **Semaine** | Vue d'ensemble, légère : pastilles et progression par jour. Un clic sur un jour ouvre la vue Jour. |
+| **À faire** | Devoirs non faits, groupés par échéance, en temps relatif (liste « À faire » de MyDevoirs). |
+| **Réglages** | Profil, matières, activités, emploi du temps, sauvegarde. |
+
+### Vue Jour
+
+```
+← Demain · mardi 21 novembre →                  [Aujourd'hui]
+┌ Emploi du temps ─────────┐ ┌ À rendre ce jour ──────── 1/3 ┐
+│ 08:00 ▌Maths  📐 B12  •1 │ │ ☑ 📐 Exercices 4 et 5 p. 82   │
+│ 09:00 ▌Français 📖       │ │ ☐ 📖 Lire le chapitre 3       │
+│ ── vous êtes ici ──      │ │ ☐ 🧪 Finir le schéma          │
+│ 14:00 ▌SVT 🧪  (annulé)  │ ├ Ce soir ──────────────────────┤
+│ 17:30 ▌Rendez-vous       │ │ ☐ 📖 Lire le chapitre 3       │
+└──────────────────────────┘ └───────────────────────────────┘
+```
+
+- En-tête en temps relatif (« Demain · mardi 21 novembre »), flèches jour précédent / suivant, bouton « Aujourd'hui ».
+- Un cours porte une pastille (`•1`) quand un devoir est à lui rendre.
+- Les exceptions se voient : cours annulé barré, cours déplacé avec une pastille.
+- « Ce soir » : voir [Jour de travail](#jour-de-travail).
+- Écran étroit : les deux colonnes passent l'une sous l'autre.
+
+### Vue Semaine
+
+Elle reste utile pour anticiper, mais MyDevoirs la rend trop chargée. Dans Sablio, chaque jour ne montre que :
+
+- les cours sous forme de bandes de couleur, sans texte détaillé ;
+- le nombre de devoirs à rendre et la barre de progression ;
+- les jours sans cours repliés.
+
+Repris de MyDevoirs : premier jour de la semaine, semaine suivante affichée le week-end, numéro et lettre de semaine, « semaine prochaine » / « dans 3 semaines », saut à une date (`12`, `12/2027`, `JJ/MM/AAAA`, et en plus « demain », « lundi »).
+
+Les jours affichés se déduisent de l'emploi du temps (jours avec au moins un cours ou une activité), avec la possibilité de forcer un jour.
+
+### Préparer le sac
+
+Liste déduite de l'emploi du temps du prochain jour de classe : ses matières, avec pour chacune le matériel habituel (champ facultatif de la matière : « calculatrice », « tenue de sport »). Affichée dans Maintenant / Ensuite après le dernier cours, et dans la vue Jour du lendemain. Cases à cocher, remises à zéro chaque jour.
+
+## Matières et activités personnelles
+
+Les cours et les devoirs utilisent la **même matière** : la changer à un endroit la change partout.
+
+| Champ | Sens |
+|---|---|
+| `id` | UUID |
+| `nature` | `ecole` (matière) ou `perso` (activité personnelle) |
+| `nom`, `court` | « Mathématiques », « Ma » |
+| `couleur` | prise dans une palette prédéfinie |
+| `pictogramme` | toujours présent : la couleur ne doit jamais être le seul repère (daltonisme, 8-11 ans) |
+| `materiel` | facultatif, pour « Préparer le sac » |
+| `confidentialite` | activités seulement, voir plus bas |
+| `ordre`, `modifie_le`, `supprime` | ordre d'affichage, fusion |
+
+Les matières et les activités sont rangées dans la même table, mais **séparées partout dans l'interface** : deux listes dans les réglages, deux groupes au choix, et pas de devoir possible sur une activité.
+
+Palette : une douzaine de couleurs nettement distinctes, chacune avec un texte lisible dessus (contraste WCAG AA, calcul déjà présent dans le prototype : `texteSur`). Couleur libre possible pour les plus âgés.
+
+### Confidentialité des activités personnelles
+
+En classe, l'écran se voit : l'élève assis derrière n'a pas à savoir qu'il y a un rendez-vous chez le psychologue.
+
+Chaque activité a un niveau de confidentialité :
+
+| Niveau | Affichage en mode discret |
+|---|---|
+| `visible` | Nom et pictogramme réels (sport, musique…). |
+| `discret` (**par défaut**) | Libellé neutre, **le même pour toutes les activités** (« Rendez-vous », modifiable dans les réglages), et pictogramme neutre. Le vrai nom n'apparaît qu'en ouvrant l'activité. |
+| `masque` | N'apparaît pas du tout. |
+
+Pour une activité `discret`, une case « garder la couleur en mode discret » : l'élève reconnaît son rendez-vous à la couleur (sport en vert, psychologue en rouge, musique en bleu), les autres ne voient que « Rendez-vous ». Décochée, l'activité prend une couleur neutre (gris).
+
+Le **mode discret** applique ces niveaux. Hors mode discret, tout est affiché en clair. Son déclenchement se règle par profil :
+
+| Réglage | Comportement |
+|---|---|
+| Manuel | Désactivé par défaut ; un bouton sur tous les écrans l'active ou le désactive. |
+| Automatique | Actif pendant les heures de cours (du début du premier cours à la fin du dernier, d'après l'emploi du temps du jour), désactivé en dehors. Le bouton permet de forcer le changement jusqu'au prochain basculement automatique. |
+| Toujours | Actif par défaut. Le bouton le désactive pour un moment ; il se réactive à la prochaine ouverture de l'application, ou au bout d'un délai réglable (30 minutes par défaut), selon ce qui arrive en premier. |
+
+Règles :
+
+- les **notifications** et le **mode compact** suivent toujours la règle la plus prudente : une notification de rappel s'affiche par-dessus tout, même en classe ;
+- le rendez-vous reste **visible en tant que créneau occupé**, même discret : si l'élève doit quitter la classe à 15 h, il doit le voir ;
+- le fichier de sauvegarde contient les vrais noms. Il est privé, comme le reste des données.
+
+## Devoirs
+
+| Champ | Sens |
+|---|---|
+| `id` | UUID |
+| `matiere` | matière (`nature = ecole`) |
+| `texte`, `fait` | comme MyDevoirs |
+| `serie`, `date_origine` | le cours ou le créneau auquel le devoir est à rendre (même clé qu'une exception) ; vides si le devoir est rattaché à une date |
+| `pour` | date de rendu connue (voir plus bas) |
+| `a_faire_le` | facultatif, voir [Jour de travail](#jour-de-travail) |
+| `modifie_le`, `supprime` | fusion |
+
+### Le devoir suit le cours
+
+Règle : **si le devoir correspond à un cours, il suit ce cours ; sinon, il est rattaché à une date.**
+
+Rattaché à **une occurrence** (série + date d'origine), sa date de rendu se calcule à partir de l'emploi du temps et de ses exceptions :
+
+- cours **déplacé** : le devoir le suit ;
+- cours **annulé** ou **remplacé** : le devoir reste affiché à sa date avec un avertissement (« Le cours de maths est annulé : à rendre quand ? ») et un bouton « Reporter au prochain cours de maths ». Pas de report silencieux : un changement qu'on ne remarque pas est justement le piège ;
+- série modifiée (« celle-ci et les suivantes ») : le devoir suit l'occurrence correspondante de la nouvelle série (même semaine, même position dans le cycle). S'il n'y en a pas, il est rattaché à la date de l'ancienne occurrence.
+
+`pour` garde toujours la dernière date de rendu calculée. Elle sert de date de rattachement quand il n'y a pas de cours, et de repli quand la série est inconnue : après une synchronisation partielle, sans emploi du temps (jeunes élèves) ou pour un devoir importé de MyDevoirs.
+
+### Créneaux à matière variable
+
+Certains créneaux n'ont pas de matière fixe. Exemple : un « DS » chaque mercredi matin, dont la matière change d'une semaine à l'autre. Un DS de maths tombe alors dans un créneau où l'emploi du temps n'affiche pas « Maths ».
+
+- Une série peut être un **créneau** sans matière (`matiere` vide) : DS, devoir surveillé, heure de vie de classe…
+- Un devoir peut être rattaché à **n'importe quelle occurrence**, pas seulement à un cours de sa matière : « Contrôle de maths » → DS du mercredi 26.
+- Affichage : le créneau prend la matière et la couleur du devoir qui lui est rattaché (« DS · Maths », en bleu maths). Sans devoir rattaché, il garde son titre et une couleur neutre.
+- Le devoir suit le créneau comme il suivrait un cours (déplacement, annulation).
+
+### Saisie
+
+- Date proposée par défaut : **le prochain cours de cette matière**.
+- Autres choix en un clic : les cours suivants de la matière (« jeudi (dans 3 jours) », « vendredi 28 »), les prochains créneaux à matière variable (« DS · mercredi 26 »), ou une date libre.
+- Sans emploi du temps, la saisie se fait par date, comme dans MyDevoirs.
+
+### Jour de travail
+
+Par défaut, Sablio ne demande que **le jour où le devoir est à rendre**.
+
+Pour les enfants qui en ont besoin, deux aides :
+
+1. **Avec saisie, active par défaut** : champ « à faire le », proposé à la saisie du devoir mais **facultatif**. Laissé vide, rien ne change. Le réglage « Prévoir le jour de travail » du profil permet de le masquer.
+2. **Sans saisie, à activer dans le profil** : le compte « il te reste 2 soirs » ignore les soirs occupés par une activité. Si le dernier soir avant le rendu est pris (sport le mercredi pour un devoir du jeudi), l'application le signale : « Mercredi soir, tu as sport : fais-le mardi. »
+
+« Ce soir » liste les devoirs dont `a_faire_le` est aujourd'hui. Pour un devoir sans `a_faire_le`, il liste ceux à rendre au prochain jour de classe, plus ceux que l'aide 2 avance à ce soir.
+
+## Temps relatif
+
+Échéances, en-têtes et rappels sont d'abord exprimés en temps relatif, la date venant en second.
+
+| Écart | Texte |
+|---|---|
+| Passé | « en retard d'un jour », « en retard de 3 jours » |
+| 0 | « aujourd'hui » (« ce soir » pour le travail) |
+| 1, 2 | « demain », « après-demain » |
+| 3 à 6 | « jeudi (dans 3 jours) » |
+| 7 et plus | « mardi 2 décembre (dans 12 jours) » |
+| Semaines | « cette semaine », « semaine prochaine », « dans 3 semaines » (MyDevoirs) |
+| Moins d'un jour | « dans 25 minutes », « dans 2 h 10 » (Maintenant / Ensuite) |
+
+Ce qu'on évite : « mardi prochain », que les gens comprennent différemment.
+
+Selon le profil :
+
+- 8-11 ans : « dans 2 nuits » plutôt que « dans 2 jours » ;
+- tous : « il te reste N soirs » pour le travail à la maison (soirs libres jusqu'à la veille du rendu).
+
+## Reprise des fonctions de MyDevoirs
+
+| MyDevoirs Kivy | Sablio |
+|---|---|
+| Agenda par semaine | Vue Semaine allégée + vue Jour |
+| Matière (nom, couleur RGBA en flottants, ordre) | Matière ; couleur convertie en hexadécimal, pictogramme à choisir |
+| Devoir (matière, jour, texte, fait) | Devoir ; à l'import, rattaché au cours de la même matière ce jour-là s'il existe, sinon à la date |
+| Progression par jour | Gardée (Jour, Semaine) |
+| Liste « À faire » | Écran À faire |
+| Semaines A/B | Cycle de N semaines |
+| Jours affichés, premier jour, semaine suivante le week-end | Gardés ; jours affichés déduits de l'emploi du temps |
+| Saut à une semaine ou une date | Gardé, plus « demain », « lundi » |
+| Thèmes | Clair, sombre, contraste élevé |
+| Chemin de la base, taille de la fenêtre | Sans objet (sauvegarde dans un fichier, PWA) |
+
+## Hors périmètre pour l'instant
+
+- Types de devoir (contrôle à réviser, matériel à apporter).
+- Devoirs qui reviennent (« lire 20 min chaque soir »).
+
+## Questions ouvertes
+
+Aucune pour l'instant.
