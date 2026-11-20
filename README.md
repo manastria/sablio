@@ -15,10 +15,11 @@ npm run captures     # 33 captures d'écran + rapport.txt (avec des essais d'int
 
 Dans la fenêtre :
 
-- **Profil** : Primaire, Collège, Supérieur (taille, vocabulaire, nombre de devoirs affichés).
-- **Mode compact** : petite fenêtre au premier plan, dans le coin de l'écran.
-- **Plein écran** : bouton ou `F11`. `F12` ouvre les outils de développement.
-- **Outils** : heure simulée (avance rapide, vitesse × 60), essais (notification, son, SQLite, fluidité), relevé de l'environnement, copie du rapport.
+- **Plein écran** : icône de l'en-tête ou `F11`. `F12` ouvre les outils de développement.
+- Dans le **menu** (☰) :
+  - **Profil** : Primaire, Collège, Supérieur (taille, vocabulaire, nombre de devoirs affichés) ;
+  - **Mode compact** : petite fenêtre au premier plan, dans le coin de l'écran ;
+  - **Réglages et outils** : réglages du profil, heure simulée (avance rapide, vitesse × 60), données et sauvegarde, essais (notification, son, SQLite, fluidité), relevé de l'environnement, copie du rapport.
 
 Un rappel (notification + carillon) part 5 minutes avant chaque cours.
 
