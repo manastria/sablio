@@ -163,6 +163,9 @@ button.icone svg { width: 1.3em; height: 1.3em; fill: none; stroke: currentColor
 .vues button { border: 0; background: transparent; font-weight: 600; color: var(--texte-doux); }
 .vues button[aria-current="page"] { background: var(--surface); color: var(--texte); box-shadow: var(--ombre); }
 
+/* Mode adulte ouvert : visible, pour penser à reverrouiller. */
+button.adulte { background: var(--surface-2); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
 /* Mode discret : l'état doit se voir d'un coup d'œil. */
 button.discret[aria-pressed="true"] { background: var(--texte); border-color: var(--texte); color: var(--fond); font-weight: 600; }
 button.discret[aria-pressed="true"]::before { content: "● "; }

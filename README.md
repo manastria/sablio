@@ -35,6 +35,8 @@ Un rappel (notification + carillon) part 5 minutes avant chaque cours.
 
 **+ Événement** (vues Jour et Semaine, écran Emploi du temps) ajoute un rendez-vous à l'agenda : une activité (le psychologue) ou un titre libre (le dentiste), une date, des heures, et éventuellement une répétition (« chaque semaine, 3 fois »). La démonstration contient un rendez-vous chez le dentiste.
 
+**Verrou** (facultatif) : dans **Réglages et outils → Verrou de la configuration**, un code à 4 chiffres protège l'emploi du temps, les séances, les réglages et les données. L'élève garde ses devoirs, peut ajouter des événements et basculer le mode discret. Le code ouvre le mode adulte pour 10 minutes.
+
 Un clic sur une séance de la vue Jour permet de la dire annulée ou déplacée (avec un motif), puis de la rétablir ; ses devoirs la suivent.
 
 Un clic sur un devoir l'ouvre (texte complet, échéance, cours, boutons **Modifier** et **Supprimer**) ; seule la case le marque fait. Le devoir de français de la démonstration montre une longue consigne mise en forme, comme sur l'ENT.

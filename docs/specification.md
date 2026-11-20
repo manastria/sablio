@@ -85,6 +85,21 @@ Repris de MyDevoirs : semaine suivante affichée le week-end, numéro et lettre 
 - En mode discret, les activités non visibles restent neutres et ne sont pas modifiables.
 - Enregistré dans la base (tables `categorie`, `serie`, `exception`), avec suppression douce pour la fusion entre appareils.
 
+### Verrou de la configuration
+
+**Facultatif** (pas de verrou par défaut), activé dans « Réglages et outils » avec un **code à 4 chiffres**. On ne garde que son empreinte (SHA-256 salée), dans la base avec les réglages. Ce n'est pas une vraie sécurité (les données sont locales) : il évite les modifications par erreur ou par jeu.
+
+| Libre pour l'élève | Demande le code |
+|---|---|
+| Devoirs (ajouter, cocher, modifier) | Emploi du temps : cours, matières, activités, semaines alternées |
+| Ajouter un événement à l'agenda | Modifier ou supprimer un événement existant |
+| Basculer le mode discret | Annuler ou déplacer une séance |
+| Regarder une séance et ses devoirs | Profil, réglages et outils (données, sauvegarde, démonstration) |
+
+Le code ouvre le **mode adulte** pour 10 minutes, prolongées à chaque action ; un bouton « 🔓 Mode adulte » dans l'en-tête le referme tout de suite. Le menu propose « Mode adulte (code) » et « Verrouiller maintenant ».
+
+À trancher : que faire d'un code oublié (aujourd'hui, seul l'effacement des données du site le retire).
+
 ### Semaines alternées
 
 Comme dans MyDevoirs, dans l'écran Emploi du temps (« Modifier » à côté du badge de semaine) :

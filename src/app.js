@@ -653,11 +653,130 @@ function construireEdt(n) {
   appliquerStyles(zone);
 }
 
+// --- Verrou de la configuration (facultatif) ---
+// Un code à 4 chiffres, dont on ne garde que l'empreinte (SHA-256 salée).
+// Ce n'est pas une vraie sécurité (les données sont locales) : il évite les
+// modifications par erreur ou par jeu. Le code ouvre le « mode adulte » pour
+// 10 minutes, prolongées à chaque action.
+
+const DUREE_ADULTE = 10 * MINUTE;
+const adulte = () => etat.adulteJusqua > Date.now();
+const verrouActif = () => Boolean(etat.verrou) && !adulte();
+
+async function empreinte(code, sel) {
+  const octets = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${sel}:${code}`));
+  return [...new Uint8Array(octets)].map((x) => x.toString(16).padStart(2, '0')).join('');
+}
+
+function prolongerAdulte() {
+  if (etat.verrou && adulte()) etat.adulteJusqua = Date.now() + DUREE_ADULTE;
+}
+
+let resoudreVerrou = null;
+function demanderCode(raison) {
+  return new Promise((resolve) => {
+    resoudreVerrou = resolve;
+    $('#verrou-raison').textContent = `${raison} : le code adulte est demandé.`;
+    $('#verrou-code').value = '';
+    $('#verrou-erreur').hidden = true;
+    $('#verrou').showModal();
+  });
+}
+$('#verrou').addEventListener('close', () => {
+  resoudreVerrou?.(adulte());
+  resoudreVerrou = null;
+});
+$('#verrou form').addEventListener('submit', async (e) => {
+  if (e.submitter?.value !== 'ok') return;
+  e.preventDefault(); // la vérification est asynchrone : on ferme nous-mêmes
+  const code = $('#verrou-code').value;
+  if (etat.verrou && await empreinte(code, etat.verrou.sel) === etat.verrou.empreinte) {
+    etat.adulteJusqua = Date.now() + DUREE_ADULTE;
+    journaliser('Mode adulte ouvert');
+    $('#verrou').close();
+    rendre(true);
+  } else {
+    $('#verrou-erreur').hidden = false;
+    $('#verrou-code').select();
+  }
+});
+
+// À placer au début d'une action verrouillée : si le verrou est actif, on
+// demande le code, on refait l'action s'il est bon, et on renvoie true
+// (l'action en cours doit s'arrêter). Sans verrou, l'action continue.
+function bloque(raison, reprendre) {
+  if (!verrouActif()) {
+    prolongerAdulte();
+    return false;
+  }
+  demanderCode(raison).then((ok) => { if (ok) reprendre(); });
+  return true;
+}
+
+function verrouiller() {
+  etat.adulteJusqua = 0;
+  journaliser('Configuration verrouillée');
+  rendre(true);
+}
+
+function majVerrou() {
+  const ouvert = Boolean(etat.verrou) && adulte();
+  for (const b of document.querySelectorAll('[data-action="verrouiller"]')) b.hidden = !ouvert;
+  $('[data-action="deverrouiller"]').hidden = !etat.verrou || ouvert;
+  $('#profil').disabled = verrouActif();
+  $('#profil').title = verrouActif() ? 'Verrouillé : mode adulte nécessaire' : '';
+  $('#verrou-etat').textContent = etat.verrou
+    ? `Verrou actif${ouvert ? ' (mode adulte ouvert)' : ''}.` : 'Pas de verrou : tout le monde peut tout modifier.';
+  $('#verrou-definir').textContent = etat.verrou ? 'Changer le code…' : 'Choisir un code…';
+  $('#verrou-retirer').hidden = !etat.verrou;
+}
+
+function ouvrirReglageVerrou() {
+  if (bloque('Changer le code', ouvrirReglageVerrou)) return;
+  $('#verrou-nouveau').value = '';
+  $('#verrou-confirmation').value = '';
+  $('#verrou-reglage-erreur').hidden = true;
+  $('#verrou-reglage').showModal();
+}
+
+let verrouEnCours = Promise.resolve();
+async function enregistrerVerrou(code) {
+  const sel = crypto.randomUUID();
+  const valeur = code ? { sel, empreinte: await empreinte(code, sel) } : null;
+  await stockage.enregistrerReglage('verrou', valeur);
+  etat.verrou = valeur;
+  // Celui qui vient de choisir le code garde la main quelques minutes.
+  etat.adulteJusqua = valeur ? Date.now() + DUREE_ADULTE : 0;
+  planifierSauvegarde();
+  journaliser(valeur ? 'Verrou : code enregistré' : 'Verrou retiré');
+  rendre(true);
+}
+$('#verrou-reglage form').addEventListener('submit', (e) => {
+  if (e.submitter?.value !== 'ok') return;
+  const code = $('#verrou-nouveau').value;
+  const erreur = (texte) => {
+    e.preventDefault();
+    $('#verrou-reglage-erreur').textContent = texte;
+    $('#verrou-reglage-erreur').hidden = false;
+  };
+  if (!/^\d{4}$/.test(code)) return erreur('Le code doit avoir quatre chiffres.');
+  if (code !== $('#verrou-confirmation').value) return erreur('Les deux codes sont différents.');
+  verrouEnCours = enregistrerVerrou(code);
+});
+
+async function retirerVerrou() {
+  if (bloque('Retirer le verrou', retirerVerrou)) return;
+  if (!confirm('Retirer le verrou ? Tout le monde pourra modifier la configuration.')) return;
+  verrouEnCours = enregistrerVerrou(null);
+  await verrouEnCours;
+}
+
 // --- Cycle de semaines (comme MyDevoirs : libellés et semaine en cours) ---
 
 const lireLibelles = () => [...new Set($('#cycle-libelles').value.split(/[,;]/).map((x) => x.trim()).filter(Boolean))];
 
 function ouvrirCycle() {
+  if (bloque('Modifier les semaines alternées', ouvrirCycle)) return;
   const n = maintenant();
   const { actif, libelles } = edt.cycleActuel();
   $('#cycle-actif').checked = actif;
@@ -727,6 +846,7 @@ $('#edt-cycle').addEventListener('change', (e) => { if (e.target.id === 'cycle-a
 let serieEditee = null;
 
 function ouvrirSerie(id = null, jour = 1) {
+  if (bloque('Modifier l’emploi du temps', () => ouvrirSerie(id, jour))) return;
   const x = id ? edt.series().find((s) => s.id === id) : null;
   serieEditee = x;
   const option = (c) => `<option value="${c.cle}">${c.picto} ${echapper(c.nom)}</option>`;
@@ -871,7 +991,9 @@ function htmlChoixCouleurs(nom, choisie) {
     <input type="radio" name="${nom}" value="${x}" ${x === choisie ? 'checked' : ''} aria-label="Couleur ${x}"><span></span></label>`).join('');
 }
 
+// Ajouter un événement reste libre ; modifier un événement existant est verrouillé.
 function ouvrirEvenement(id = null, date = null) {
+  if (id && bloque('Modifier un événement', () => ouvrirEvenement(id, date))) return;
   const x = id ? edt.evenements().find((e) => e.id === id) : null;
   evenementEdite = x;
   const n = maintenant();
@@ -984,6 +1106,7 @@ let categorieEditee = null;
 let natureEditee = 'ecole';
 
 function ouvrirCategorie(cle = null, nature = 'ecole') {
+  if (bloque('Modifier les matières et activités', () => ouvrirCategorie(cle, nature))) return;
   const c = cle ? edt.categorie(cle) : null;
   categorieEditee = c;
   natureEditee = c?.nature ?? nature;
@@ -1436,6 +1559,11 @@ function allerAuJour(jour) {
 
 function mettreAJour(s, n, profil) {
   majPointMenu();
+  if (etat.verrou && etat.adulteJusqua && !adulte()) {
+    etat.adulteJusqua = 0;
+    journaliser('Mode adulte refermé (10 minutes sans action)');
+  }
+  majVerrou();
   $('[data-champ="heure"]').textContent = edt.heureTexte(n);
   $('[data-champ="simulee"]').hidden = !horloge.simulee;
   // Date et semaine ne changent qu'une fois par jour : on ne réécrit que si besoin.
@@ -1831,6 +1959,12 @@ async function enregistrerSeance() {
 let seanceEnCours = Promise.resolve();
 $('#seance form').addEventListener('submit', (e) => {
   if (e.submitter?.value !== 'ok') return;
+  // Annuler ou déplacer une séance est verrouillé ; regarder ses devoirs ne l'est pas.
+  if (verrouActif()) {
+    e.preventDefault();
+    bloque('Annuler ou déplacer une séance', () => $('#seance form').requestSubmit($('#seance button[value="ok"]')));
+    return;
+  }
   const statut = document.querySelector('input[name="seance-statut"]:checked')?.value;
   if (statut === 'deplace' && $('#seance-fin').value <= $('#seance-debut').value) {
     e.preventDefault();
@@ -2002,6 +2136,7 @@ async function lancerTests() {
 
 function basculerOutils() {
   const panneau = $('#outils');
+  if (panneau.hidden && bloque('Ouvrir les réglages et outils', basculerOutils)) return;
   panneau.hidden = !panneau.hidden;
   for (const b of document.querySelectorAll('[data-action="outils"][aria-expanded]')) {
     b.setAttribute('aria-expanded', String(!panneau.hidden));
@@ -2050,6 +2185,10 @@ const actions = {
   'fermer-detail': () => $('#detail').close(),
   'serie-nouvelle': (bouton) => ouvrirSerie(null, Number(bouton.dataset.jour)),
   'cycle-modifier': () => ouvrirCycle(),
+  verrouiller,
+  deverrouiller: () => bloque('Mode adulte', () => {}),
+  'verrou-definir': ouvrirReglageVerrou,
+  'verrou-retirer': retirerVerrou,
   'serie-supprimer': supprimerSerieEditee,
   'categorie-nouvelle': (bouton) => ouvrirCategorie(null, bouton.dataset.nature),
   'categorie-supprimer': supprimerCategorieEditee,
@@ -2097,6 +2236,7 @@ const actions = {
 };
 
 document.addEventListener('click', (e) => {
+  prolongerAdulte();
   // Un choix dans le menu le referme (sauf la liste des profils).
   const menu = $('#menu');
   if (e.target.closest('#menu button') && menu.matches(':popover-open')) menu.hidePopover();
@@ -2412,6 +2552,29 @@ async function essaisInterface() {
   await cycleEnCours;
   journaliser(`Essai cycle : semaine ${lettreAvant} → ${lettreApres} (lundi 13 h 30 : ${svtOuPc}) → ${edt.lettreSemaine(maintenant())}`);
 
+  // Verrou : code 1234, puis on verrouille ; le cycle demande le code.
+  ouvrirReglageVerrou();
+  $('#verrou-nouveau').value = '1234';
+  $('#verrou-confirmation').value = '1234';
+  $('#verrou-reglage form').requestSubmit($('#verrou-reglage button[value="ok"]'));
+  await verrouEnCours;
+  verrouiller();
+  ouvrirCycle();
+  const codeDemande = $('#verrou').open && !$('#edt-cycle').open;
+  $('#verrou-code').value = '0000';
+  $('#verrou form').requestSubmit($('#verrou button[value="ok"]'));
+  await new Promise((r) => setTimeout(r, 100));
+  const mauvaisRefuse = !$('#verrou-erreur').hidden && !$('#edt-cycle').open;
+  $('#verrou-code').value = '1234';
+  $('#verrou form').requestSubmit($('#verrou button[value="ok"]'));
+  await new Promise((r) => setTimeout(r, 100));
+  const cycleOuvert = $('#edt-cycle').open;
+  $('#edt-cycle').close();
+  const evenementLibre = (() => { verrouiller(); ouvrirEvenement(null); const ok = $('#evenement').open; $('#evenement').close(); return ok; })();
+  etat.adulteJusqua = Date.now() + DUREE_ADULTE;
+  await enregistrerVerrou(null);
+  journaliser(`Essai verrou : code demandé ${codeDemande ? 'oui' : 'NON'} ; mauvais code ${mauvaisRefuse ? 'refusé' : 'accepté à tort'} ; bon code → cycle ${cycleOuvert ? 'ouvert' : 'NON ouvert'} ; ajout d’événement libre ${evenementLibre ? 'oui' : 'NON'} ; verrou retiré ${etat.verrou ? 'NON' : 'oui'}`);
+
   // Modification : on ouvre le devoir, on le modifie, on enregistre.
   afficherDetail(ajoute.id);
   actions['modifier-devoir']();
@@ -2547,6 +2710,7 @@ async function chargerEmploiDuTemps() {
   const donnees = await stockage.emploiDuTemps();
   edt.definirEmploiDuTemps(donnees);
   edt.definirExceptions(donnees.exceptions);
+  etat.verrou = donnees.reglages?.verrou ?? null;
   const cycle = donnees.reglages?.cycle;
   edt.definirCycle(cycle ? { ...cycle, reference: edt.dateDepuisIso(cycle.reference) } : undefined);
 }

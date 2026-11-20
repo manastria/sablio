@@ -29,6 +29,7 @@
       <button type="button" data-action="vue" data-vue="afaire">À faire</button>
     </nav>
     <div class="commandes">
+      <button type="button" class="adulte" data-action="verrouiller" hidden title="Mode adulte ouvert ; cliquer pour verrouiller">🔓 Mode adulte</button>
       <button type="button" class="discret" data-action="discret" aria-pressed="false">Mode discret</button>
       <button type="button" class="icone" data-action="plein-ecran" aria-label="Plein écran" title="Plein écran (F11)">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>
@@ -57,6 +58,8 @@
     </label>
     <button type="button" data-action="compact">Mode compact</button>
     <button type="button" data-action="outils" aria-expanded="false" aria-controls="outils">Réglages et outils</button>
+    <button type="button" data-action="deverrouiller" hidden>🔒 Mode adulte (code)</button>
+    <button type="button" data-action="verrouiller" hidden>🔒 Verrouiller maintenant</button>
   </div>
 
   <p class="alerte-globale" id="alerte" role="alert" hidden></p>
@@ -129,6 +132,34 @@
         <button value="annuler" formnovalidate>Annuler</button>
         <span class="espace"></span>
         <button type="button" data-action="serie-supprimer" id="serie-supprimer">Supprimer ce cours</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Code adulte : demandé avant une action verrouillée. -->
+  <dialog id="verrou" aria-labelledby="verrou-titre">
+    <form method="dialog" class="formulaire">
+      <h2 id="verrou-titre">Mode adulte</h2>
+      <p class="vide" id="verrou-raison"></p>
+      <label>Code <input id="verrou-code" type="password" inputmode="numeric" autocomplete="off" maxlength="4" pattern="[0-9]{4}" required></label>
+      <p class="erreur" id="verrou-erreur" hidden>Code incorrect.</p>
+      <div class="ligne boutons">
+        <button value="ok" class="mise-en-avant">Déverrouiller</button>
+        <button value="annuler" formnovalidate>Annuler</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="verrou-reglage" aria-labelledby="verrou-reglage-titre">
+    <form method="dialog" class="formulaire">
+      <h2 id="verrou-reglage-titre">Code adulte</h2>
+      <p class="vide">Quatre chiffres. Ils seront demandés pour modifier l’emploi du temps, les séances, les réglages et les données. L’élève garde ses devoirs, peut ajouter des événements et basculer le mode discret.</p>
+      <label>Nouveau code <input id="verrou-nouveau" type="password" inputmode="numeric" autocomplete="off" maxlength="4" pattern="[0-9]{4}" required></label>
+      <label>Confirmer le code <input id="verrou-confirmation" type="password" inputmode="numeric" autocomplete="off" maxlength="4" pattern="[0-9]{4}" required></label>
+      <p class="erreur" id="verrou-reglage-erreur" hidden></p>
+      <div class="ligne boutons">
+        <button value="ok" class="mise-en-avant">Enregistrer</button>
+        <button value="annuler" formnovalidate>Annuler</button>
       </div>
     </form>
   </dialog>
@@ -333,6 +364,13 @@
     <div class="outils-tete">
       <h2>Outils</h2>
       <button type="button" data-action="outils">Fermer</button>
+    </div>
+
+    <h3>Verrou de la configuration</h3>
+    <p class="vide" id="verrou-etat"></p>
+    <div class="ligne">
+      <button type="button" data-action="verrou-definir" id="verrou-definir">Choisir un code…</button>
+      <button type="button" data-action="verrou-retirer" id="verrou-retirer">Retirer le verrou</button>
     </div>
 
     <h3>Réglages du profil</h3>
