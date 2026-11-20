@@ -21,6 +21,10 @@ L'environnement de l'enfant varie beaucoup : âge, activités, présence d'un ad
 
 **Sauvegardes** : dans un dossier choisi (clé USB, dossier synchronisé), **un fichier par jour** (`sablio-AAAA-MM-JJ.sqlite`), réécrit dans la journée ; on garde les 10 derniers. Une mauvaise manipulation (base vidée ou abîmée) n'écrase donc que la sauvegarde du jour, et une base vide n'est jamais sauvegardée. On restaure une sauvegarde datée du dossier ou n'importe quel fichier. Tant qu'aucun dossier n'est choisi, le menu le propose (point rouge).
 
+**Réglages, À propos, Mise au point** : le menu ouvre « Réglages » (verrou, profil, données et sauvegarde ; verrouillé) et « À propos de Sablio » (version, liens, environnement technique, rapport à copier). Les outils de test (heure simulée, essais techniques, démonstration, perte de données simulée) sont dans « Mise au point », un lien discret en bas d'« À propos », verrouillé comme les réglages.
+
+**Démonstration** : à la création de la base, Sablio s'ouvre sur un exemple calé sur le jour même (devoirs sur les prochains cours, une séance annulée, une déplacée, un rendez-vous la semaine suivante). « Repartir de zéro » passe à l'usage réel ; « Réinitialiser la démonstration » (Mise au point) recalcule l'exemple pour aujourd'hui.
+
 **Fenêtres** (détail d'un devoir, saisie, séance…) : elles se ferment par un clic à côté, par Échap ou par leur bouton. Une fenêtre de saisie déjà modifiée demande d'abord « Abandonner les modifications ? ».
 
 **En-tête allégé** : l'heure et la date empilées, avec à côté un carré de semaine de la même hauteur (« sem. 48 » et la lettre du cycle), les onglets (Maintenant, Jour, Semaine, À faire), le bouton « Mode discret » (il doit rester à un clic) et deux icônes : plein écran et menu. Le reste est dans le **menu** : emploi du temps et agenda, profil, mode compact, réglages et outils, et les actions ponctuelles (installer l'application, activer les rappels, reprendre la sauvegarde). Un point rouge sur l'icône du menu signale seulement les actions importantes (rappels, sauvegarde) : Edge propose « Installer » dans tout onglet, même quand l'application est déjà installée.
@@ -100,7 +104,7 @@ L'ergothérapeute (ou un parent) prépare l'emploi du temps dans son propre Sabl
 
 ### Verrou de la configuration
 
-**Facultatif** (pas de verrou par défaut), activé dans « Réglages et outils » avec un **code à 4 chiffres**. On ne garde que son empreinte (SHA-256 salée), dans la base avec les réglages. Ce n'est pas une vraie sécurité (les données sont locales) : il évite les modifications par erreur ou par jeu.
+**Facultatif** (pas de verrou par défaut), activé dans « Réglages » avec un **code à 4 chiffres**. On ne garde que son empreinte (SHA-256 salée), dans la base avec les réglages. Ce n'est pas une vraie sécurité (les données sont locales) : il évite les modifications par erreur ou par jeu.
 
 | Libre pour l'élève | Demande le code |
 |---|---|

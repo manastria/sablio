@@ -57,7 +57,8 @@
       </select>
     </label>
     <button type="button" data-action="compact">Mode compact</button>
-    <button type="button" data-action="outils" aria-expanded="false" aria-controls="outils">Réglages et outils</button>
+    <button type="button" data-action="panneau" data-panneau="reglages" aria-expanded="false" aria-controls="reglages">Réglages</button>
+    <button type="button" data-action="panneau" data-panneau="apropos" aria-expanded="false" aria-controls="apropos">À propos de Sablio</button>
     <button type="button" data-action="deverrouiller" hidden>🔒 Mode adulte (code)</button>
     <button type="button" data-action="verrouiller" hidden>🔒 Verrouiller maintenant</button>
   </div>
@@ -426,10 +427,10 @@
 
   <button type="button" class="sortir-compact" data-action="compact" title="Revenir à la fenêtre normale">Agrandir</button>
 
-  <aside id="outils" class="outils" hidden aria-label="Outils du prototype">
+  <aside id="reglages" class="outils" hidden aria-label="Réglages">
     <div class="outils-tete">
-      <h2>Outils</h2>
-      <button type="button" data-action="outils">Fermer</button>
+      <h2>Réglages</h2>
+      <button type="button" data-action="panneau" data-panneau="reglages">Fermer</button>
     </div>
 
     <h3>Verrou de la configuration</h3>
@@ -461,6 +462,55 @@
       </label>
     </div>
 
+    <h3>Données</h3>
+    <dl class="environnement" id="donnees"></dl>
+    <div class="ligne">
+      <button type="button" data-action="choisir-sauvegarde">Choisir le dossier de sauvegarde…</button>
+      <button type="button" data-action="sauvegarder">Sauvegarder maintenant</button>
+    </div>
+    <div class="ligne">
+      <label>Sauvegardes du dossier <select id="sauvegardes-liste"></select></label>
+      <button type="button" data-action="restaurer-datee">Restaurer celle-ci</button>
+    </div>
+    <div class="ligne">
+      <button type="button" data-action="restaurer">Restaurer depuis un autre fichier…</button>
+    </div>
+    <div class="ligne">
+      <button type="button" data-action="repartir-zero">Repartir de zéro (usage réel)…</button>
+    </div>
+  </aside>
+
+  <aside id="apropos" class="outils" hidden aria-label="À propos de Sablio">
+    <div class="outils-tete">
+      <h2>À propos de Sablio</h2>
+      <button type="button" data-action="panneau" data-panneau="apropos">Fermer</button>
+    </div>
+
+    <div class="apropos-tete">
+      <img src="icones/icone-192.png" alt="" width="56" height="56">
+      <p><strong>Sablio</strong> <span id="apropos-version"></span><br>
+        <span class="vide">Se repérer dans sa journée, ses cours et ses devoirs.</span></p>
+    </div>
+    <p>Version de mise au point (prototype). Les données restent dans ce navigateur : choisissez un dossier de sauvegarde dans les réglages.</p>
+    <ul class="apropos-liens">
+      <li><a href="https://sablio.manastria.fr/" target="_blank" rel="noopener">sablio.manastria.fr</a></li>
+      <li><a href="secours.html" target="_blank" rel="noopener">Code adulte oublié</a></li>
+    </ul>
+
+    <h3>Environnement</h3>
+    <dl class="environnement" id="environnement"></dl>
+    <button type="button" data-action="copier-rapport">Copier le rapport</button>
+    <p class="apropos-debug"><button type="button" class="lien" data-action="panneau" data-panneau="debug">Mise au point…</button></p>
+  </aside>
+
+  <aside id="debug" class="outils" hidden aria-label="Mise au point">
+    <div class="outils-tete">
+      <h2>Mise au point</h2>
+      <button type="button" data-action="panneau" data-panneau="debug">Fermer</button>
+    </div>
+
+    <p class="vide">Pour tester Sablio : heure simulée, essais techniques, données de démonstration.</p>
+
     <h3>Heure simulée</h3>
     <div class="ligne">
       <input type="datetime-local" id="heure-simulee">
@@ -483,23 +533,10 @@
       <button type="button" data-action="heure-reelle">Heure réelle</button>
     </div>
 
-    <h3>Données</h3>
-    <dl class="environnement" id="donnees"></dl>
+    <h3>Données de test</h3>
     <div class="ligne">
-      <button type="button" data-action="choisir-sauvegarde">Choisir le dossier de sauvegarde…</button>
-      <button type="button" data-action="sauvegarder">Sauvegarder maintenant</button>
-    </div>
-    <div class="ligne">
-      <label>Sauvegardes du dossier <select id="sauvegardes-liste"></select></label>
-      <button type="button" data-action="restaurer-datee">Restaurer celle-ci</button>
-    </div>
-    <div class="ligne">
-      <button type="button" data-action="restaurer">Restaurer depuis un autre fichier…</button>
-      <button type="button" data-action="perte">Simuler une perte de données</button>
-    </div>
-    <div class="ligne">
-      <button type="button" data-action="repartir-zero">Repartir de zéro (usage réel)…</button>
       <button type="button" data-action="reinitialiser">Réinitialiser la démonstration</button>
+      <button type="button" data-action="perte">Simuler une perte de données</button>
     </div>
 
     <h3>Essais</h3>
@@ -513,10 +550,6 @@
       <button type="button" data-action="test-sqlite-dossier">SQLite (autre dossier…)</button>
     </div>
     <ol class="journal" id="journal"></ol>
-
-    <h3>Environnement</h3>
-    <dl class="environnement" id="environnement"></dl>
-    <button type="button" data-action="copier-rapport">Copier le rapport</button>
   </aside>
 </body>
 </html>

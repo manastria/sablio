@@ -13,14 +13,14 @@ Documents :
 - [docs/modele-recurrence.md](docs/modele-recurrence.md) : cours répétés, exceptions ;
 - [docs/notice-professionnel.md](docs/notice-professionnel.md) : préparer l'emploi du temps d'un élève (ergothérapeute, enseignant).
 
-Emploi du temps de démonstration, modifiable : une semaine type de collégien avec semaines A/B, un créneau « DS » sans matière fixe (mercredi matin) et quatre activités personnelles (football, psychologue, orthophonie, piano). Pour un usage réel : Menu → Réglages et outils → « Repartir de zéro ».
+Emploi du temps de démonstration, modifiable : une semaine type de collégien avec semaines A/B, un créneau « DS » sans matière fixe (mercredi matin) et quatre activités personnelles (football, psychologue, orthophonie, piano). Pour un usage réel : Menu → Réglages → « Repartir de zéro ».
 
 ## Lancer
 
 ```sh
 npm install
 npm start            # fenêtre normale
-npm run captures     # 39 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
+npm run captures     # 41 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
 ```
 
 ## Tests
@@ -43,7 +43,8 @@ Dans la fenêtre :
 - Dans le **menu** (☰) :
   - **Profil** : Primaire, Collège, Supérieur (taille, vocabulaire, nombre de devoirs affichés) ;
   - **Mode compact** : petite fenêtre au premier plan, dans le coin de l'écran ;
-  - **Réglages et outils** : réglages du profil, heure simulée (avance rapide, vitesse × 60), données et sauvegarde, essais (notification, son, SQLite, fluidité), relevé de l'environnement, copie du rapport.
+  - **Réglages** : verrou, réglages du profil, données et sauvegarde ;
+  - **À propos de Sablio** : version, liens, environnement technique, « Copier le rapport » (à joindre pour signaler un problème). En bas, le lien discret **Mise au point…** ouvre les outils de test : heure simulée (avance rapide, vitesse × 60), réinitialisation de la démonstration, perte de données simulée, essais (notification, son, SQLite, fluidité) et journal.
 
 Un rappel (notification + carillon) part 5 minutes avant chaque cours.
 
@@ -61,7 +62,7 @@ Un rappel (notification + carillon) part 5 minutes avant chaque cours.
 
 **Pour l'ergothérapeute** : dans l'écran Emploi du temps, **Exporter l'emploi du temps** produit un fichier JSON (matières, activités, cours, événements, vacances, semaines alternées) ; **Importer un emploi du temps…** le reprend sur l'ordinateur de la famille, en remplacement ou en ajout, sans doublon. Le prénom de l'élève figure dans le titre et le nom du fichier ; **Nouvel emploi du temps (vide)** prépare l'élève suivant. Notice : `docs/notice-professionnel.md`.
 
-**Verrou** (facultatif) : dans **Réglages et outils → Verrou de la configuration**, un code à 4 chiffres protège l'emploi du temps, les séances, les réglages et les données. L'élève garde ses devoirs, peut ajouter des événements et basculer le mode discret. Le code ouvre le mode adulte pour 10 minutes. Code oublié : la fenêtre du code donne un code de demande ; la page `secours.html` (servie avec l'application, à publier sur sablio.manastria.fr/secours) en déduit un code de secours valable le jour même.
+**Verrou** (facultatif) : dans **Réglages → Verrou de la configuration**, un code à 4 chiffres protège l'emploi du temps, les séances, les réglages et les données. L'élève garde ses devoirs, peut ajouter des événements et basculer le mode discret. Le code ouvre le mode adulte pour 10 minutes. Code oublié : la fenêtre du code donne un code de demande ; la page `secours.html` (servie avec l'application, à publier sur sablio.manastria.fr/secours) en déduit un code de secours valable le jour même.
 
 **Vacances** : dans l'écran Emploi du temps, section « Vacances et jours sans cours », choisir la zone (dates officielles 2026-2028 incluses), les jours fériés, et ajouter des périodes (stage, examens). Ces jours-là, les cours disparaissent ; les activités continuent, sauf celles qui « s'arrêtent pendant les vacances ».
 
@@ -81,11 +82,11 @@ Ce que la démonstration montre :
 
 L'en-tête ne garde que l'essentiel : onglets, **Mode discret**, plein écran et **menu** (☰). Le menu contient l'emploi du temps et l'agenda, le profil, le mode compact, les réglages et outils, et les actions ponctuelles (installer, activer les rappels, reprendre la sauvegarde). Un point rouge sur l'icône signale les rappels à activer ou la sauvegarde à reprendre.
 
-Dans **Menu → Réglages et outils → Réglages du profil** : mode discret manuel, automatique (pendant les cours, par défaut) ou toujours actif (une désactivation dure 30 minutes, ou jusqu'à la réouverture) ; champ « à faire le » proposé ou non ; sac préparé la veille au soir (par défaut) ou le matin même.
+Dans **Menu → Réglages → Réglages du profil** : mode discret manuel, automatique (pendant les cours, par défaut) ou toujours actif (une désactivation dure 30 minutes, ou jusqu'à la réouverture) ; champ « à faire le » proposé ou non ; sac préparé la veille au soir (par défaut) ou le matin même.
 
-**Menu → Réglages et outils → Repartir de zéro (usage réel)** efface tout (devoirs, cours, activités, événements, vacances, réglages, code du verrou) et ne garde que la liste des matières ; la démonstration ne revient plus ensuite, même après un rechargement. Les sauvegardes des jours précédents restent dans le dossier.
+**Menu → Réglages → Repartir de zéro (usage réel)** efface tout (devoirs, cours, activités, événements, vacances, réglages, code du verrou) et ne garde que la liste des matières ; la démonstration ne revient plus ensuite, même après un rechargement. Les sauvegardes des jours précédents restent dans le dossier.
 
-**Menu → Réglages et outils → Réinitialiser la démonstration** remplace les devoirs par ceux de la démonstration, calculés à partir d'aujourd'hui. C'est utile avec une base créée par une version précédente du prototype : ses devoirs sont conservés, mais rattachés à une date et non à un cours.
+**Menu → À propos de Sablio → Mise au point… → Réinitialiser la démonstration** remplace les devoirs par ceux de la démonstration, recalculés à partir d'aujourd'hui (la démonstration est calée sur le jour où la base est créée ; au fil des semaines, ses devoirs passent « en retard »). C'est utile avec une base créée par une version précédente du prototype : ses devoirs sont conservés, mais rattachés à une date et non à un cours.
 
 ## Version navigateur, installable (PWA)
 
@@ -107,7 +108,7 @@ Depuis WSL, le serveur est joignable par Edge sous Windows à l'adresse `http://
 
 Les devoirs sont dans une base SQLite (WebAssembly) enregistrée dans le stockage privé du navigateur (OPFS), dans Electron comme dans Edge. Le schéma est en version 3 (`PRAGMA user_version`) : une base plus ancienne est migrée à l'ouverture, et une base plus récente que le prototype est refusée. `npm install` copie SQLite dans `src/vendor/sqlite/` (fichiers non versionnés) : il faut l'avoir lancé avant de servir `src/`.
 
-Dans **Menu → Réglages et outils → Données** :
+Dans **Menu → Réglages → Données** :
 
 - **Choisir le dossier de sauvegarde** : ensuite, chaque modification est sauvegardée au bout de 2 secondes, dans un fichier par jour (`sablio-2026-11-20.sqlite`) ; les 10 derniers jours sont gardés. Une mauvaise manipulation n'écrase que la sauvegarde du jour, et une base vide n'est jamais sauvegardée. Tant qu'aucun dossier n'est choisi, le menu le propose avec un point rouge ;
 - **Restaurer celle-ci** : remplace les données par une des sauvegardes datées du dossier ; **Restaurer depuis un autre fichier** : depuis n'importe quel fichier (un fichier invalide est refusé) ;

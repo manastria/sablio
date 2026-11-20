@@ -905,6 +905,14 @@ dialog.large { width: min(42rem, calc(100vw - 2rem)); }
 }
 .outils[hidden] { display: none; }
 .outils-tete { display: flex; justify-content: space-between; align-items: center; }
+.apropos-tete { display: flex; align-items: center; gap: 0.8rem; margin-top: 1rem; }
+.apropos-tete img { border-radius: 12px; }
+.apropos-tete p { margin: 0; }
+.apropos-liens { padding-left: 1.2rem; }
+.apropos-liens a { color: var(--accent); }
+/* Lien discret vers la mise au point, en bas de « À propos ». */
+.apropos-debug { margin-top: 2rem; text-align: right; }
+.apropos-debug .lien { font-size: 0.85em; font-weight: 400; color: var(--texte-doux); }
 .outils h2 { margin: 0; }
 .outils h3 { margin: 1.4rem 0 0.5rem; font-size: 1em; }
 .ligne { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }

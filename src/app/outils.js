@@ -1,6 +1,7 @@
-// Panneau « Réglages et outils » : profil, environnement, rapport, essais
-// techniques (stockage, notification, son, fluidité).
+// Panneaux Réglages, À propos (version, environnement, rapport) et Mise au
+// point (heure simulée, essais techniques : stockage, notification, son, fluidité).
 
+import { DATE_VERSION, VERSION } from '../version.js';
 import { $, PROFILS, ecrirePreference, etat, journaliser, maintenant, remplirListe } from './commun.js';
 import { affichage, discret } from './discret.js';
 import { afficherDonnees, majListeSauvegardes, rechargerTout, stockage } from './donnees.js';
@@ -84,7 +85,7 @@ export async function afficherEnvironnement() {
 export async function rapport() {
   const lignes = await lignesEnvironnement();
   return [
-    'Sablio – rapport du prototype',
+    `Sablio ${VERSION} – rapport`,
     `Date : ${new Date().toLocaleString('fr-FR')}`,
     '',
     ...lignes.map(([cle, valeur]) => `${cle} : ${valeur}`),
@@ -126,24 +127,40 @@ export async function lancerTests() {
   return etat.journal;
 }
 
-export function basculerOutils() {
-  const panneau = $('#outils');
-  if (panneau.hidden && bloque('Ouvrir les réglages et outils', basculerOutils)) return;
-  panneau.hidden = !panneau.hidden;
-  for (const b of document.querySelectorAll('[data-action="outils"][aria-expanded]')) {
-    b.setAttribute('aria-expanded', String(!panneau.hidden));
+// Trois panneaux latéraux : Réglages (verrouillé), À propos (libre) et
+// Mise au point (verrouillé, accessible depuis « À propos »). Un seul ouvert.
+const PANNEAUX = {
+  reglages: 'Ouvrir les réglages',
+  apropos: null,
+  debug: 'Ouvrir la mise au point',
+};
+
+export function basculerPanneau(nom) {
+  const panneau = $(`#${nom}`);
+  const ouvrir = panneau.hidden;
+  if (ouvrir && PANNEAUX[nom] && bloque(PANNEAUX[nom], () => basculerPanneau(nom))) return;
+  for (const autre of Object.keys(PANNEAUX)) $(`#${autre}`).hidden = autre === nom ? !ouvrir : true;
+  for (const b of document.querySelectorAll('[data-action="panneau"][aria-expanded]')) {
+    b.setAttribute('aria-expanded', String(b.dataset.panneau === nom && ouvrir));
   }
-  if (!panneau.hidden) {
-    const n = maintenant();
-    const p = (x) => String(x).padStart(2, '0');
-    $('#heure-simulee').value = `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}T${p(n.getHours())}:${p(n.getMinutes())}`;
+  if (!ouvrir) return;
+  if (nom === 'reglages') {
     $('#discret-mode').value = etat.reglages.discret;
     $('#reglage-afaire').checked = etat.reglages.aFaireLe;
     $('#reglage-sac').value = etat.reglages.sac;
-    afficherEnvironnement();
     majListeSauvegardes().then(afficherDonnees);
+  } else if (nom === 'apropos') {
+    $('#apropos-version').textContent = `version ${VERSION} (${new Date(DATE_VERSION).toLocaleDateString('fr-FR')})`;
+    afficherEnvironnement();
+  } else {
+    const n = maintenant();
+    const p = (x) => String(x).padStart(2, '0');
+    $('#heure-simulee').value = `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}T${p(n.getHours())}:${p(n.getMinutes())}`;
   }
 }
+
+// Ancien nom de l'action (« outils ») : ouvre les réglages.
+export const basculerOutils = () => basculerPanneau('reglages');
 
 export function changerProfil(profil) {
   if (!PROFILS[profil]) return;

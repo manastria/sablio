@@ -10,7 +10,7 @@ import { exporterEmploiDuTemps, importerEmploiDuTemps, nommerEleve, viderEmploiD
 import { majChampsSerie, ouvrirCategorie, ouvrirCycle, ouvrirSerie, supprimerCategorieEditee, supprimerSerieEditee } from './emploi-du-temps.js';
 import { allerAuJour, ligneSeance } from './jour.js';
 import { ouvrirPeriode, ouvrirVacances, supprimerPeriodeEditee } from './jours-sans-cours.js';
-import { basculerOutils, changerProfil, mesurerFluidite, rapport, resumeSqlite } from './outils.js';
+import { basculerOutils, basculerPanneau, changerProfil, mesurerFluidite, rapport, resumeSqlite } from './outils.js';
 import { activerRappels, api, dansElectron, installer, jouerCarillon } from './plateforme.js';
 import { reglerHorloge, rendre } from './rendu.js';
 import { cleSac, lireSac } from './sac.js';
@@ -22,6 +22,7 @@ export const actions = {
   'plein-ecran': () => api.basculerPleinEcran(),
   compact: () => api.basculerCompact?.(),
   outils: basculerOutils,
+  panneau: (bouton) => basculerPanneau(bouton.dataset.panneau),
   installer: installer,
   'activer-rappels': activerRappels,
   discret: basculerDiscret,

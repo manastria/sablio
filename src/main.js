@@ -323,6 +323,12 @@ async function faireCaptures(dossier) {
   await page.executeJavaScript(`document.querySelector('#menu').showPopover()`);
   await capturer('33-menu');
   await page.executeJavaScript(`document.querySelector('#menu').hidePopover()`);
+  // Panneaux « À propos » et « Mise au point ».
+  await page.executeJavaScript(`document.querySelector('[data-panneau="apropos"]').click()`);
+  await capturer('40-a-propos');
+  await page.executeJavaScript(`document.querySelector('#apropos [data-panneau="debug"]').click()`);
+  await capturer('41-mise-au-point');
+  await page.executeJavaScript(`document.querySelector('#debug [data-panneau="debug"]').click()`);
   // Vacances de Noël en zone B.
   await proto('zoneVacances("B")');
   await proto('scenario("2026-12-22T10:00", "college")');
