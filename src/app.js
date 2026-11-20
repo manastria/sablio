@@ -1015,10 +1015,9 @@ function ouvrirAjout(devoir = null, occurrence = null) {
   etat.edition = devoir?.id ?? null;
   const n = maintenant();
   const matiere = $('#ajout-matiere');
-  if (!matiere.options.length) {
-    matiere.innerHTML = Object.values(edt.MATIERES)
-      .map((m) => `<option value="${m.cle}">${m.picto} ${echapper(m.nom)}</option>`).join('');
-  }
+  // Reconstruite à chaque fois : les matières peuvent avoir changé.
+  matiere.innerHTML = edt.matieres()
+    .map((m) => `<option value="${m.cle}">${m.picto} ${echapper(m.nom)}</option>`).join('');
   // Matière par défaut : celle du cours en cours ou qui vient de finir,
   // puisqu'on note le travail à la fin du cours.
   const s = edt.situation(n, edt.estEcole);
@@ -1341,7 +1340,7 @@ async function verifierStockage() {
     } catch (e) {
       refus = `refusé (${e.message})`;
     }
-    await chargerDevoirs();
+    await rechargerTout();
     return `${avant} devoirs, export ${taille} octets, après perte ${apresPerte}, après import ${nombre} ; faux fichier ${refus}`;
   } catch (e) {
     return `échec : ${e.message}`;
@@ -1693,16 +1692,30 @@ const sauvegardeEtat = { fichier: null, autorisation: '', derniere: null, minute
 // retenu pour que les deux restent cohérents d'une ouverture à l'autre.
 const CLE_REFERENCE = 'sablio-demo-reference';
 
+// Démonstration complète : emploi du temps, exceptions et devoirs.
 function preparerDemo(reference) {
   // Devoirs et exceptions sont calculés sur l'emploi du temps sans exception :
   // un devoir de démonstration peut ainsi tomber sur le cours qui sera annulé.
+  edt.definirEmploiDuTemps({ categories: edt.DEMO_CATEGORIES, series: edt.DEMO_SERIES });
   edt.definirExceptions([]);
   const exceptions = edt.exceptionsDemo(reference);
   const devoirs = edt.devoirsDemo(reference).map((d) => ({
     id: crypto.randomUUID(), ...d, texte: d.contenu ? texteBrut(d.contenu) : d.texte,
   }));
   edt.definirExceptions(exceptions);
-  return devoirs;
+  return { devoirs, categories: edt.DEMO_CATEGORIES, series: edt.DEMO_SERIES, exceptions };
+}
+
+// L'emploi du temps enregistré (matières, activités, séries, exceptions).
+async function chargerEmploiDuTemps() {
+  const donnees = await stockage.emploiDuTemps();
+  edt.definirEmploiDuTemps(donnees);
+  edt.definirExceptions(donnees.exceptions);
+}
+
+async function rechargerTout() {
+  await chargerEmploiDuTemps();
+  await chargerDevoirs();
 }
 
 async function chargerDevoirs() {
@@ -1717,7 +1730,7 @@ async function chargerDevoirs() {
       dateOrigine: l.dateOrigine ?? null,
       aFaireLe: l.aFaireLe ? edt.dateDepuisIso(l.aFaireLe) : null,
       contenu: l.contenu ?? null,
-      matiere: edt.MATIERES[l.matiere] ?? { cle: l.matiere, nom: l.matiere, court: '?', picto: '❔', couleur: GRIS },
+      matiere: edt.categorie(l.matiere) ?? { cle: l.matiere, nom: l.matiere, court: '?', picto: '❔', couleur: GRIS },
     };
     // Le devoir suit son cours ; sans cours retrouvé, il garde sa date.
     d.seance = d.serie ? edt.trouverOccurrence(d.serie, d.dateOrigine) : null;
@@ -1793,7 +1806,7 @@ const actionsDonnees = {
       const { nom, octets } = await sauvegarde.lireFichierChoisi();
       if (!confirm(`Remplacer les données actuelles par celles de « ${nom} » ?`)) return;
       const { nombre } = await stockage.importer(octets);
-      await chargerDevoirs();
+      await rechargerTout();
       sauvegardeEtat.suspendue = false;
       journaliser(`Restauration : ${nombre} devoirs repris de ${nom}`);
     } catch (e) {
@@ -1807,20 +1820,20 @@ const actionsDonnees = {
     clearTimeout(sauvegardeEtat.minuterie);
     sauvegardeEtat.suspendue = true;
     await stockage.effacer();
-    await chargerDevoirs();
+    await rechargerTout();
     journaliser('Perte simulée : la base est vide, la sauvegarde automatique est suspendue');
     afficherDonnees();
   },
   reinitialiser: async () => {
-    if (!confirm('Remplacer tous les devoirs par ceux de la démonstration, recalculés à partir d’aujourd’hui ?')) return;
+    if (!confirm('Remplacer tous les devoirs et l’emploi du temps par ceux de la démonstration, recalculés à partir d’aujourd’hui ?')) return;
     try {
       const reference = edt.debutJour(maintenant());
       const graine = preparerDemo(reference);
       await stockage.reinitialiser(graine);
       ecrirePreference(CLE_REFERENCE, edt.isoLocal(reference));
-      await chargerDevoirs();
+      await rechargerTout();
       planifierSauvegarde();
-      journaliser(`Démonstration réinitialisée : ${graine.length} devoirs`);
+      journaliser(`Démonstration réinitialisée : ${graine.devoirs.length} devoirs, ${graine.series.length} séances par semaine`);
     } catch (e) {
       journaliser(`Réinitialisation : échec (${e.message})`);
     }
@@ -1871,7 +1884,7 @@ async function demarrerStockage() {
   if (info.creee && info.persistant) ecrirePreference(CLE_REFERENCE, edt.isoLocal(reference));
   journaliser(`Base : ${info.mode}${info.creee && info.persistant ? ', créée avec les devoirs de démonstration' : `, ${info.nombre} devoirs`}`);
   if (!info.persistant) alerter(`Attention : rien de ce que vous saisissez ne sera enregistré (${info.mode}).`);
-  await chargerDevoirs();
+  await rechargerTout();
   if (sauvegarde.disponible) {
     sauvegardeEtat.fichier = (await sauvegarde.fichierEnregistre()) ?? null;
     if (sauvegardeEtat.fichier) {

@@ -13,32 +13,32 @@ const JOUR = 86_400_000;
 export const REFERENCE_AB = new Date(2025, 11, 29);
 export const LIBELLES_AB = ['A', 'B'];
 
-// Matières (école) : la même couleur et le même pictogramme pour les cours
-// et pour les devoirs. `materiel` sert à « Préparer le sac ».
-export const MATIERES = {
-  fr: { nom: 'Français', court: 'Fr', picto: '📖', couleur: '#c8553d' },
-  ma: { nom: 'Mathématiques', court: 'Ma', picto: '📐', couleur: '#2f6fbf', materiel: 'calculatrice, équerre' },
-  hg: { nom: 'Histoire-géographie', court: 'HG', picto: '🌍', couleur: '#8a6d3b' },
-  an: { nom: 'Anglais', court: 'An', picto: '💬', couleur: '#7b4fa0' },
-  svt: { nom: 'SVT', court: 'SVT', picto: '🌱', couleur: '#3c8d40' },
-  pc: { nom: 'Physique-chimie', court: 'PC', picto: '🧪', couleur: '#0f7f81', materiel: 'blouse' },
-  eps: { nom: 'EPS', court: 'EPS', picto: '🏃', couleur: '#e0a100', materiel: 'tenue de sport' },
-  ap: { nom: 'Arts plastiques', court: 'AP', picto: '🎨', couleur: '#c2457a', materiel: 'pochette de dessin' },
-  mu: { nom: 'Musique', court: 'Mu', picto: '🎵', couleur: '#6d6aa8' },
-  te: { nom: 'Technologie', court: 'Te', picto: '⚙️', couleur: '#5f7380' },
-};
+// --- Emploi du temps ---
+// Fourni par l'application (base SQLite) avec definirEmploiDuTemps() ; à défaut,
+// celui de la démonstration. Une catégorie est une matière (école) ou une
+// activité personnelle ; une série est un cours ou une activité qui revient.
 
-// Activités personnelles : jamais de devoir, et une confidentialité
-// (visible, discret, masque) appliquée par le mode discret.
-export const ACTIVITES = {
-  sport: { nom: 'Football', court: 'Foot', picto: '⚽', couleur: '#2e7d32', confidentialite: 'visible' },
-  psy: { nom: 'Psychologue', court: 'Psy', picto: '💭', couleur: '#c62828', confidentialite: 'discret', garderCouleur: true },
-  ortho: { nom: 'Orthophonie', court: 'Ortho', picto: '🗣️', couleur: '#d9822b', confidentialite: 'discret', garderCouleur: false },
-  piano: { nom: 'Piano', court: 'Piano', picto: '🎹', couleur: '#3949ab', confidentialite: 'visible' },
-};
-
-for (const [cle, m] of Object.entries(MATIERES)) Object.assign(m, { cle, nature: 'ecole' });
-for (const [cle, a] of Object.entries(ACTIVITES)) Object.assign(a, { cle, nature: 'perso' });
+// Matières : la même couleur et le même pictogramme pour les cours et pour
+// les devoirs. `materiel` sert à « Préparer le sac ».
+// Activités personnelles : jamais de devoir, et une confidentialité (visible,
+// discret, masque) appliquée par le mode discret.
+const cat = (cle, nature, nom, court, picto, couleur, autres = {}) => ({ cle, nature, nom, court, picto, couleur, ...autres });
+export const DEMO_CATEGORIES = [
+  cat('fr', 'ecole', 'Français', 'Fr', '📖', '#c8553d'),
+  cat('ma', 'ecole', 'Mathématiques', 'Ma', '📐', '#2f6fbf', { materiel: 'calculatrice, équerre' }),
+  cat('hg', 'ecole', 'Histoire-géographie', 'HG', '🌍', '#8a6d3b'),
+  cat('an', 'ecole', 'Anglais', 'An', '💬', '#7b4fa0'),
+  cat('svt', 'ecole', 'SVT', 'SVT', '🌱', '#3c8d40'),
+  cat('pc', 'ecole', 'Physique-chimie', 'PC', '🧪', '#0f7f81', { materiel: 'blouse' }),
+  cat('eps', 'ecole', 'EPS', 'EPS', '🏃', '#e0a100', { materiel: 'tenue de sport' }),
+  cat('ap', 'ecole', 'Arts plastiques', 'AP', '🎨', '#c2457a', { materiel: 'pochette de dessin' }),
+  cat('mu', 'ecole', 'Musique', 'Mu', '🎵', '#6d6aa8'),
+  cat('te', 'ecole', 'Technologie', 'Te', '⚙️', '#5f7380'),
+  cat('sport', 'perso', 'Football', 'Foot', '⚽', '#2e7d32', { confidentialite: 'visible' }),
+  cat('psy', 'perso', 'Psychologue', 'Psy', '💭', '#c62828', { confidentialite: 'discret', garderCouleur: true }),
+  cat('ortho', 'perso', 'Orthophonie', 'Ortho', '🗣️', '#d9822b', { confidentialite: 'discret', garderCouleur: false }),
+  cat('piano', 'perso', 'Piano', 'Piano', '🎹', '#3949ab', { confidentialite: 'visible' }),
+].map((c, ordre) => ({ ...c, ordre }));
 
 // Semaine type d'un collégien. Clé : jour au sens de Date.getDay() (1 = lundi).
 // `cle` vide : créneau à matière variable (le DS du mercredi).
@@ -88,14 +88,45 @@ const SEMAINE_TYPE = {
   ],
 };
 
-// Identifiant stable d'une série : jour de la semaine, heure, matière.
-for (const [jour, liste] of Object.entries(SEMAINE_TYPE)) {
-  for (const s of liste) s.id = `s${jour}-${s.debut.replace(':', '')}-${s.cle || 'creneau'}`;
+// Identifiant d'une série de démonstration : jour, heure, matière. Les séries
+// créées ensuite ont un UUID.
+export const DEMO_SERIES = Object.entries(SEMAINE_TYPE).flatMap(([jour, liste]) => liste.map((x) => ({
+  id: `s${jour}-${x.debut.replace(':', '')}-${x.cle || 'creneau'}`,
+  jour: Number(jour),
+  cle: x.cle,
+  titre: x.titre ?? null,
+  picto: x.picto ?? null,
+  salle: x.salle,
+  debut: x.debut,
+  fin: x.fin,
+  semaine: x.semaine ?? null,
+  valideDu: null,
+  valideAu: null,
+})));
+
+let categories = new Map();
+let seriesParJour = new Map();
+let toutesLesSeries = [];
+
+export function definirEmploiDuTemps({ categories: listeCategories, series }) {
+  categories = new Map(listeCategories.map((x) => [x.cle, x]));
+  toutesLesSeries = series;
+  seriesParJour = new Map();
+  for (const x of series) {
+    if (!seriesParJour.has(x.jour)) seriesParJour.set(x.jour, []);
+    seriesParJour.get(x.jour).push(x);
+  }
 }
+definirEmploiDuTemps({ categories: DEMO_CATEGORIES, series: DEMO_SERIES });
 
 export function categorie(cle) {
-  return MATIERES[cle] ?? ACTIVITES[cle] ?? null;
+  return categories.get(cle) ?? null;
 }
+
+const parOrdre = (a, b) => (a.ordre ?? 0) - (b.ordre ?? 0) || a.nom.localeCompare(b.nom, 'fr');
+export const matieres = () => [...categories.values()].filter((x) => x.nature === 'ecole').sort(parOrdre);
+export const activites = () => [...categories.values()].filter((x) => x.nature === 'perso').sort(parOrdre);
+export const series = () => toutesLesSeries;
 
 // --- Dates ---
 
@@ -210,9 +241,11 @@ function occurrence(serie, jour) {
 
 function occurrencesDuMotif(jour) {
   const lettre = lettreSemaine(jour);
-  return (SEMAINE_TYPE[jour.getDay()] ?? [])
-    .filter((s) => !s.semaine || s.semaine === lettre)
-    .map((s) => occurrence(s, jour));
+  const date = isoLocal(jour);
+  return (seriesParJour.get(jour.getDay()) ?? [])
+    .filter((x) => (!x.semaine || x.semaine === lettre)
+      && (!x.valideDu || x.valideDu <= date) && (!x.valideAu || date <= x.valideAu))
+    .map((x) => occurrence(x, jour));
 }
 
 function appliquerException(o) {

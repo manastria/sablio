@@ -25,8 +25,14 @@ function client(worker) {
   });
 }
 
-function stockageMemoire(raison) {
+function stockageMemoire(raison, graine) {
   const devoirs = [];
+  const edt = { categories: graine?.categories ?? [], series: graine?.series ?? [], exceptions: graine?.exceptions ?? [] };
+  const remplacer = (liste, cle, x) => {
+    const i = liste.findIndex((y) => cle(y) === cle(x));
+    if (i >= 0) liste[i] = x; else liste.push(x);
+  };
+  const retirer = (liste, test) => { const i = liste.findIndex(test); if (i >= 0) liste.splice(i, 1); };
   const indisponible = async () => { throw new Error(`indisponible (${raison})`); };
   return {
     info: { mode: `mémoire seulement, rien n'est enregistré (${raison})`, persistant: false, nombre: devoirs.length },
@@ -37,6 +43,13 @@ function stockageMemoire(raison) {
     supprimer: async (id) => { const i = devoirs.findIndex((x) => x.id === id); if (i >= 0) devoirs.splice(i, 1); },
     rattacher: async (id, champs) => { Object.assign(devoirs.find((x) => x.id === id) ?? {}, champs); },
     reinitialiser: indisponible,
+    emploiDuTemps: async () => structuredClone(edt),
+    enregistrerCategorie: async (x) => remplacer(edt.categories, (y) => y.cle, x),
+    enregistrerSerie: async (x) => remplacer(edt.series, (y) => y.id, x),
+    enregistrerException: async (x) => remplacer(edt.exceptions, (y) => `${y.serie}@${y.dateOrigine}`, x),
+    supprimerCategorie: async (cle) => retirer(edt.categories, (y) => y.cle === cle),
+    supprimerSerie: async (id) => retirer(edt.series, (y) => y.id === id),
+    supprimerException: async (serie, dateOrigine) => retirer(edt.exceptions, (y) => y.serie === serie && y.dateOrigine === dateOrigine),
     exporter: indisponible,
     importer: indisponible,
     effacer: async () => { devoirs.length = 0; return { nombre: 0 }; },
@@ -48,7 +61,7 @@ export async function ouvrirStockage(graine) {
   try {
     worker = new Worker(new URL('./stockage-worker.js', import.meta.url), { type: 'module' });
   } catch (e) {
-    return stockageMemoire(e.message);
+    return stockageMemoire(e.message, graine);
   }
   const appeler = client(worker);
   try {
@@ -65,12 +78,19 @@ export async function ouvrirStockage(graine) {
       supprimer: (id) => appeler('supprimer', { id }),
       rattacher: (id, champs) => appeler('rattacher', { id, ...champs }),
       reinitialiser: (graine) => appeler('reinitialiser', { graine }),
+      emploiDuTemps: () => appeler('emploiDuTemps'),
+      enregistrerCategorie: (categorie) => appeler('enregistrerCategorie', { categorie }),
+      enregistrerSerie: (serie) => appeler('enregistrerSerie', { serie }),
+      enregistrerException: (exception) => appeler('enregistrerException', { exception }),
+      supprimerCategorie: (cle) => appeler('supprimerCategorie', { cle }),
+      supprimerSerie: (id) => appeler('supprimerSerie', { id }),
+      supprimerException: (serie, dateOrigine) => appeler('supprimerException', { serie, dateOrigine }),
       exporter: () => appeler('exporter'),
       importer: (octets) => appeler('importer', { octets }, [octets.buffer]),
       effacer: () => appeler('effacer'),
     };
   } catch (e) {
     worker.terminate();
-    return stockageMemoire(e.message);
+    return stockageMemoire(e.message, graine);
   }
 }

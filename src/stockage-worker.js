@@ -7,7 +7,7 @@
 import sqlite3InitModule from './vendor/sqlite/index.mjs';
 
 const NOM = '/mydevoirs.sqlite3';
-const VERSION = 3;
+const VERSION = 4;
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS devoir (
     id TEXT PRIMARY KEY,
@@ -32,9 +32,96 @@ const MIGRATIONS = {
   3: `
     ALTER TABLE devoir ADD COLUMN contenu TEXT;
   `,
+  // 4 : l'emploi du temps est enregistré (il était écrit dans le code).
+  4: `
+    CREATE TABLE categorie (
+      cle TEXT PRIMARY KEY,
+      nature TEXT NOT NULL,
+      nom TEXT NOT NULL,
+      court TEXT,
+      picto TEXT,
+      couleur TEXT NOT NULL,
+      materiel TEXT,
+      confidentialite TEXT,
+      garder_couleur INTEGER,
+      ordre INTEGER,
+      modifie_le INTEGER NOT NULL,
+      supprime INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE serie (
+      id TEXT PRIMARY KEY,
+      categorie TEXT,
+      titre TEXT,
+      picto TEXT,
+      salle TEXT,
+      jour INTEGER NOT NULL,
+      debut TEXT NOT NULL,
+      fin TEXT NOT NULL,
+      semaine TEXT,
+      valide_du TEXT,
+      valide_au TEXT,
+      modifie_le INTEGER NOT NULL,
+      supprime INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE exception (
+      serie TEXT NOT NULL,
+      date_origine TEXT NOT NULL,
+      statut TEXT NOT NULL,
+      motif TEXT,
+      nouvelle_date TEXT,
+      debut TEXT,
+      fin TEXT,
+      modifie_le INTEGER NOT NULL,
+      supprime INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (serie, date_origine)
+    );
+  `,
 };
 
+// --- Emploi du temps : écriture « insérer ou remplacer » (clé = identifiant) ---
+
+function ecrireCategorie(x) {
+  db.exec({
+    sql: `INSERT OR REPLACE INTO categorie (cle, nature, nom, court, picto, couleur, materiel, confidentialite,
+            garder_couleur, ordre, modifie_le, supprime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+    bind: [x.cle, x.nature, x.nom, x.court ?? null, x.picto ?? null, x.couleur, x.materiel ?? null,
+      x.confidentialite ?? null, x.garderCouleur ? 1 : 0, x.ordre ?? 0, Date.now()],
+  });
+}
+
+function ecrireSerie(x) {
+  db.exec({
+    sql: `INSERT OR REPLACE INTO serie (id, categorie, titre, picto, salle, jour, debut, fin, semaine,
+            valide_du, valide_au, modifie_le, supprime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+    bind: [x.id, x.cle || null, x.titre ?? null, x.picto ?? null, x.salle ?? null, x.jour, x.debut, x.fin,
+      x.semaine ?? null, x.valideDu ?? null, x.valideAu ?? null, Date.now()],
+  });
+}
+
+function ecrireException(x) {
+  db.exec({
+    sql: `INSERT OR REPLACE INTO exception (serie, date_origine, statut, motif, nouvelle_date, debut, fin,
+            modifie_le, supprime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+    bind: [x.serie, x.dateOrigine, x.statut, x.motif ?? null, x.nouvelleDate ?? null, x.debut ?? null, x.fin ?? null, Date.now()],
+  });
+}
+
+function completerEmploiDuTemps() {
+  if (graineMigration && !db.selectValue('SELECT count(*) FROM categorie')) insererEmploiDuTemps(graineMigration);
+}
+
+function insererEmploiDuTemps(graine) {
+  db.transaction(() => {
+    for (const x of graine.categories ?? []) ecrireCategorie(x);
+    for (const x of graine.series ?? []) ecrireSerie(x);
+    for (const x of graine.exceptions ?? []) ecrireException(x);
+  });
+}
+
 let sqlite3 = null;
+// Emploi du temps de démonstration, pour une base d'une version précédente
+// (ouverte ou restaurée) qui n'en a pas encore.
+let graineMigration = null;
 let pool = null;
 let db = null;
 let mode = '';
@@ -90,7 +177,14 @@ const operations = {
     const existait = pool ? pool.getFileNames().includes(NOM) : false;
     ouvrirBase();
     // Sans stockage, pas de démonstration : on ne montre pas des données qui seraient perdues.
-    if (pool && !existait && graine?.length) inserer(graine);
+    if (pool && !existait && graine) {
+      inserer(graine.devoirs ?? []);
+      insererEmploiDuTemps(graine);
+    }
+    // Base d'une version précédente : l'emploi du temps était écrit dans le
+    // code ; on reprend celui de la démonstration.
+    graineMigration = graine;
+    if (pool && existait) completerEmploiDuTemps();
     return { mode, persistant: Boolean(pool), sqlite: sqlite3.version.libVersion, creee: !existait, nombre: compter() };
   },
 
@@ -105,6 +199,44 @@ const operations = {
     db.exec({
       sql: 'UPDATE devoir SET fait = ?, modifie_le = ? WHERE id = ?',
       bind: [fait ? 1 : 0, Date.now(), id],
+    });
+    return true;
+  },
+
+  emploiDuTemps() {
+    const categories = db.selectObjects(
+      `SELECT cle, nature, nom, court, picto, couleur, materiel, confidentialite, garder_couleur AS garderCouleur, ordre
+       FROM categorie WHERE supprime = 0 ORDER BY ordre, nom`,
+    ).map((x) => ({ ...x, garderCouleur: Boolean(x.garderCouleur) }));
+    const series = db.selectObjects(
+      `SELECT id, coalesce(categorie, '') AS cle, titre, picto, salle, jour, debut, fin, semaine,
+              valide_du AS valideDu, valide_au AS valideAu
+       FROM serie WHERE supprime = 0 ORDER BY jour, debut`,
+    );
+    const exceptions = db.selectObjects(
+      `SELECT serie, date_origine AS dateOrigine, statut, motif, nouvelle_date AS nouvelleDate, debut, fin
+       FROM exception WHERE supprime = 0`,
+    );
+    return { categories, series, exceptions };
+  },
+
+  enregistrerCategorie({ categorie }) { ecrireCategorie(categorie); return true; },
+  enregistrerSerie({ serie }) { ecrireSerie(serie); return true; },
+  enregistrerException({ exception }) { ecrireException(exception); return true; },
+
+  // Suppressions douces : la ligne reste, marquée, pour la fusion entre appareils.
+  supprimerCategorie({ cle }) {
+    db.exec({ sql: 'UPDATE categorie SET supprime = 1, modifie_le = ? WHERE cle = ?', bind: [Date.now(), cle] });
+    return true;
+  },
+  supprimerSerie({ id }) {
+    db.exec({ sql: 'UPDATE serie SET supprime = 1, modifie_le = ? WHERE id = ?', bind: [Date.now(), id] });
+    return true;
+  },
+  supprimerException({ serie, dateOrigine }) {
+    db.exec({
+      sql: 'UPDATE exception SET supprime = 1, modifie_le = ? WHERE serie = ? AND date_origine = ?',
+      bind: [Date.now(), serie, dateOrigine],
     });
     return true;
   },
@@ -141,7 +273,8 @@ const operations = {
   // Démonstration : efface tout et remet les devoirs fournis.
   async reinitialiser({ graine }) {
     await operations.effacer();
-    inserer(graine);
+    inserer(graine.devoirs ?? []);
+    insererEmploiDuTemps(graine);
     return { nombre: compter() };
   },
 
@@ -162,6 +295,7 @@ const operations = {
       ouvrirBase();
       const verification = db.selectValue('PRAGMA integrity_check');
       if (verification !== 'ok') throw new Error(`fichier abîmé (${verification})`);
+      completerEmploiDuTemps();
       return { nombre: compter() };
     } catch (e) {
       try { db?.close(); } catch { /* déjà fermée */ }
