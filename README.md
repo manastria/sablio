@@ -85,7 +85,7 @@ Dans **Menu → Réglages et outils → Données** :
 - **Restaurer celle-ci** : remplace les données par une des sauvegardes datées du dossier ; **Restaurer depuis un autre fichier** : depuis n'importe quel fichier (un fichier invalide est refusé) ;
 - **Simuler une perte de données** : vide la base du navigateur, sans toucher au fichier. La sauvegarde automatique est alors suspendue, pour ne pas écraser le fichier avec une base vide.
 
-Si le navigateur demande de nouveau l'autorisation d'écrire dans le fichier, le bouton **Reprendre la sauvegarde** apparaît dans l'en-tête.
+Si le navigateur demande de nouveau l'autorisation d'écrire dans le dossier, **Reprendre la sauvegarde** apparaît dans le menu (point rouge sur l'icône).
 
 Une seule fenêtre à la fois peut ouvrir la base ; les autres affichent un avertissement.
 

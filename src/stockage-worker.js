@@ -7,7 +7,7 @@
 import sqlite3InitModule from './vendor/sqlite/index.mjs';
 
 const NOM = '/mydevoirs.sqlite3';
-const VERSION = 7;
+const VERSION = 8;
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS devoir (
     id TEXT PRIMARY KEY,
@@ -105,6 +105,10 @@ const MIGRATIONS = {
     );
     ALTER TABLE categorie ADD COLUMN pause_vacances INTEGER;
   `,
+  // 8 : qui a créé un événement (« eleve » : créé sous verrou, modifiable sans code).
+  8: `
+    ALTER TABLE serie ADD COLUMN auteur TEXT;
+  `,
 };
 
 // --- Emploi du temps : écriture « insérer ou remplacer » (clé = identifiant) ---
@@ -121,11 +125,11 @@ function ecrireCategorie(x) {
 function ecrireSerie(x) {
   db.exec({
     sql: `INSERT OR REPLACE INTO serie (id, categorie, titre, picto, salle, jour, debut, fin, semaine,
-            valide_du, valide_au, type, intervalle, couleur, confidentialite, modifie_le, supprime)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+            valide_du, valide_au, type, intervalle, couleur, confidentialite, auteur, modifie_le, supprime)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
     bind: [x.id, x.cle || null, x.titre ?? null, x.picto ?? null, x.salle ?? null, x.jour, x.debut, x.fin,
       x.semaine ?? null, x.valideDu ?? null, x.valideAu ?? null, x.type ?? null, x.intervalle ?? null,
-      x.couleur ?? null, x.confidentialite ?? null, Date.now()],
+      x.couleur ?? null, x.confidentialite ?? null, x.auteur ?? null, Date.now()],
   });
 }
 
@@ -250,7 +254,7 @@ const operations = {
     const periodes = db.selectObjects('SELECT id, nom, du, au FROM periode WHERE supprime = 0 ORDER BY du');
     const series = db.selectObjects(
       `SELECT id, coalesce(categorie, '') AS cle, titre, picto, salle, jour, debut, fin, semaine,
-              valide_du AS valideDu, valide_au AS valideAu, type, intervalle, couleur, confidentialite
+              valide_du AS valideDu, valide_au AS valideAu, type, intervalle, couleur, confidentialite, auteur
        FROM serie WHERE supprime = 0 ORDER BY jour, debut`,
     );
     const exceptions = db.selectObjects(

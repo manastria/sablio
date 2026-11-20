@@ -94,9 +94,11 @@ Repris de MyDevoirs : semaine suivante affichée le week-end, numéro et lettre 
 | Libre pour l'élève | Demande le code |
 |---|---|
 | Devoirs (ajouter, cocher, modifier) | Emploi du temps : cours, matières, activités, semaines alternées |
-| Ajouter un événement à l'agenda | Modifier ou supprimer un événement existant |
+| Ajouter un événement à l'agenda, et modifier ou supprimer les siens | Modifier ou supprimer un événement ajouté par l'adulte |
 | Basculer le mode discret | Annuler ou déplacer une séance |
 | Regarder une séance et ses devoirs | Profil, réglages et outils (données, sauvegarde, démonstration) |
+
+Un événement créé sous verrou, hors mode adulte, appartient à l'élève (colonne `auteur` = « eleve ») : il le modifie, le supprime, annule ou déplace une de ses dates sans code. L'agenda de l'écran Emploi du temps le signale (« ajouté par l'élève »).
 
 Le code ouvre le **mode adulte** pour 10 minutes, prolongées à chaque action ; un bouton « 🔓 Mode adulte » dans l'en-tête le referme tout de suite. Le menu propose « Mode adulte (code) » et « Verrouiller maintenant ».
 

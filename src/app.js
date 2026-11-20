@@ -1071,7 +1071,7 @@ function htmlAgenda(n) {
     const a = affichageCategorie(edt.categorie(x.cle) ?? { nature: 'perso', nom: x.titre, picto: x.picto, couleur: x.couleur, confidentialite: x.confidentialite, garderCouleur: true }, x);
     if (a.masque) return '';
     const dates = edt.datesEvenement(x);
-    const rythme = dates.length > 1 ? `, ${x.intervalle === 2 ? 'une semaine sur deux' : 'chaque semaine'}` : '';
+    const rythme = `${dates.length > 1 ? `, ${x.intervalle === 2 ? 'une semaine sur deux' : 'chaque semaine'}` : ''}${x.auteur === 'eleve' ? ' · ajouté par l’élève' : ''}`;
     const details = `${resumeDates(dates)}${rythme} · ${heureCourte(x.debut)} – ${heureCourte(x.fin)}`;
     return `<li><button type="button" class="ligne-edt" data-evenement="${x.id}" data-css="${couleurs(a)}" ${a.cache ? 'disabled title="Désactivez le mode discret pour modifier"' : ''}>
       ${pastille(a)}<span><strong>${echapper(a.nom)}</strong><span class="precision">${echapper(details)}</span></span></button></li>`;
@@ -1095,8 +1095,10 @@ function htmlChoixCouleurs(nom, choisie) {
 }
 
 // Ajouter un événement reste libre ; modifier un événement existant est verrouillé.
+// Un événement créé par l'élève (sous verrou) reste modifiable sans code.
 function ouvrirEvenement(id = null, date = null) {
-  if (id && bloque('Modifier un événement', () => ouvrirEvenement(id, date))) return;
+  const deLEleve = id && edt.evenements().find((e) => e.id === id)?.auteur === 'eleve';
+  if (id && !deLEleve && bloque('Modifier un événement', () => ouvrirEvenement(id, date))) return;
   const x = id ? edt.evenements().find((e) => e.id === id) : null;
   evenementEdite = x;
   const n = maintenant();
@@ -1149,6 +1151,8 @@ function serieDuFormulaire() {
     valideDu: date || null,
     valideAu: debut ? edt.isoLocal(edt.ajouterJours(debut, 7 * (rythme || 1) * (fois - 1))) : null,
     intervalle: rythme > 1 ? rythme : null,
+    // Créé sous verrou, hors mode adulte : il appartient à l'élève.
+    auteur: evenementEdite ? evenementEdite.auteur ?? null : etat.verrou && !adulte() ? 'eleve' : null,
   };
 }
 
@@ -2081,7 +2085,9 @@ let seanceEnCours = Promise.resolve();
 $('#seance form').addEventListener('submit', (e) => {
   if (e.submitter?.value !== 'ok') return;
   // Annuler ou déplacer une séance est verrouillé ; regarder ses devoirs ne l'est pas.
-  if (verrouActif()) {
+  // L'élève garde la main sur les dates de ses propres événements.
+  const serieSeance = edt.series().find((x) => x.id === seanceOuverte?.serie);
+  if (verrouActif() && serieSeance?.auteur !== 'eleve') {
     e.preventDefault();
     bloque('Annuler ou déplacer une séance', () => $('#seance form').requestSubmit($('#seance button[value="ok"]')));
     return;
@@ -2700,7 +2706,24 @@ async function essaisInterface() {
   const cycleOuvert = $('#edt-cycle').open;
   $('#edt-cycle').close();
   const evenementLibre = (() => { verrouiller(); ouvrirEvenement(null); const ok = $('#evenement').open; $('#evenement').close(); return ok; })();
+  // Un événement ajouté par l'élève (sous verrou) se modifie sans code ;
+  // celui de l'adulte (le dentiste de la démonstration) demande le code.
+  verrouiller();
+  ouvrirEvenement(null, edt.isoLocal(maintenant()));
+  $('#evt-titre').value = 'Anniversaire de Léa';
+  $('#evenement form').requestSubmit($('#evenement button[value="ok"]'));
+  await evenementEnCours;
+  const anniversaire = edt.evenements().find((x) => x.titre === 'Anniversaire de Léa');
+  ouvrirEvenement(anniversaire.id);
+  const sienLibre = $('#evenement').open && !$('#verrou').open;
+  $('#evenement').close();
+  ouvrirEvenement('e-dentiste');
+  const adulteProtege = $('#verrou').open && !$('#evenement').open;
+  $('#verrou').close();
   etat.adulteJusqua = Date.now() + DUREE_ADULTE;
+  await stockage.supprimerSerie(anniversaire.id);
+  await rechargerTout();
+  journaliser(`Essai événements de l’élève : auteur « ${anniversaire.auteur} » ; le sien ${sienLibre ? 'modifiable sans code' : 'BLOQUÉ'} ; celui de l’adulte ${adulteProtege ? 'demande le code' : 'NON protégé'}`);
   await enregistrerVerrou(null);
   journaliser(`Essai verrou : code demandé ${codeDemande ? 'oui' : 'NON'} ; mauvais code ${mauvaisRefuse ? 'refusé' : 'accepté à tort'} ; bon code → cycle ${cycleOuvert ? 'ouvert' : 'NON ouvert'} ; ajout d’événement libre ${evenementLibre ? 'oui' : 'NON'} ; verrou retiré ${etat.verrou ? 'NON' : 'oui'}`);
 
