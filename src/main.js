@@ -261,8 +261,15 @@ async function faireCaptures(dossier) {
   fenetre.setContentSize(1100, 720);
   await proto('scenario("2026-11-23T10:58", "college", "jour", "2026-11-23")');
   await proto('ouvrirAjout()');
+  await page.executeJavaScript(`document.querySelector('#ajout-texte').innerHTML =
+    '<p><strong>Exercices 4 et 5 p. 82</strong></p><ul><li>refaire le schéma</li><li>justifier chaque réponse</li></ul>'`);
   await capturer('16-saisie');
   await proto('fermerAjout()');
+  await proto('scenario("2026-11-23T19:00", "college", "jour", "2026-11-24")');
+  await capturer('18-jour-texte-long');
+  await proto('afficherDetail("Lire le chapitre 3")');
+  await capturer('19-detail');
+  await proto('fermerDetail()');
   await proto('essaisInterface()');
   await proto('scenario("2026-11-23T19:00", "college", "jour", "2026-11-27")');
   await capturer('17-apres-report');

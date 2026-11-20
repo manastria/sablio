@@ -59,6 +59,9 @@ button {
   cursor: pointer;
 }
 button:hover { background: var(--surface-2); }
+button:disabled { opacity: 0.45; cursor: default; }
+button:disabled:hover { background: var(--surface); }
+.espace { flex: 1; }
 button[hidden] { display: none; }
 button.mise-en-avant { background: var(--accent); border-color: var(--accent); color: var(--fond); font-weight: 600; }
 button.mise-en-avant:hover { filter: brightness(1.1); }
@@ -288,15 +291,36 @@ button.lien:hover { text-decoration: underline; }
 /* --- Devoirs --- */
 
 .liste-devoirs { list-style: none; margin: 0.4rem 0 0; padding: 0; }
-.devoir label {
+.devoir-ligne {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  border-bottom: 1px solid var(--bord);
+}
+.devoir:last-child .devoir-ligne { border-bottom: 0; }
+/* La case a sa propre zone de clic, assez grande. */
+.devoir .case { flex: none; display: grid; place-items: center; padding: 0.55rem 0.4rem; cursor: pointer; }
+.devoir-ouvrir {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  padding: 0.55rem 0.2rem;
-  border-bottom: 1px solid var(--bord);
-  cursor: pointer;
+  padding: 0.55rem 0.4rem;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  text-align: left;
 }
-.devoir:last-child label { border-bottom: 0; }
+.devoir-ouvrir:hover { background: var(--surface-2); }
+/* Aperçu : deux lignes au plus ; le texte complet s'affiche au clic. */
+.resume {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  white-space: pre-line;
+}
 .devoir input {
   flex: none;
   width: 1.4em;
@@ -338,8 +362,29 @@ button.lien:hover { text-decoration: underline; }
   align-items: start;
 }
 .jour-entete { grid-area: entete; display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem 0.75rem; }
-.jour-nav { display: flex; align-items: center; gap: 0.75rem; min-width: 0; }
-.jour-entete h2 { margin: 0; font-size: 1.5em; min-width: 0; }
+.jour-nav { display: flex; align-items: center; gap: 0.4rem; flex: none; }
+.jour-entete h2 { margin: 0; font-size: 1.5em; min-width: 0; flex: 1; }
+
+.bande-jours { flex: 1 1 100%; display: flex; gap: 0.35rem; }
+.puce-jour, .puce-semaine { padding: 0.3rem 0.2rem; border-radius: 10px; }
+.puce-semaine { flex: none; padding: 0.3rem 0.6rem; }
+.puce-jour { flex: 1; display: grid; justify-items: center; gap: 0.05rem; min-width: 0; line-height: 1.15; }
+.puce-jour .jour-nom { font-size: 0.8em; color: var(--texte-doux); text-transform: capitalize; }
+.puce-jour .jour-num { font-size: 1.15em; font-weight: 700; }
+.puce-jour .jour-nb {
+  min-width: 1.5em;
+  min-height: 1.3em;
+  border-radius: 999px;
+  font-size: 0.75em;
+  font-weight: 700;
+  background: var(--texte);
+  color: var(--surface);
+}
+.puce-jour .jour-nb:empty { background: none; }
+.puce-jour.libre { background: var(--surface-2); }
+.puce-jour.aujourdhui { border: 2px solid var(--accent); }
+.puce-jour.choisi { background: var(--accent); border-color: var(--accent); color: var(--fond); }
+.puce-jour.choisi .jour-nom { color: inherit; }
 .jour-entete .semaine { color: var(--texte-doux); }
 .jour-entete .espace { flex: 1; }
 .jour-edt { grid-area: edt; }
@@ -397,6 +442,8 @@ button.lien:hover { text-decoration: underline; }
 
 dialog {
   width: min(30rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
   padding: 1.25rem;
   border: 1px solid var(--bord);
   border-radius: 14px;
@@ -416,6 +463,51 @@ dialog::backdrop { background: rgb(0 0 0 / 0.35); }
   padding: 0.4em 0.5em;
 }
 .facultatif { font-weight: 400; color: var(--texte-doux); }
+dialog.large { width: min(42rem, calc(100vw - 2rem)); }
+.champ { display: grid; gap: 0.3rem; }
+.libelle { font-weight: 600; }
+.barre-outils { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.barre-outils button { padding: 0.15em 0.6em; font-size: 0.9em; }
+.editeur {
+  min-height: 9em;
+  max-height: 45vh;
+  overflow: auto;
+  padding: 0.5em 0.7em;
+  border: 1px solid var(--bord);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.editeur:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.editeur:empty::before { content: attr(data-vide); color: var(--texte-doux); }
+.erreur { margin: 0; color: var(--alerte); font-weight: 600; }
+
+/* Contenu mis en forme d'un devoir (éditeur et détail). */
+.contenu p { margin: 0 0 0.5em; }
+.contenu ul, .contenu ol { margin: 0 0 0.5em; padding-left: 1.5em; }
+.contenu li { margin: 0.15em 0; }
+.contenu a { color: var(--accent); }
+.contenu > :last-child { margin-bottom: 0; }
+
+/* --- Détail d'un devoir --- */
+
+.detail-entete { display: flex; align-items: center; gap: 0.8rem; }
+.detail-entete h2 { margin: 0; font-size: 1.3em; }
+.detail-echeance { margin: 0; color: var(--alerte); font-weight: 650; }
+.detail-contenu {
+  margin: 1rem 0;
+  padding: 0.8rem 1rem;
+  max-height: 55vh;
+  overflow: auto;
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-size: 1.05em;
+  line-height: 1.5;
+}
+.detail-infos { display: grid; grid-template-columns: max-content 1fr; gap: 0.3rem 0.8rem; margin: 0 0 1rem; }
+.detail-infos dt { color: var(--texte-doux); }
+.detail-infos dd { margin: 0; }
+.bascule-fait { display: flex; align-items: center; gap: 0.4rem; font-weight: 600; cursor: pointer; }
+.bascule-fait input { width: 1.3em; height: 1.3em; }
 .boutons { margin: 0.4rem 0 0; }
 
 /* --- Panneau d'outils --- */
@@ -482,8 +574,9 @@ html[data-compact] .sortir-compact {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "entete" "edt" "devoirs" "sac";
   }
-  .jour-nav { flex: 1 1 100%; }
-  .jour-nav h2 { flex: 1; font-size: 1.2em; text-align: center; }
+  .jour-entete h2 { flex: 1 1 100%; order: -1; font-size: 1.25em; }
+  .bande-jours { gap: 0.15rem; }
+  .puce-semaine { padding: 0.3rem 0.35rem; }
   .seance { grid-template-columns: 4.2em auto 1fr; }
   .seance .badge { grid-column: 3; justify-self: start; }
   .commandes { margin-left: 0; }

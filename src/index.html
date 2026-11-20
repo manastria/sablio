@@ -56,19 +56,51 @@
     <section id="jour-sac" class="carte jour-sac" aria-label="Sac à préparer"></section>
   </main>
 
-  <dialog id="ajout" aria-labelledby="ajout-titre">
+  <dialog id="ajout" class="large" aria-labelledby="ajout-titre">
     <form method="dialog" class="formulaire">
       <h2 id="ajout-titre">Nouveau devoir</h2>
       <label>Matière <select id="ajout-matiere"></select></label>
-      <label>Travail <input id="ajout-texte" required autocomplete="off" placeholder="Exercices 4 et 5 p. 82"></label>
+      <div class="champ">
+        <span class="libelle" id="ajout-texte-libelle">Travail</span>
+        <div class="barre-outils" role="toolbar" aria-label="Mise en forme">
+          <button type="button" data-format="bold" title="Gras (Ctrl+B)"><strong>G</strong></button>
+          <button type="button" data-format="italic" title="Italique (Ctrl+I)"><em>I</em></button>
+          <button type="button" data-format="underline" title="Souligné (Ctrl+U)"><u>S</u></button>
+          <button type="button" data-format="insertUnorderedList" title="Liste à puces">• Liste</button>
+          <button type="button" data-format="insertOrderedList" title="Liste numérotée">1. Liste</button>
+          <button type="button" data-format="removeFormat" title="Enlever la mise en forme">Effacer la forme</button>
+        </div>
+        <div id="ajout-texte" class="editeur contenu" contenteditable="true" role="textbox" aria-multiline="true"
+          aria-labelledby="ajout-texte-libelle" data-vide="Exercices 4 et 5 p. 82, ou le texte collé depuis l’ENT"></div>
+        <p class="erreur" id="ajout-erreur" hidden>Écrivez le travail à faire.</p>
+      </div>
       <label>À rendre <select id="ajout-rendu"></select></label>
       <label id="ajout-champ-date" hidden>Date <input type="date" id="ajout-date"></label>
       <label id="ajout-champ-afaire"><span>À faire le <span class="facultatif">(facultatif)</span></span> <input type="date" id="ajout-afaire"></label>
       <div class="ligne boutons">
-        <button value="ok" class="mise-en-avant">Ajouter</button>
+        <button value="ok" class="mise-en-avant" id="ajout-valider">Ajouter</button>
         <button value="annuler" formnovalidate>Annuler</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="detail" class="large" aria-labelledby="detail-titre">
+    <div class="detail-entete">
+      <span id="detail-pastille"></span>
+      <div>
+        <h2 id="detail-titre"></h2>
+        <p class="detail-echeance" id="detail-echeance"></p>
+      </div>
+    </div>
+    <div class="contenu detail-contenu" id="detail-contenu"></div>
+    <dl class="detail-infos" id="detail-infos"></dl>
+    <div class="ligne boutons">
+      <label class="bascule-fait"><input type="checkbox" id="detail-fait"> Fait</label>
+      <span class="espace"></span>
+      <button type="button" data-action="modifier-devoir">Modifier</button>
+      <button type="button" data-action="supprimer-devoir">Supprimer</button>
+      <button type="button" class="mise-en-avant" data-action="fermer-detail" autofocus>Fermer</button>
+    </div>
   </dialog>
 
   <button type="button" class="sortir-compact" data-action="compact" title="Revenir à la fenêtre normale">Agrandir</button>

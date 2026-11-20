@@ -10,7 +10,7 @@ Emploi du temps en dur : une semaine type de collégien avec semaines A/B, un cr
 cd refonte/prototype
 npm install
 npm start            # fenêtre normale
-npm run captures     # 17 captures d'écran + rapport.txt dans captures/, puis quitte
+npm run captures     # 19 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
 ```
 
 Dans la fenêtre :
@@ -25,7 +25,9 @@ Un rappel (notification + carillon) part 5 minutes avant chaque cours.
 ## Vues
 
 - **Maintenant** (accueil) : séance en cours, temps restant, séance suivante, frise du jour, devoirs à faire. Après le dernier cours, la frise laisse la place à « Préparer le sac » pour le prochain jour de classe.
-- **Jour** : emploi du temps du jour avec le repère « Vous êtes ici », devoirs à rendre ce jour (avec leur progression), travail du soir, sac à préparer. Flèches `←` `→` (ou boutons) pour changer de jour.
+- **Jour** : emploi du temps du jour avec le repère « Vous êtes ici », devoirs à rendre ce jour (avec leur progression), travail du soir, sac à préparer. Pour changer de jour : les boutons `←` `Aujourd’hui` `→`, les touches `←` `→`, ou la bande des jours de la semaine (`«` `»` pour changer de semaine).
+
+Un clic sur un devoir l'ouvre (texte complet, échéance, cours, boutons **Modifier** et **Supprimer**) ; seule la case le marque fait. Le devoir de français de la démonstration montre une longue consigne mise en forme, comme sur l'ENT.
 
 Ce que la démonstration montre :
 
@@ -35,7 +37,7 @@ Ce que la démonstration montre :
 - **« à faire le »** : l'exercice de physique pour jeudi est prévu le mardi (le mercredi après-midi est pris par le football) ;
 - **mode discret** (bouton dans l'en-tête) : le psychologue et l'orthophonie deviennent « Rendez-vous ». Le psychologue garde sa couleur, l'orthophonie passe en gris. Les notifications sont toujours neutres pour ces activités.
 
-**+ Devoir** ouvre la saisie : la matière proposée est celle du cours en cours ou qui vient de finir, et la date proposée le prochain cours de cette matière. On peut aussi choisir un DS ou une date libre.
+**+ Devoir** ouvre la saisie. Le travail s'écrit dans une zone de texte riche (gras, italique, souligné, listes) ; un texte collé depuis l'ENT garde sa mise en forme, nettoyée (`src/contenu.js`). La matière proposée est celle du cours en cours ou qui vient de finir, et la date proposée le prochain cours de cette matière. On peut aussi choisir un DS ou une date libre.
 
 Dans **Outils → Réglages du profil** : mode discret manuel, automatique (pendant les cours, par défaut) ou toujours actif (une désactivation dure 30 minutes, ou jusqu'à la réouverture) ; champ « à faire le » proposé ou non.
 
@@ -59,7 +61,7 @@ Depuis WSL, le serveur est joignable par Edge sous Windows à l'adresse `http://
 
 ## Données et sauvegarde
 
-Les devoirs sont dans une base SQLite (WebAssembly) enregistrée dans le stockage privé du navigateur (OPFS), dans Electron comme dans Edge. Le schéma est en version 2 (`PRAGMA user_version`) : une base de la version 1 est migrée à l'ouverture, et une base plus récente que le prototype est refusée. `npm install` copie SQLite dans `src/vendor/sqlite/` (fichiers non versionnés) : il faut l'avoir lancé avant de servir `src/`.
+Les devoirs sont dans une base SQLite (WebAssembly) enregistrée dans le stockage privé du navigateur (OPFS), dans Electron comme dans Edge. Le schéma est en version 3 (`PRAGMA user_version`) : une base plus ancienne est migrée à l'ouverture, et une base plus récente que le prototype est refusée. `npm install` copie SQLite dans `src/vendor/sqlite/` (fichiers non versionnés) : il faut l'avoir lancé avant de servir `src/`.
 
 Dans **Outils → Données** :
 
@@ -89,6 +91,7 @@ L'exécutable n'est **pas signé** : le Contrôle intelligent des applications d
 | `src/preload.js` | Pont minimal entre la page et le système |
 | `src/emploi-du-temps.js` | Données et calculs de temps, sans DOM : séries, exceptions, occurrences, semaines A/B, états de la journée, temps relatif, démonstration |
 | `src/app.js` | Interface |
+| `src/contenu.js` | Nettoyage du texte mis en forme d'un devoir, version brute |
 | `src/index.html`, `src/style.css` | Page et styles (thème clair et sombre) |
 | `src/stockage.js`, `src/stockage-worker.js` | Base SQLite (WebAssembly, OPFS) dans un worker, avec repli en mémoire |
 | `src/sauvegarde.js` | Sauvegarde et restauration dans un fichier choisi |

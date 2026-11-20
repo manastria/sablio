@@ -7,7 +7,7 @@
 import sqlite3InitModule from './vendor/sqlite/index.mjs';
 
 const NOM = '/mydevoirs.sqlite3';
-const VERSION = 2;
+const VERSION = 3;
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS devoir (
     id TEXT PRIMARY KEY,
@@ -27,6 +27,10 @@ const MIGRATIONS = {
     ALTER TABLE devoir ADD COLUMN serie TEXT;
     ALTER TABLE devoir ADD COLUMN date_origine TEXT;
     ALTER TABLE devoir ADD COLUMN a_faire_le TEXT;
+  `,
+  // 3 : contenu mis en forme (HTML nettoyé) ; `texte` garde la version brute.
+  3: `
+    ALTER TABLE devoir ADD COLUMN contenu TEXT;
   `,
 };
 
@@ -58,9 +62,9 @@ function inserer(devoirs) {
   db.transaction(() => {
     for (const d of devoirs) {
       db.exec({
-        sql: `INSERT INTO devoir (id, matiere, texte, pour, serie, date_origine, a_faire_le, modifie_le)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        bind: [d.id, d.matiere, d.texte, d.pour, d.serie ?? null, d.dateOrigine ?? null, d.aFaireLe ?? null, Date.now()],
+        sql: `INSERT INTO devoir (id, matiere, texte, contenu, pour, serie, date_origine, a_faire_le, modifie_le)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        bind: [d.id, d.matiere, d.texte, d.contenu ?? null, d.pour, d.serie ?? null, d.dateOrigine ?? null, d.aFaireLe ?? null, Date.now()],
       });
     }
   });
@@ -92,7 +96,7 @@ const operations = {
 
   devoirs() {
     return db.selectObjects(
-      `SELECT id, matiere, texte, pour, fait, serie, date_origine AS dateOrigine, a_faire_le AS aFaireLe
+      `SELECT id, matiere, texte, contenu, pour, fait, serie, date_origine AS dateOrigine, a_faire_le AS aFaireLe
        FROM devoir WHERE supprime = 0 ORDER BY pour, rowid`,
     );
   },
@@ -107,6 +111,21 @@ const operations = {
 
   ajouter({ devoir }) {
     inserer([devoir]);
+    return true;
+  },
+
+  modifier({ devoir: d }) {
+    db.exec({
+      sql: `UPDATE devoir SET matiere = ?, texte = ?, contenu = ?, pour = ?, serie = ?, date_origine = ?,
+            a_faire_le = ?, modifie_le = ? WHERE id = ?`,
+      bind: [d.matiere, d.texte, d.contenu ?? null, d.pour, d.serie ?? null, d.dateOrigine ?? null, d.aFaireLe ?? null, Date.now(), d.id],
+    });
+    return true;
+  },
+
+  // Suppression douce : la ligne reste, marquée, pour la fusion entre appareils.
+  supprimer({ id }) {
+    db.exec({ sql: 'UPDATE devoir SET supprime = 1, modifie_le = ? WHERE id = ?', bind: [Date.now(), id] });
     return true;
   },
 

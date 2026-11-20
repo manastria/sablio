@@ -322,13 +322,29 @@ export function exceptionsDemo(reference) {
   return liste;
 }
 
+const CONSIGNE_FRANCAIS = `<p><strong>Lire le chapitre 3</strong> de <em>Vendredi ou la vie sauvage</em> (p. 45 à 62).</p>
+<p>Pendant la lecture :</p>
+<ul>
+  <li>relever <u>au moins cinq mots</u> que vous ne connaissez pas et chercher leur sens dans le dictionnaire ;</li>
+  <li>noter sur une fiche les étapes de la construction du radeau.</li>
+</ul>
+<p>Puis répondre aux questions 1 à 4 p. 63, <strong>en faisant des phrases complètes</strong>.</p>
+<ol>
+  <li>Pourquoi Robinson veut-il quitter l’île ?</li>
+  <li>Quels outils utilise-t-il ?</li>
+  <li>Que se passe-t-il au moment de la mise à l’eau ?</li>
+  <li>Que ressent-il à la fin du chapitre ? Justifiez avec une citation.</li>
+</ol>
+<p>Le questionnaire sera ramassé et noté. Les fiches de vocabulaire sont sur <a href="https://exemple.fr/vocabulaire">la page de la classe</a>.</p>`;
+
 export function devoirsDemo(reference) {
   const apres = debutJour(ajouterJours(reference, 1));
   const prochain = (filtre, rang = 0) => prochainesOccurrences(apres, filtre, rang + 1)[rang] ?? null;
   const parMatiere = (cle) => (o) => o.cle === cle;
   const liste = [
     { matiere: 'ma', texte: 'Exercices 12 et 13 p. 84', occ: prochain(parMatiere('ma')) },
-    { matiere: 'fr', texte: 'Lire le chapitre 3 du roman', occ: prochain(parMatiere('fr'), 1) },
+    // Texte long et mis en forme, comme le donne un professeur sur l'ENT.
+    { matiere: 'fr', texte: 'Lire le chapitre 3 du roman', contenu: CONSIGNE_FRANCAIS, occ: prochain(parMatiere('fr'), 1) },
     { matiere: 'an', texte: 'Apprendre le vocabulaire de l’unité 4', occ: prochain(parMatiere('an')) },
     { matiere: 'ma', texte: 'Réviser les fractions', occ: prochain((o) => o.nature === 'creneau') },
     { matiere: 'svt', texte: 'Finir le schéma du cœur', occ: prochain(parMatiere('svt')) },
@@ -343,6 +359,7 @@ export function devoirsDemo(reference) {
     return {
       matiere: d.matiere,
       texte: d.texte,
+      contenu: d.contenu ?? null,
       serie: d.occ.serie,
       dateOrigine: d.occ.dateOrigine,
       pour: isoLocal(rendu),

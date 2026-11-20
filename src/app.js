@@ -2,6 +2,7 @@
 // saisie des devoirs, panneau d'outils.
 
 import * as edt from './emploi-du-temps.js';
+import { htmlDepuisTexte, nettoyerHtml, texteBrut } from './contenu.js';
 import * as sauvegarde from './sauvegarde.js';
 import { ouvrirStockage } from './stockage.js';
 
@@ -398,12 +399,58 @@ function ligneDevoir(d, { precision = '', droite = '', proche = false }) {
     alerte = `<p class="avertissement">⚠ Le cours de ${echapper(nom)} du ${echapper(edt.dateLongue(o.debut))} est annulé${o.motif ? ` (${echapper(o.motif)})` : ''} : à rendre quand ?
       <button type="button" data-reporter="${d.id}">Reporter au prochain cours de ${echapper(nom)}</button></p>`;
   }
-  return `<li class="devoir${d.fait ? ' fait' : ''}"><label data-css="${couleurs(d.matiere)}">
-      <input type="checkbox" data-devoir="${d.id}" ${d.fait ? 'checked' : ''}>
-      ${pastille(d.matiere)}
-      <span class="texte">${echapper(d.texte)}${precision ? `<span class="precision">${echapper(precision)}</span>` : ''}</span>
-      ${droite ? `<span class="echeance${proche && !d.fait ? ' proche' : ''}">${echapper(droite)}</span>` : ''}
-    </label>${alerte}</li>`;
+  // La case marque le devoir fait ; le reste de la ligne ouvre le devoir.
+  return `<li class="devoir${d.fait ? ' fait' : ''}"><div class="devoir-ligne" data-css="${couleurs(d.matiere)}">
+      <label class="case" title="Marquer comme fait">
+        <input type="checkbox" data-devoir="${d.id}" ${d.fait ? 'checked' : ''} aria-label="Fait : ${echapper(d.texte.split('\n')[0])}">
+      </label>
+      <button type="button" class="devoir-ouvrir" data-ouvrir="${d.id}" title="Afficher le devoir">
+        ${pastille(d.matiere)}
+        <span class="texte"><span class="resume">${echapper(d.texte)}</span>${precision ? `<span class="precision">${echapper(precision)}</span>` : ''}</span>
+        ${droite ? `<span class="echeance${proche && !d.fait ? ' proche' : ''}">${echapper(droite)}</span>` : ''}
+      </button>
+    </div>${alerte}</li>`;
+}
+
+// --- Détail d'un devoir ---
+
+function afficherDetail(id) {
+  const d = etat.devoirs?.find((x) => x.id === id);
+  if (!d) return;
+  etat.detail = id;
+  const n = maintenant();
+  const profil = PROFILS[etat.profil];
+  $('#detail-pastille').innerHTML = pastille(d.matiere);
+  appliquerStyles($('#detail-pastille'));
+  $('#detail-titre').textContent = d.matiere.nom;
+  const soirs = d.fait ? '' : edt.soirsTexte(d.rendu, n);
+  $('#detail-echeance').textContent = [edt.majuscule(edt.echeanceTexte(d.rendu, n, profil)), soirs].filter(Boolean).join(' · ');
+  $('#detail-contenu').innerHTML = nettoyerHtml(d.contenu ?? htmlDepuisTexte(d.texte));
+  const o = d.seance;
+  const infos = [['À rendre', [edt.majuscule(edt.dateLongue(d.rendu)), precisionRendu(d, n)].filter(Boolean).join(', ')]];
+  if (o?.statut === 'annule') infos.push(['Attention', `cours annulé${o.motif ? ` (${o.motif})` : ''}`]);
+  if (o?.statut === 'deplace') infos.push(['Cours déplacé', `prévu ${edt.dateLongue(o.origine.debut)} à ${edt.heureTexte(o.origine.debut)}`]);
+  if (!o) infos.push(['Rattaché', 'à une date (pas à un cours)']);
+  if (d.aFaireLe) infos.push(['À faire', edt.quandTexte(d.aFaireLe, n, profil)]);
+  remplirListe($('#detail-infos'), infos);
+  const fait = $('#detail-fait');
+  fait.checked = d.fait;
+  fait.dataset.devoir = d.id;
+  if (!$('#detail').open) $('#detail').showModal();
+}
+
+async function supprimerDevoir() {
+  const d = etat.devoirs?.find((x) => x.id === etat.detail);
+  if (!d || !confirm(`Supprimer ce devoir ?\n\n${d.matiere.nom} : ${d.texte.split('\n')[0]}`)) return;
+  $('#detail').close();
+  try {
+    await stockage.supprimer(d.id);
+    await chargerDevoirs();
+    planifierSauvegarde();
+    journaliser(`Devoir supprimé : ${d.texte.split('\n')[0]}`);
+  } catch (e) {
+    journaliser(`Suppression : échec (${e.message})`);
+  }
 }
 
 // Échéance relative et soirs restants, pour les listes de devoirs à faire.
@@ -474,20 +521,47 @@ function construireJour(n, profil) {
   etat.jour ??= edt.debutJour(n);
   const jour = etat.jour;
   const aujourdhui = edt.memeJour(jour, n);
+  // Les boutons de navigation ne bougent pas, quelle que soit la longueur
+  // du titre ; la bande des jours permet d'aller plus loin en un clic.
   $('#jour-entete').innerHTML = `
     <div class="jour-nav">
       <button type="button" data-action="jour-decaler" data-jours="-1" aria-label="Jour précédent" title="Jour précédent (flèche gauche)">←</button>
-      <h2>${echapper(edt.titreJour(jour, n))}</h2>
+      <button type="button" data-action="jour-aujourdhui" ${aujourdhui ? 'disabled' : ''}>Aujourd’hui</button>
       <button type="button" data-action="jour-decaler" data-jours="1" aria-label="Jour suivant" title="Jour suivant (flèche droite)">→</button>
     </div>
+    <h2>${echapper(edt.titreJour(jour, n))}</h2>
     <span class="semaine">Semaine ${edt.lettreSemaine(jour)}</span>
-    <span class="espace"></span>
-    ${aujourdhui ? '' : '<button type="button" data-action="jour-aujourdhui">Aujourd’hui</button>'}
-    <button type="button" class="mise-en-avant" data-action="ajouter">+ Devoir</button>`;
+    <button type="button" class="mise-en-avant" data-action="ajouter">+ Devoir</button>
+    ${htmlBandeJours(jour, n)}`;
   $('#jour-edt').innerHTML = htmlJourEdt(jour, n);
   $('#jour-devoirs').innerHTML = htmlJourDevoirs(jour, n, profil);
   $('#jour-sac').innerHTML = htmlSac(jour, `Dans le sac pour ${edt.jourRelatif(jour, n)}`);
   appliquerStyles($('#vue-jour'));
+}
+
+// Les sept jours de la semaine affichée, avec le nombre de devoirs à rendre.
+function htmlBandeJours(jour, n) {
+  const debut = edt.lundi(jour);
+  const puces = [];
+  for (let i = 0; i < 7; i++) {
+    const d = edt.ajouterJours(debut, i);
+    const nb = (etat.devoirs ?? []).filter((x) => !x.fait && edt.memeJour(x.rendu, d)).length;
+    const classes = ['puce-jour'];
+    if (edt.memeJour(d, jour)) classes.push('choisi');
+    if (edt.memeJour(d, n)) classes.push('aujourdhui');
+    if (!edt.coursDuJour(d, edt.estEcole).length) classes.push('libre');
+    const nom = d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '');
+    const etiquette = `${edt.dateLongue(d)}${edt.memeJour(d, n) ? ', aujourd’hui' : ''}${nb ? `, ${pluriel(nb, 'devoir')} à rendre` : ''}`;
+    puces.push(`<button type="button" class="${classes.join(' ')}" data-action="voir-jour" data-date="${edt.isoLocal(d)}"
+      aria-label="${echapper(etiquette)}" ${edt.memeJour(d, jour) ? 'aria-current="date"' : ''}>
+      <span class="jour-nom">${echapper(nom)}</span><span class="jour-num">${d.getDate()}</span>
+      <span class="jour-nb">${nb || ''}</span></button>`);
+  }
+  return `<nav class="bande-jours" aria-label="Jours de la semaine">
+    <button type="button" class="puce-semaine" data-action="jour-decaler" data-jours="-7" aria-label="Semaine précédente" title="Semaine précédente">«</button>
+    ${puces.join('')}
+    <button type="button" class="puce-semaine" data-action="jour-decaler" data-jours="7" aria-label="Semaine suivante" title="Semaine suivante">»</button>
+  </nav>`;
 }
 
 function htmlJourEdt(jour, n) {
@@ -679,29 +753,47 @@ function jouerCarillon() {
 
 // --- Saisie d'un devoir ---
 
-function ouvrirAjout() {
+// Sans argument : nouveau devoir. Avec un devoir : modification.
+function ouvrirAjout(devoir = null) {
   if (!etat.devoirs) return;
+  etat.edition = devoir?.id ?? null;
   const n = maintenant();
   const matiere = $('#ajout-matiere');
   if (!matiere.options.length) {
     matiere.innerHTML = Object.values(edt.MATIERES)
       .map((m) => `<option value="${m.cle}">${m.picto} ${echapper(m.nom)}</option>`).join('');
   }
-  // Matière par défaut : celle du cours en cours ou qui vient de finir,
-  // puisqu'on note le travail à la fin du cours.
-  const s = edt.situation(n, edt.estEcole);
-  const recent = s.actuel ?? s.precedent ?? (s.etat === 'fini' ? s.cours.at(-1) : null);
-  if (recent?.nature === 'ecole') matiere.value = recent.cle;
-  $('#ajout-texte').value = '';
-  $('#ajout-afaire').value = '';
-  $('#ajout-date').value = edt.isoLocal(etat.vue === 'jour' && etat.jour ? etat.jour : edt.ajouterJours(n, 1));
-  $('#ajout-champ-afaire').hidden = !etat.reglages.aFaireLe;
+  if (devoir) {
+    matiere.value = devoir.matiere.cle;
+  } else {
+    // Matière par défaut : celle du cours en cours ou qui vient de finir,
+    // puisqu'on note le travail à la fin du cours.
+    const s = edt.situation(n, edt.estEcole);
+    const recent = s.actuel ?? s.precedent ?? (s.etat === 'fini' ? s.cours.at(-1) : null);
+    if (recent?.nature === 'ecole') matiere.value = recent.cle;
+  }
+  const editeur = $('#ajout-texte');
+  editeur.innerHTML = devoir ? nettoyerHtml(devoir.contenu ?? htmlDepuisTexte(devoir.texte)) : '';
+  $('#ajout-erreur').hidden = true;
+  $('#ajout-afaire').value = devoir?.aFaireLe ? edt.isoLocal(devoir.aFaireLe) : '';
+  $('#ajout-date').value = edt.isoLocal(devoir?.pour ?? (etat.vue === 'jour' && etat.jour ? etat.jour : edt.ajouterJours(n, 1)));
+  $('#ajout-champ-afaire').hidden = !etat.reglages.aFaireLe && !devoir?.aFaireLe;
+  $('#ajout-titre').textContent = devoir ? 'Modifier le devoir' : 'Nouveau devoir';
+  $('#ajout-valider').textContent = devoir ? 'Enregistrer' : 'Ajouter';
   remplirRendu();
   const dialogue = $('#ajout');
   dialogue.returnValue = '';
   dialogue.showModal();
-  $('#ajout-texte').focus();
+  editeur.focus();
+  // Curseur à la fin du texte existant.
+  const plage = document.createRange();
+  plage.selectNodeContents(editeur);
+  plage.collapse(false);
+  getSelection().removeAllRanges();
+  getSelection().addRange(plage);
 }
+
+const devoirEnEdition = () => (etat.edition ? etat.devoirs?.find((d) => d.id === etat.edition) : null);
 
 // Choix de la séance : les prochains cours de la matière (le premier est
 // proposé), les prochains créneaux à matière variable (DS), ou une date.
@@ -717,8 +809,18 @@ function remplirRendu() {
   if (creneaux.length) html += `<optgroup label="Créneaux sans matière fixe">${creneaux.map((o) => option(o, `${o.titre} · `)).join('')}</optgroup>`;
   html += '<option value="date">Autre date…</option>';
   const choix = $('#ajout-rendu');
+  // Modification sans changer de matière : on garde la séance actuelle,
+  // même si elle n'est plus dans les prochaines.
+  const devoir = devoirEnEdition();
+  const garder = devoir && devoir.matiere.cle === cle;
+  const actuelle = garder && devoir.seance ? `o|${devoir.serie}|${devoir.dateOrigine}` : null;
+  if (actuelle && !html.includes(`value="${actuelle}"`)) {
+    html = `<option value="${actuelle}">Actuel : ${echapper(edt.majuscule(edt.quandTexte(devoir.seance.debut, n)))} · ${edt.heureTexte(devoir.seance.debut)}</option>${html}`;
+  }
   choix.innerHTML = html;
   choix.selectedIndex = 0;
+  if (actuelle) choix.value = actuelle;
+  else if (garder) choix.value = 'date';
   majDateLibre();
 }
 
@@ -739,25 +841,47 @@ async function enregistrerAjout() {
   } else {
     pour = $('#ajout-date').value;
   }
+  // Le contenu mis en forme est nettoyé ; `texte` en garde la version brute.
+  const contenu = nettoyerHtml($('#ajout-texte').innerHTML);
+  const edition = etat.edition;
   const devoir = {
-    id: crypto.randomUUID(),
+    id: edition ?? crypto.randomUUID(),
     matiere: $('#ajout-matiere').value,
-    texte: $('#ajout-texte').value.trim(),
+    texte: texteBrut(contenu),
+    contenu,
     pour,
     serie,
     dateOrigine,
-    aFaireLe: (etat.reglages.aFaireLe && $('#ajout-afaire').value) || null,
+    aFaireLe: (!$('#ajout-champ-afaire').hidden && $('#ajout-afaire').value) || null,
   };
+  etat.edition = null;
   if (!devoir.texte || !pour) return;
   try {
-    await stockage.ajouter(devoir);
+    if (edition) await stockage.modifier(devoir);
+    else await stockage.ajouter(devoir);
     await chargerDevoirs();
     planifierSauvegarde();
-    journaliser(`Devoir ajouté : ${devoir.texte} (${serie ? 'rattaché au cours' : 'rattaché à une date'})`);
+    journaliser(`Devoir ${edition ? 'modifié' : 'ajouté'} : ${devoir.texte.split('\n')[0]} (${serie ? 'rattaché au cours' : 'rattaché à une date'})`);
+    if (edition) afficherDetail(edition);
   } catch (e) {
-    journaliser(`Ajout : échec (${e.message})`);
+    journaliser(`${edition ? 'Modification' : 'Ajout'} : échec (${e.message})`);
   }
 }
+
+// Coller depuis l'ENT : on garde la mise en forme utile, nettoyée.
+$('#ajout-texte').addEventListener('paste', (e) => {
+  const html = e.clipboardData?.getData('text/html');
+  const texte = e.clipboardData?.getData('text/plain') ?? '';
+  e.preventDefault();
+  if (html) document.execCommand('insertHTML', false, nettoyerHtml(html));
+  else document.execCommand('insertText', false, texte);
+});
+// Un glisser-déposer pourrait apporter des images ou du HTML non nettoyé.
+$('#ajout-texte').addEventListener('drop', (e) => e.preventDefault());
+// Les boutons de mise en forme ne doivent pas prendre le focus de l'éditeur.
+document.addEventListener('mousedown', (e) => {
+  if (e.target.closest('[data-format]')) e.preventDefault();
+});
 
 // Cours annulé : on rattache le devoir à la séance suivante de la même série
 // de cours (même matière, ou même créneau pour un DS).
@@ -959,7 +1083,15 @@ const actions = {
   'voir-jour': (bouton) => allerAuJour(edt.dateDepuisIso(bouton.dataset.date)),
   'jour-decaler': (bouton) => allerAuJour(edt.ajouterJours(etat.jour, Number(bouton.dataset.jours))),
   'jour-aujourdhui': () => allerAuJour(maintenant()),
-  ajouter: ouvrirAjout,
+  ajouter: () => ouvrirAjout(),
+  'fermer-detail': () => $('#detail').close(),
+  'modifier-devoir': () => {
+    const d = etat.devoirs?.find((x) => x.id === etat.detail);
+    if (!d) return;
+    $('#detail').close();
+    ouvrirAjout(d);
+  },
+  'supprimer-devoir': supprimerDevoir,
   'heure-appliquer': () => {
     const valeur = $('#heure-simulee').value;
     if (valeur) reglerHorloge({ date: new Date(valeur) });
@@ -988,6 +1120,17 @@ document.addEventListener('click', (e) => {
   const reporterBouton = e.target.closest('[data-reporter]');
   if (reporterBouton) {
     reporter(reporterBouton.dataset.reporter);
+    return;
+  }
+  const ouvrir = e.target.closest('[data-ouvrir]');
+  if (ouvrir) {
+    afficherDetail(ouvrir.dataset.ouvrir);
+    return;
+  }
+  const format = e.target.closest('[data-format]');
+  if (format) {
+    $('#ajout-texte').focus();
+    document.execCommand(format.dataset.format);
     return;
   }
   const bouton = e.target.closest('[data-action]');
@@ -1033,19 +1176,35 @@ document.addEventListener('change', (e) => {
 // « close » part plus tard, et deux fermetures rapprochées se confondent.
 let ajoutEnCours = Promise.resolve();
 $('#ajout form').addEventListener('submit', (e) => {
-  if (e.submitter?.value === 'ok') ajoutEnCours = enregistrerAjout();
+  if (e.submitter?.value !== 'ok') {
+    etat.edition = null;
+    return;
+  }
+  // L'éditeur n'est pas un champ de formulaire : on vérifie nous-mêmes.
+  if (!texteBrut($('#ajout-texte').innerHTML)) {
+    e.preventDefault();
+    $('#ajout-erreur').hidden = false;
+    $('#ajout-texte').focus();
+    return;
+  }
+  ajoutEnCours = enregistrerAjout();
 });
+$('#ajout').addEventListener('cancel', () => { etat.edition = null; });
 
 // Essai des actions sans clic, pour les captures automatiques : saisie,
 // report d'un devoir dont le cours est annulé, bouton du mode discret.
 async function essaisInterface() {
   const avant = etat.devoirs.length;
+  // Nettoyage : un contenu dangereux, analysé sans être exécuté.
+  const piege = '<p onclick="x()">Texte <b>gras</b><script>alert(1)</script><img src="x" onerror="alert(1)"> <a href="javascript:alert(1)">lien</a> <a href="https://exemple.fr">site</a></p>';
+  journaliser(`Essai nettoyage : ${nettoyerHtml(piege)}`);
   ouvrirAjout();
-  $('#ajout-texte').value = 'Essai automatique';
+  $('#ajout-texte').innerHTML = '<p>Essai <strong>automatique</strong></p><ul><li>premier point</li><li>second point</li></ul>';
   const choix = $('#ajout-rendu').selectedOptions[0].textContent;
   $('#ajout form').requestSubmit($('#ajout button[value="ok"]'));
   await ajoutEnCours;
-  const ajoute = etat.devoirs.find((d) => d.texte === 'Essai automatique');
+  const ajoute = etat.devoirs.find((d) => d.texte.startsWith('Essai automatique'));
+  journaliser(`Essai texte brut : ${JSON.stringify(ajoute?.texte)}`);
   journaliser(`Essai saisie : ${etat.devoirs.length - avant} devoir ajouté (${ajoute?.matiere.nom}, « ${choix} »), à rendre ${ajoute ? edt.dateLongue(ajoute.rendu) : '?'}, rattaché ${ajoute?.serie ? 'au cours' : 'à une date'}`);
   const annule = etat.devoirs.find((d) => d.seance?.statut === 'annule');
   if (annule) {
@@ -1061,6 +1220,16 @@ async function essaisInterface() {
   basculerDiscret();
   etats.push(etat.discret);
   journaliser(`Essai mode discret (${etat.reglages.discret}) : ${etats.map((x) => (x ? 'actif' : 'inactif')).join(' → ')}`);
+
+  // Modification : on ouvre le devoir, on le modifie, on enregistre.
+  afficherDetail(ajoute.id);
+  actions['modifier-devoir']();
+  $('#ajout-texte').innerHTML += '<p>Ligne ajoutée</p>';
+  $('#ajout form').requestSubmit($('#ajout button[value="ok"]'));
+  await ajoutEnCours;
+  const modifie = etat.devoirs.find((d) => d.id === ajoute.id);
+  journaliser(`Essai modification : ${etat.devoirs.length} devoirs, texte ${JSON.stringify(modifie?.texte)}, détail ${$('#detail').open ? 'rouvert' : 'fermé'}`);
+  $('#detail').close();
 }
 
 document.addEventListener('keydown', (e) => {
@@ -1095,6 +1264,8 @@ window.prototypeMyDevoirs = {
   ouvrirAjout,
   fermerAjout: () => $('#ajout').close(),
   essaisInterface,
+  afficherDetail: (texte) => afficherDetail(etat.devoirs.find((d) => d.texte.startsWith(texte))?.id),
+  fermerDetail: () => $('#detail').close(),
   lancerTests,
   rapport,
 };
@@ -1163,7 +1334,9 @@ function preparerDemo(reference) {
   // un devoir de démonstration peut ainsi tomber sur le cours qui sera annulé.
   edt.definirExceptions([]);
   const exceptions = edt.exceptionsDemo(reference);
-  const devoirs = edt.devoirsDemo(reference).map((d) => ({ id: crypto.randomUUID(), ...d }));
+  const devoirs = edt.devoirsDemo(reference).map((d) => ({
+    id: crypto.randomUUID(), ...d, texte: d.contenu ? texteBrut(d.contenu) : d.texte,
+  }));
   edt.definirExceptions(exceptions);
   return devoirs;
 }
@@ -1179,6 +1352,7 @@ async function chargerDevoirs() {
       serie: l.serie ?? null,
       dateOrigine: l.dateOrigine ?? null,
       aFaireLe: l.aFaireLe ? edt.dateDepuisIso(l.aFaireLe) : null,
+      contenu: l.contenu ?? null,
       matiere: edt.MATIERES[l.matiere] ?? { cle: l.matiere, nom: l.matiere, court: '?', picto: '❔', couleur: GRIS },
     };
     // Le devoir suit son cours ; sans cours retrouvé, il garde sa date.

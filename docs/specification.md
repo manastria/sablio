@@ -31,7 +31,9 @@ L'environnement de l'enfant varie beaucoup : âge, activités, présence d'un ad
 └──────────────────────────┘ └───────────────────────────────┘
 ```
 
-- En-tête en temps relatif (« Demain · mardi 21 novembre »), flèches jour précédent / suivant, bouton « Aujourd'hui ».
+- En-tête en temps relatif (« Demain · mardi 21 novembre »).
+- Navigation à gauche, **à une place fixe** quelle que soit la longueur du titre : jour précédent, « Aujourd'hui » (grisé si on y est déjà), jour suivant.
+- **Bande des jours** de la semaine affichée, sous l'en-tête : un clic pour aller deux ou trois jours plus loin, le nombre de devoirs à rendre sur chaque jour, « « » et « » » pour changer de semaine. Les jours sans cours sont grisés.
 - Un cours porte une pastille (`•1`) quand un devoir est à lui rendre.
 - Les exceptions se voient : cours annulé barré, cours déplacé avec une pastille.
 - « Ce soir » : voir [Jour de travail](#jour-de-travail).
@@ -106,7 +108,9 @@ Règles :
 |---|---|
 | `id` | UUID |
 | `matiere` | matière (`nature = ecole`) |
-| `texte`, `fait` | comme MyDevoirs |
+| `texte` | version brute du travail : aperçus, notifications, export lisible |
+| `contenu` | travail mis en forme (HTML nettoyé), souvent collé depuis l'ENT |
+| `fait` | comme MyDevoirs |
 | `serie`, `date_origine` | le cours ou le créneau auquel le devoir est à rendre (même clé qu'une exception) ; vides si le devoir est rattaché à une date |
 | `pour` | date de rendu connue (voir plus bas) |
 | `a_faire_le` | facultatif, voir [Jour de travail](#jour-de-travail) |
@@ -135,9 +139,18 @@ Certains créneaux n'ont pas de matière fixe. Exemple : un « DS » chaque merc
 
 ### Saisie
 
+- Le travail se saisit dans une **zone de texte riche** : plusieurs lignes, gras, italique, souligné, listes. Les professeurs écrivent parfois de longues consignes mises en forme sur l'ENT : on doit pouvoir les coller telles quelles.
+- **Nettoyage** à la saisie et à l'affichage (une sauvegarde restaurée peut contenir n'importe quoi) : seuls les paragraphes, retours à la ligne, gras, italique, souligné, listes et liens web sont gardés ; scripts, images, styles et attributs sont retirés.
 - Date proposée par défaut : **le prochain cours de cette matière**.
 - Autres choix en un clic : les cours suivants de la matière (« jeudi (dans 3 jours) », « vendredi 28 »), les prochains créneaux à matière variable (« DS · mercredi 26 »), ou une date libre.
 - Sans emploi du temps, la saisie se fait par date, comme dans MyDevoirs.
+
+### Afficher un devoir
+
+- Dans les listes, un devoir n'affiche qu'un **aperçu de deux lignes**.
+- **Un clic sur le devoir l'ouvre** : texte complet mis en forme, échéance en temps relatif, cours auquel il est rattaché, jour de travail prévu. Depuis là : marquer fait, modifier, supprimer.
+- **Seule la case** marque le devoir fait. Avant, cliquer n'importe où sur la ligne le cochait, ce qui gênait pour lire un long texte.
+- Supprimer demande une confirmation. La suppression est « douce » : la ligne reste dans la base, marquée, pour la fusion entre appareils.
 
 ### Jour de travail
 
