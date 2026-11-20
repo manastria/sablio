@@ -1,10 +1,28 @@
 # Refonte : étude de faisabilité
 
-État : **réflexion**, rien n'est décidé ni codé. Ce document consigne les contraintes, les choix provisoires et les risques, pour ne pas les redécouvrir.
+État : **faisabilité**. Un prototype existe (`refonte/prototype/`). Ce document consigne les contraintes, les choix provisoires et les risques, pour ne pas les redécouvrir.
 
 ## Objectif
 
-Une application d'agenda, d'emploi du temps et de devoirs pensée pour les élèves et étudiants TDAH qui ont du mal à se repérer dans le temps. Elle remplace l'application Kivy actuelle.
+Une application qui dit à l'élève : « voilà à quoi ressemble ta journée ». Elle regroupe les devoirs, l'emploi du temps et l'agenda : cours, rendez-vous de soin (orthophonie, ergothérapie, psychologue…), sport, loisirs. Elle est pensée pour les élèves et étudiants TDAH qui ont du mal à se repérer dans le temps.
+
+C'est une application distincte de MyDevoirs. MyDevoirs (Kivy) continue d'exister à côté. Le passage de l'une à l'autre se fera par import des données de MyDevoirs.
+
+## Nom et adresse
+
+**Nom : Sablio.** **Adresse : `https://sablio.manastria.fr/`** (sous-domaine à créer).
+
+- Le nom vient de « sablier » : le temps qui s'écoule et se voit, comme la barre qui se vide et l'icône du prototype.
+- Il ne fait **aucune référence au trouble** : l'élève ne doit pas se sentir étiqueté, et le site est public.
+- C'est un mot inventé, et non une faute plausible d'un mot courant (comme « Ajenda »), pour ne pas montrer chaque jour un mot mal écrit à des enfants qui apprennent l'orthographe.
+- Recherche du 20 novembre 2026 : aucune application connue à ce nom. Noms voisins sans rapport : Sublio (suivi d'abonnements), Sablono (chantiers). **Reste à vérifier dans la base des marques de l'INPI** (data.inpi.fr).
+- Noms écartés car déjà pris ou trop proches d'une application existante : Clepsy (Clepside, un agenda pour le TDAH), Oclo (rappels de médicaments pour les aidants), Jalio (Jalios), Tikora (Tickora), Pendulo (Pendul, Pendulum), Heurio, Kairos, Horae. Noms courants écartés car noyés dans les résultats de recherche : Repères, Ma journée, Tempo.
+
+**L'adresse est définitive** : les données de l'élève sont liées à l'origine (`https://sablio.manastria.fr`). Changer de sous-domaine les rendrait invisibles. Changer de chemin sur ce même sous-domaine les conserve, mais oblige à réinstaller l'application.
+
+**Pourquoi un sous-domaine à part**, et pas un dossier de `popa.manastria.fr` (Petits outils pour apprendre) : sur une même origine, toutes les applications partagent le stockage (un effacement ou une éviction les touche toutes), les autorisations (notifications, stockage persistant) et l'accès aux données. De plus, Petits outils impose « un seul fichier HTML autonome, téléchargeable », ce que ne permettent pas le worker, SQLite en WebAssembly et OPFS. Petits outils pourra en revanche présenter Sablio avec un lien.
+
+Clés `localStorage`, bases IndexedDB, dossier OPFS et verrous : toujours préfixés `sablio-`.
 
 ## Contraintes connues
 
