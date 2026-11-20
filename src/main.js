@@ -335,6 +335,10 @@ async function faireCaptures(dossier) {
   await page.executeJavaScript(`document.querySelector('[data-action="vacances-modifier"]').scrollIntoView({ block: 'center' })`);
   await capturer('38-vacances-edt');
   await proto('zoneVacances("")');
+  await proto('scenario("2026-11-23T19:00", "college", "edt")');
+  await proto('importEssai()');
+  await capturer('39-import-emploi-du-temps');
+  await page.executeJavaScript(`document.querySelector('#import-edt').close()`);
   await proto('scenario("2026-11-25T19:00", "college", "afaire")');
   await capturer('25-a-faire');
   await proto('scenario("2026-11-23T19:00", "college", "jour", "2026-11-24")');

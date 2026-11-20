@@ -10,7 +10,7 @@ Emploi du temps de démonstration, modifiable : une semaine type de collégien a
 cd refonte/prototype
 npm install
 npm start            # fenêtre normale
-npm run captures     # 38 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
+npm run captures     # 39 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
 ```
 
 Dans la fenêtre :
@@ -34,6 +34,8 @@ Un rappel (notification + carillon) part 5 minutes avant chaque cours.
 **Menu → Emploi du temps et agenda** ouvre la saisie de la semaine type (cours, semaines alternées réglables comme dans MyDevoirs, période de validité), des matières (pictogramme, couleur, matériel) et des activités personnelles (confidentialité en mode discret).
 
 **+ Événement** (vues Jour et Semaine, écran Emploi du temps) ajoute un rendez-vous à l'agenda : une activité (le psychologue) ou un titre libre (le dentiste), une date, des heures, et éventuellement une répétition (« chaque semaine, 3 fois »). La démonstration contient un rendez-vous chez le dentiste.
+
+**Pour l'ergothérapeute** : dans l'écran Emploi du temps, **Exporter l'emploi du temps** produit un fichier JSON (matières, activités, cours, événements, vacances, semaines alternées) ; **Importer un emploi du temps…** le reprend sur l'ordinateur de la famille, en remplacement ou en ajout, sans doublon.
 
 **Verrou** (facultatif) : dans **Réglages et outils → Verrou de la configuration**, un code à 4 chiffres protège l'emploi du temps, les séances, les réglages et les données. L'élève garde ses devoirs, peut ajouter des événements et basculer le mode discret. Le code ouvre le mode adulte pour 10 minutes. Code oublié : la fenêtre du code donne un code de demande ; la page `secours.html` (servie avec l'application, à publier sur sablio.manastria.fr/secours) en déduit un code de secours valable le jour même.
 

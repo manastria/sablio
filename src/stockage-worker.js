@@ -268,6 +268,45 @@ const operations = {
   },
 
   enregistrerPeriode({ periode }) { ecrirePeriode(periode); return true; },
+
+  // Emploi du temps reçu d'un autre ordinateur (l'ergothérapeute le prépare
+  // chez elle). « remplacer » retire ce qui n'est pas dans le fichier, sauf
+  // les matières encore utilisées par des devoirs. Tout ou rien.
+  importerEmploiDuTemps({ edt, remplacer }) {
+    const maintenant = Date.now();
+    db.transaction(() => {
+      if (remplacer) {
+        const garder = (liste, cle) => new Set(liste.map((x) => x[cle]));
+        const categories = garder(edt.categories, 'cle');
+        const utilisees = new Set(db.selectValues('SELECT DISTINCT matiere FROM devoir WHERE supprime = 0'));
+        for (const cle of db.selectValues('SELECT cle FROM categorie WHERE supprime = 0')) {
+          if (!categories.has(cle) && !utilisees.has(cle)) {
+            db.exec({ sql: 'UPDATE categorie SET supprime = 1, modifie_le = ? WHERE cle = ?', bind: [maintenant, cle] });
+          }
+        }
+        const series = garder(edt.series, 'id');
+        for (const id of db.selectValues('SELECT id FROM serie WHERE supprime = 0')) {
+          if (!series.has(id)) db.exec({ sql: 'UPDATE serie SET supprime = 1, modifie_le = ? WHERE id = ?', bind: [maintenant, id] });
+        }
+        const periodes = garder(edt.periodes ?? [], 'id');
+        for (const id of db.selectValues('SELECT id FROM periode WHERE supprime = 0')) {
+          if (!periodes.has(id)) db.exec({ sql: 'UPDATE periode SET supprime = 1, modifie_le = ? WHERE id = ?', bind: [maintenant, id] });
+        }
+        for (const [cle, valeur] of Object.entries(edt.reglages ?? {})) {
+          if (valeur) {
+            db.exec({
+              sql: 'INSERT OR REPLACE INTO reglage (cle, valeur, modifie_le, supprime) VALUES (?, ?, ?, 0)',
+              bind: [cle, JSON.stringify(valeur), maintenant],
+            });
+          }
+        }
+      }
+      for (const x of edt.categories) ecrireCategorie(x);
+      for (const x of edt.series) ecrireSerie(x);
+      for (const x of edt.periodes ?? []) ecrirePeriode(x);
+    });
+    return true;
+  },
   supprimerPeriode({ id }) {
     db.exec({ sql: 'UPDATE periode SET supprime = 1, modifie_le = ? WHERE id = ?', bind: [Date.now(), id] });
     return true;

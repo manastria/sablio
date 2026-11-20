@@ -87,6 +87,15 @@ Repris de MyDevoirs : semaine suivante affichée le week-end, numéro et lettre 
 - En mode discret, les activités non visibles restent neutres et ne sont pas modifiables.
 - Enregistré dans la base (tables `categorie`, `serie`, `exception`), avec suppression douce pour la fusion entre appareils.
 
+### Préparer l'emploi du temps sur un autre ordinateur
+
+L'ergothérapeute (ou un parent) prépare l'emploi du temps dans son propre Sablio, l'**exporte** (« Exporter l'emploi du temps », écran Emploi du temps) et envoie le fichier ; la famille l'**importe**.
+
+- Fichier JSON versionné, lisible sans l'application (`format: "sablio-emploi-du-temps"`, `version: 1`) : matières, activités, cours, événements, périodes sans cours, semaines alternées, zone de vacances. **Ni devoirs, ni séances modifiées, ni code du verrou.**
+- À l'import, la fenêtre résume le fichier (« préparé le 20/11/2026 : 10 matières, 4 activités, 31 cours… ») et propose de **remplacer** l'emploi du temps (ce qui n'est pas dans le fichier est retiré, sauf les matières encore utilisées par des devoirs ; les réglages du fichier s'appliquent) ou de l'**ajouter** (on garde le sien et ses réglages).
+- Les matières et activités de même nom, et les cours identiques (même matière, jour, heures, semaine), sont **reconnus** : pas de doublon, et les devoirs restent rattachés à leurs cours. Un devoir rattaché à un cours retiré reste rattaché à sa date.
+- Export et import demandent le mode adulte quand le verrou est actif.
+
 ### Verrou de la configuration
 
 **Facultatif** (pas de verrou par défaut), activé dans « Réglages et outils » avec un **code à 4 chiffres**. On ne garde que son empreinte (SHA-256 salée), dans la base avec les réglages. Ce n'est pas une vraie sécurité (les données sont locales) : il évite les modifications par erreur ou par jeu.

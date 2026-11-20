@@ -169,6 +169,27 @@
     </form>
   </dialog>
 
+  <!-- Emploi du temps reçu d'un autre ordinateur (l'ergothérapeute). -->
+  <input type="file" id="import-edt-fichier" accept=".json,application/json" hidden>
+  <dialog id="import-edt" class="large" aria-labelledby="import-edt-titre">
+    <form method="dialog" class="formulaire">
+      <h2 id="import-edt-titre">Importer un emploi du temps</h2>
+      <p id="import-edt-resume"></p>
+      <fieldset class="rendu">
+        <legend>Que faire de l’emploi du temps actuel ?</legend>
+        <div class="choix-seances" role="radiogroup" aria-label="Mode d’import">
+          <label class="choix-seance"><input type="radio" name="import-mode" value="remplacer" checked><span><strong>Le remplacer</strong><span class="precision">les cours, activités et réglages du fichier remplacent les miens</span></span></label>
+          <label class="choix-seance"><input type="radio" name="import-mode" value="ajouter"><span><strong>Ajouter le fichier</strong><span class="precision">je garde les miens et mes réglages</span></span></label>
+        </div>
+      </fieldset>
+      <p class="vide">Les matières de même nom sont reconnues (pas de doublon). Les devoirs ne sont pas touchés ; ceux rattachés à un cours retiré restent rattachés à leur date.</p>
+      <div class="ligne boutons">
+        <button value="ok" class="mise-en-avant">Importer</button>
+        <button value="annuler" formnovalidate>Annuler</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="edt-vacances" class="large" aria-labelledby="vacances-titre">
     <form method="dialog" class="formulaire">
       <h2 id="vacances-titre">Vacances scolaires</h2>
