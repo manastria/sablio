@@ -3,6 +3,7 @@
 
 import * as edt from './emploi-du-temps.js';
 import { htmlDepuisTexte, nettoyerHtml, texteBrut } from './contenu.js';
+import { SOURCE_VACANCES, VACANCES } from './vacances.js';
 import * as sauvegarde from './sauvegarde.js';
 import { ouvrirStockage } from './stockage.js';
 
@@ -292,7 +293,9 @@ function construire(s, n, profil) {
   const carteMaintenant = $('#maintenant');
   const carteEnsuite = $('#ensuite');
   const enCours = s.actuel ?? s.suivant;
-  carteMaintenant.style.setProperty('--couleur', enCours ? affichage(enCours).couleur : 'var(--accent)');
+  // Jour sans cours : couleur neutre (la carte parle des vacances, pas du prochain rendez-vous).
+  const sansCours = edt.periodeDe(n) && !s.cours.some(edt.estEcole) && s.etat !== 'cours';
+  carteMaintenant.style.setProperty('--couleur', enCours && !sansCours ? affichage(enCours).couleur : 'var(--accent)');
   carteMaintenant.innerHTML = htmlMaintenant(s, n, profil);
   carteEnsuite.innerHTML = htmlEnsuite(s, n);
   const prochain = prochainCours(s);
@@ -312,6 +315,18 @@ function construire(s, n, profil) {
 const prochainCours = (s) => (s.etat === 'fini' ? s.demain?.cours[0] : s.suivant) ?? null;
 
 function htmlMaintenant(s, n, profil) {
+  // Jour sans cours (vacances, férié) : on dit quand ça reprend. Une activité
+  // de la journée (le psychologue) reste dans la carte « Ensuite ».
+  const sansCours = edt.periodeDe(n);
+  if (sansCours && !s.cours.some(edt.estEcole) && s.etat !== 'cours') {
+    const reprise = edt.prochainJourDeCours(n, edt.estEcole)?.jour;
+    const dans = reprise ? edt.ecartJours(n, reprise) : 0;
+    return `
+      <p class="etiquette">${sansCours.nature === 'ferie' ? 'Jour férié' : sansCours.nature === 'vacances' ? 'Vacances' : 'Pas de cours'}</p>
+      <div class="titre-cours"><p>${sansCours.nature === 'vacances' ? '🏖️' : '📅'} ${echapper(sansCours.nom)}</p></div>
+      ${reprise ? `<p class="grand grand-texte">Reprise ${dans === 1 ? 'demain' : `dans ${dans} ${profil.nuits ? 'nuits' : 'jours'}`}</p>
+      <p class="detail">${echapper(edt.majuscule(edt.dateLongue(reprise)))}</p>` : ''}`;
+  }
   const barre = '<div class="barre" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="barre-reste"></div></div>';
   if (s.etat === 'cours') {
     const c = s.actuel;
@@ -340,7 +355,7 @@ function htmlMaintenant(s, n, profil) {
   const lendemain = s.demain?.jour;
   const aRendre = lendemain
     ? (etat.devoirs ?? []).filter((d) => !d.fait && edt.memeJour(d.rendu, lendemain)).length : 0;
-  const quand = lendemain ? edt.jourRelatif(lendemain, n) : 'demain';
+  const quand = lendemain ? jourCourt(lendemain, n) : 'demain';
   const texteDevoirs = aRendre === 0
     ? `Rien à rendre pour ${quand}.`
     : `${pluriel(aRendre, 'devoir')} à rendre pour ${quand}.`;
@@ -638,6 +653,11 @@ function construireEdt(n) {
         <div class="entete-carte"><p class="etiquette">Matières</p>
           <button type="button" class="lien" data-action="categorie-nouvelle" data-nature="ecole">+ Matière</button></div>
         <ul class="liste-edt">${edt.matieres().map(ligneCategorie).join('')}</ul>
+      </section>
+      <section class="carte">
+        <div class="entete-carte"><p class="etiquette">Vacances et jours sans cours</p>
+          <button type="button" class="lien" data-action="periode-nouvelle">+ Période</button></div>
+        ${htmlVacances(n)}
       </section>
       <section class="carte">
         <div class="entete-carte"><p class="etiquette">Agenda</p>
@@ -942,6 +962,89 @@ async function supprimerSerieEditee() {
   journaliser(`Cours supprimé : ${edt.categorie(x.cle)?.nom ?? x.titre}, ${NOMS_JOURS[x.jour]} ${x.debut}`);
 }
 
+// --- Vacances et jours sans cours ---
+
+function htmlVacances(n) {
+  const aujourdhui = edt.isoLocal(n);
+  const zone = etat.vacances?.zone;
+  const resume = `${zone ? `Vacances de la zone ${zone}` : 'Pas de zone de vacances'} · ${etat.vacances?.feries ? 'jours fériés sans cours' : 'jours fériés non pris en compte'}.`;
+  // Les prochaines périodes (en cours comprise) ; les jours fériés isolés à part.
+  const prochaines = edt.toutesLesPeriodes().filter((p) => p.au >= aujourdhui).slice(0, 8);
+  const lignes = prochaines.map((p) => {
+    const debut = edt.dateDepuisIso(p.du);
+    const dates = p.du === p.au ? dateMoyenne(debut) : `du ${dateMoyenne(debut)} au ${dateMoyenne(edt.dateDepuisIso(p.au))}`;
+    const contenu = `<span class="pastille pastille-neutre" aria-hidden="true">${p.nature === 'vacances' ? '🏖️' : p.nature === 'ferie' ? '📅' : '📌'}</span>
+      <span><strong>${echapper(p.nom)}</strong><span class="precision">${echapper(dates)}</span></span>`;
+    return p.nature === 'autre'
+      ? `<li><button type="button" class="ligne-edt" data-periode="${p.id}" data-css="--couleur:var(--accent)">${contenu}</button></li>`
+      : `<li><span class="ligne-edt periode-fixe">${contenu}</span></li>`;
+  }).join('');
+  return `<p class="vide">${echapper(resume)} <button type="button" class="lien" data-action="vacances-modifier">Modifier</button></p>
+    ${lignes ? `<ul class="liste-edt">${lignes}</ul>` : '<p class="vide">Aucune période à venir.</p>'}`;
+}
+
+function ouvrirVacances() {
+  if (bloque('Modifier les vacances', ouvrirVacances)) return;
+  document.querySelector(`input[name="vacances-zone"][value="${etat.vacances?.zone ?? ''}"]`).checked = true;
+  $('#vacances-feries').checked = etat.vacances?.feries ?? true;
+  $('#vacances-source').textContent = `Dates officielles 2026-2027 et 2027-2028 (${SOURCE_VACANCES}). À mettre à jour chaque année.`;
+  $('#edt-vacances').showModal();
+}
+
+let vacancesEnCours = Promise.resolve();
+$('#edt-vacances form').addEventListener('submit', (e) => {
+  if (e.submitter?.value !== 'ok') return;
+  const valeur = { zone: document.querySelector('input[name="vacances-zone"]:checked').value, feries: $('#vacances-feries').checked };
+  vacancesEnCours = (async () => {
+    await stockage.enregistrerReglage('vacances', valeur);
+    await rechargerTout();
+    planifierSauvegarde();
+    journaliser(`Vacances : ${valeur.zone ? `zone ${valeur.zone}` : 'aucune zone'}, jours fériés ${valeur.feries ? 'sans cours' : 'ignorés'}`);
+  })();
+});
+
+let periodeEditee = null;
+function ouvrirPeriode(id = null) {
+  if (bloque('Modifier les jours sans cours', () => ouvrirPeriode(id))) return;
+  const p = id ? etat.periodesSaisies.find((x) => x.id === id) : null;
+  periodeEditee = p;
+  const n = maintenant();
+  $('#periode-nom').value = p?.nom ?? '';
+  $('#periode-du').value = p?.du ?? edt.isoLocal(n);
+  $('#periode-au').value = p?.au ?? edt.isoLocal(n);
+  $('#periode-supprimer').hidden = !p;
+  $('#periode-erreur').hidden = true;
+  $('#periode').showModal();
+}
+
+let periodeEnCours = Promise.resolve();
+$('#periode form').addEventListener('submit', (e) => {
+  if (e.submitter?.value !== 'ok') return;
+  if ($('#periode-au').value < $('#periode-du').value) {
+    e.preventDefault();
+    $('#periode-erreur').textContent = 'La date de fin doit être après la date de début.';
+    $('#periode-erreur').hidden = false;
+    return;
+  }
+  const periode = { id: periodeEditee?.id ?? crypto.randomUUID(), nom: $('#periode-nom').value.trim(), du: $('#periode-du').value, au: $('#periode-au').value };
+  periodeEnCours = (async () => {
+    await stockage.enregistrerPeriode(periode);
+    await rechargerTout();
+    planifierSauvegarde();
+    journaliser(`Jours sans cours : ${periode.nom}, du ${periode.du} au ${periode.au}`);
+  })();
+});
+
+async function supprimerPeriodeEditee() {
+  const p = periodeEditee;
+  if (!p || !confirm(`Supprimer « ${p.nom} » ?`)) return;
+  $('#periode').close();
+  await stockage.supprimerPeriode(p.id);
+  await rechargerTout();
+  planifierSauvegarde();
+  journaliser(`Jours sans cours supprimés : ${p.nom}`);
+}
+
 // --- Agenda : événements datés ---
 // « RDV psy le mercredi 25/11 à 17 h 30, pendant 3 semaines » : une série
 // de type « événement », de valideDu à valideAu, toutes les 1 ou 2 semaines.
@@ -1131,6 +1234,8 @@ function ouvrirCategorie(cle = null, nature = 'ecole') {
   $('#cat-champ-confidentialite').hidden = !perso;
   document.querySelector(`input[name="cat-confidentialite"][value="${c?.confidentialite ?? 'discret'}"]`).checked = true;
   $('#cat-garder').checked = c?.garderCouleur ?? true;
+  $('#cat-champ-vacances').hidden = !perso;
+  $('#cat-pause-vacances').checked = c?.pauseVacances ?? false;
   $('#cat-supprimer').hidden = !c;
   $('#cat-erreur').hidden = true;
   $('#edt-categorie').showModal();
@@ -1150,6 +1255,7 @@ async function enregistrerCategorieFormulaire() {
     materiel: perso ? null : $('#cat-materiel').value.trim() || null,
     confidentialite: perso ? document.querySelector('input[name="cat-confidentialite"]:checked').value : null,
     garderCouleur: perso && $('#cat-garder').checked,
+    pauseVacances: perso && $('#cat-pause-vacances').checked,
     ordre: categorieEditee?.ordre ?? Math.max(-1, ...toutes.map((x) => x.ordre ?? 0)) + 1,
   };
   try {
@@ -1209,7 +1315,9 @@ function jourCourt(d, n) {
   const ecart = edt.ecartJours(n, d);
   if (ecart === 0) return 'aujourd’hui';
   if (ecart === 1) return 'demain';
-  return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric' });
+  // Au-delà d'une semaine, le mois lève l'ambiguïté (« lundi 4 janvier »).
+  return d.toLocaleDateString('fr-FR', ecart > 6 || ecart < 0
+    ? { weekday: 'long', day: 'numeric', month: 'long' } : { weekday: 'long', day: 'numeric' });
 }
 
 function htmlSac(jour, n, { lien: avecLien = false, depuis = null } = {}) {
@@ -1328,8 +1436,10 @@ function htmlBandeJours(jour, n) {
     if (edt.memeJour(d, jour)) classes.push('choisi');
     if (edt.memeJour(d, n)) classes.push('aujourdhui');
     if (!edt.coursDuJour(d, edt.estEcole).length) classes.push('libre');
+    const sansCours = edt.periodeDe(d);
+    if (sansCours) classes.push('sans-cours');
     const nom = d.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '');
-    const etiquette = `${edt.dateLongue(d)}${edt.memeJour(d, n) ? ', aujourd’hui' : ''}${nb ? `, ${pluriel(nb, 'devoir')} à rendre` : ''}`;
+    const etiquette = `${edt.dateLongue(d)}${edt.memeJour(d, n) ? ', aujourd’hui' : ''}${sansCours ? `, ${sansCours.nom}` : ''}${nb ? `, ${pluriel(nb, 'devoir')} à rendre` : ''}`;
     puces.push(`<button type="button" class="${classes.join(' ')}" data-action="voir-jour" data-date="${edt.isoLocal(d)}"
       aria-label="${echapper(etiquette)}" ${edt.memeJour(d, jour) ? 'aria-current="date"' : ''}>
       <span class="jour-nom">${echapper(nom)}</span><span class="jour-num">${d.getDate()}</span>
@@ -1345,10 +1455,21 @@ function htmlBandeJours(jour, n) {
   </nav>`;
 }
 
+// Bandeau d'un jour sans cours : « 🏖️ Vacances de Noël, jusqu'au dimanche
+// 3 janvier · reprise lundi 4 janvier ».
+function htmlBandeauSansCours(jour, n) {
+  const p = edt.periodeDe(jour);
+  if (!p) return '';
+  const reprise = edt.prochainJourDeCours(jour, edt.estEcole)?.jour;
+  const plage = p.du === p.au ? '' : `du ${dateMoyenne(edt.dateDepuisIso(p.du))} au ${dateMoyenne(edt.dateDepuisIso(p.au))}`;
+  return `<p class="bandeau-sans-cours ${p.nature}">${p.nature === 'vacances' ? '🏖️' : '📅'} <strong>${echapper(p.nature === 'ferie' ? `Jour férié : ${p.nom}` : p.nom)}</strong>
+    ${plage ? `<span>${echapper(plage)}</span>` : ''}${reprise ? `<span>reprise ${echapper(jourCourt(reprise, n))}</span>` : ''}</p>`;
+}
+
 function htmlJourEdt(jour, n) {
   const liste = edt.occurrencesDuJour(jour).filter(visible);
-  const titre = '<p class="etiquette">Emploi du temps</p>';
-  if (!liste.length) return `${titre}<p class="vide">Pas de cours ce jour.</p>`;
+  const titre = `<p class="etiquette">Emploi du temps</p>${htmlBandeauSansCours(jour, n)}`;
+  if (!liste.length) return `${titre}${edt.periodeDe(jour) ? '' : '<p class="vide">Pas de cours ce jour.</p>'}`;
   const ecart = edt.ecartJours(n, jour);
   // Le repère « Vous êtes ici » n'existe qu'aujourd'hui : dans le cours en
   // cours s'il y en a un, sinon entre deux séances.
@@ -1544,7 +1665,7 @@ function ligneJourSemaine(j, n, seances, devoirs, pct) {
   return `<button type="button" class="${classes.join(' ')}" data-action="voir-jour" data-date="${edt.isoLocal(j)}" aria-label="${echapper(etiquette)}">
       <span class="sj-date"><span class="sj-nom">${echapper(j.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', ''))}</span>
         <span class="sj-num">${j.getDate()}</span>${relatif ? `<span class="sj-rel">${relatif}</span>` : ''}</span>
-      <span class="sj-frise">${seances.length ? blocs : '<span class="sj-vide">pas de cours</span>'}${ecart === 0 ? '<span class="sj-maintenant" data-champ="semaine-maintenant"></span>' : ''}</span>
+      <span class="sj-frise${edt.periodeDe(j) ? ' sans-cours' : ''}">${seances.length ? blocs : `<span class="sj-vide">${echapper(edt.periodeDe(j)?.nom ?? 'pas de cours')}</span>`}${ecart === 0 ? '<span class="sj-maintenant" data-champ="semaine-maintenant"></span>' : ''}</span>
       <span class="sj-devoirs">${droite}</span>
     </button>`;
 }
@@ -1762,7 +1883,7 @@ function remplirJours() {
   const n = maintenant();
   const jours = [];
   let j = edt.debutJour(n);
-  for (let i = 0; i < 31 && jours.length < 10; i++, j = edt.ajouterJours(j, 1)) {
+  for (let i = 0; i < 75 && jours.length < 10; i++, j = edt.ajouterJours(j, 1)) {
     if (edt.coursDuJour(j, edt.estEcole).some((o) => i > 0 || o.debut > n)) jours.push(j);
   }
   if (saisie.jour && !jours.some((x) => edt.memeJour(x, saisie.jour))) {
@@ -2185,6 +2306,9 @@ const actions = {
   'fermer-detail': () => $('#detail').close(),
   'serie-nouvelle': (bouton) => ouvrirSerie(null, Number(bouton.dataset.jour)),
   'cycle-modifier': () => ouvrirCycle(),
+  'vacances-modifier': () => ouvrirVacances(),
+  'periode-nouvelle': () => ouvrirPeriode(),
+  'periode-supprimer': supprimerPeriodeEditee,
   verrouiller,
   deverrouiller: () => bloque('Mode adulte', () => {}),
   'verrou-definir': ouvrirReglageVerrou,
@@ -2259,6 +2383,11 @@ document.addEventListener('click', (e) => {
   const serie = e.target.closest('[data-serie]');
   if (serie) {
     ouvrirSerie(serie.dataset.serie);
+    return;
+  }
+  const periodeBouton = e.target.closest('[data-periode]');
+  if (periodeBouton) {
+    ouvrirPeriode(periodeBouton.dataset.periode);
     return;
   }
   const evenementBouton = e.target.closest('[data-evenement]');
@@ -2575,6 +2704,21 @@ async function essaisInterface() {
   await enregistrerVerrou(null);
   journaliser(`Essai verrou : code demandé ${codeDemande ? 'oui' : 'NON'} ; mauvais code ${mauvaisRefuse ? 'refusé' : 'accepté à tort'} ; bon code → cycle ${cycleOuvert ? 'ouvert' : 'NON ouvert'} ; ajout d’événement libre ${evenementLibre ? 'oui' : 'NON'} ; verrou retiré ${etat.verrou ? 'NON' : 'oui'}`);
 
+  // Vacances : zone B ; le 22 décembre 2026 (Noël) n'a plus de cours, le psy
+  // continue, le foot s'arrête ; puis on revient à « aucune zone ».
+  ouvrirVacances();
+  document.querySelector('input[name="vacances-zone"][value="B"]').checked = true;
+  $('#edt-vacances form').requestSubmit($('#edt-vacances button[value="ok"]'));
+  await vacancesEnCours;
+  const noel = (d) => edt.coursDuJour(edt.dateDepuisIso(d)).map((o) => o.cle || o.titre).join('+') || 'rien';
+  const pendant = `mar. 22/12 : ${noel('2026-12-22')} ; mer. 23/12 : ${noel('2026-12-23')}`;
+  const reprise = edt.isoLocal(edt.prochainJourDeCours(edt.dateDepuisIso('2026-12-21'), edt.estEcole).jour);
+  ouvrirVacances();
+  document.querySelector('input[name="vacances-zone"][value=""]').checked = true;
+  $('#edt-vacances form').requestSubmit($('#edt-vacances button[value="ok"]'));
+  await vacancesEnCours;
+  journaliser(`Essai vacances : ${pendant} (attendu psy, puis rien) ; reprise ${reprise} (attendu 2027-01-04) ; 11 novembre : ${noel('2026-11-11')} (férié)`);
+
   // Modification : on ouvre le devoir, on le modifie, on enregistre.
   afficherDetail(ajoute.id);
   actions['modifier-devoir']();
@@ -2627,6 +2771,11 @@ window.prototypeMyDevoirs = {
   fermerSeance: () => $('#seance').close(),
   afficherDetail: (texte) => afficherDetail(etat.devoirs.find((d) => d.texte.startsWith(texte))?.id),
   fermerDetail: () => $('#detail').close(),
+  // Pour les captures : choisir la zone de vacances sans passer par la fenêtre.
+  async zoneVacances(zone) {
+    await stockage.enregistrerReglage('vacances', { zone, feries: true });
+    await rechargerTout();
+  },
   lancerTests,
   rapport,
 };
@@ -2711,6 +2860,15 @@ async function chargerEmploiDuTemps() {
   edt.definirEmploiDuTemps(donnees);
   edt.definirExceptions(donnees.exceptions);
   etat.verrou = donnees.reglages?.verrou ?? null;
+  // Jours sans cours : vacances de la zone choisie, jours fériés, périodes ajoutées.
+  etat.vacances = { zone: '', feries: true, ...donnees.reglages?.vacances };
+  etat.periodesSaisies = donnees.periodes ?? [];
+  const annee = maintenant().getFullYear();
+  edt.definirPeriodes([
+    ...VACANCES.filter(([, zone]) => zone === etat.vacances.zone).map(([, , nom, du, au]) => ({ nom, du, au, nature: 'vacances' })),
+    ...(etat.vacances.feries ? [annee - 1, annee, annee + 1, annee + 2].flatMap(edt.joursFeries) : []),
+    ...etat.periodesSaisies.map((p) => ({ ...p, nature: 'autre' })),
+  ]);
   const cycle = donnees.reglages?.cycle;
   edt.definirCycle(cycle ? { ...cycle, reference: edt.dateDepuisIso(cycle.reference) } : undefined);
 }

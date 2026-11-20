@@ -164,6 +164,45 @@
     </form>
   </dialog>
 
+  <dialog id="edt-vacances" class="large" aria-labelledby="vacances-titre">
+    <form method="dialog" class="formulaire">
+      <h2 id="vacances-titre">Vacances scolaires</h2>
+      <fieldset class="rendu">
+        <legend>Zone</legend>
+        <div class="choix-seances" role="radiogroup" aria-label="Zone">
+          <label class="choix-seance"><input type="radio" name="vacances-zone" value=""><span><strong>Aucune</strong><span class="precision">je les saisis moi-même</span></span></label>
+          <label class="choix-seance"><input type="radio" name="vacances-zone" value="A"><span><strong>Zone A</strong><span class="precision">Besançon, Bordeaux, Lyon…</span></span></label>
+          <label class="choix-seance"><input type="radio" name="vacances-zone" value="B"><span><strong>Zone B</strong><span class="precision">Lille, Nantes, Strasbourg…</span></span></label>
+          <label class="choix-seance"><input type="radio" name="vacances-zone" value="C"><span><strong>Zone C</strong><span class="precision">Créteil, Paris, Toulouse…</span></span></label>
+        </div>
+      </fieldset>
+      <label class="bascule-fait"><input type="checkbox" id="vacances-feries"> Pas de cours les jours fériés</label>
+      <p class="vide" id="vacances-source"></p>
+      <div class="ligne boutons">
+        <button value="ok" class="mise-en-avant">Enregistrer</button>
+        <button value="annuler" formnovalidate>Annuler</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="periode" aria-labelledby="periode-titre">
+    <form method="dialog" class="formulaire">
+      <h2 id="periode-titre">Jours sans cours</h2>
+      <label>Nom <input id="periode-nom" required placeholder="Stage, examens, grève…" autocomplete="off"></label>
+      <div class="ligne champs-courts">
+        <label>Du <input type="date" id="periode-du" required></label>
+        <label>au <input type="date" id="periode-au" required></label>
+      </div>
+      <p class="erreur" id="periode-erreur" hidden></p>
+      <div class="ligne boutons">
+        <button value="ok" class="mise-en-avant">Enregistrer</button>
+        <button value="annuler" formnovalidate>Annuler</button>
+        <span class="espace"></span>
+        <button type="button" data-action="periode-supprimer" id="periode-supprimer">Supprimer</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="edt-cycle" class="large" aria-labelledby="cycle-titre">
     <form method="dialog" class="formulaire">
       <h2 id="cycle-titre">Semaines alternées</h2>
@@ -260,6 +299,7 @@
         </div>
         <label class="bascule-fait"><input type="checkbox" id="cat-garder"> Garder sa couleur en mode discret</label>
       </fieldset>
+      <label class="bascule-fait" id="cat-champ-vacances"><input type="checkbox" id="cat-pause-vacances"> S’arrête pendant les vacances et les jours fériés</label>
       <p class="erreur" id="cat-erreur" hidden></p>
       <div class="ligne boutons">
         <button value="ok" class="mise-en-avant">Enregistrer</button>

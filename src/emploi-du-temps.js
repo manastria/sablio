@@ -34,10 +34,10 @@ export const DEMO_CATEGORIES = [
   cat('ap', 'ecole', 'Arts plastiques', 'AP', '🎨', '#c2457a', { materiel: 'pochette de dessin' }),
   cat('mu', 'ecole', 'Musique', 'Mu', '🎵', '#6d6aa8'),
   cat('te', 'ecole', 'Technologie', 'Te', '⚙️', '#5f7380'),
-  cat('sport', 'perso', 'Football', 'Foot', '⚽', '#2e7d32', { confidentialite: 'visible' }),
+  cat('sport', 'perso', 'Football', 'Foot', '⚽', '#2e7d32', { confidentialite: 'visible', pauseVacances: true }),
   cat('psy', 'perso', 'Psychologue', 'Psy', '💭', '#c62828', { confidentialite: 'discret', garderCouleur: true }),
   cat('ortho', 'perso', 'Orthophonie', 'Ortho', '🗣️', '#d9822b', { confidentialite: 'discret', garderCouleur: false }),
-  cat('piano', 'perso', 'Piano', 'Piano', '🎹', '#3949ab', { confidentialite: 'visible' }),
+  cat('piano', 'perso', 'Piano', 'Piano', '🎹', '#3949ab', { confidentialite: 'visible', pauseVacances: true }),
 ].map((c, ordre) => ({ ...c, ordre }));
 
 // Semaine type d'un collégien. Clé : jour au sens de Date.getDay() (1 = lundi).
@@ -243,6 +243,53 @@ export function dateDepuisIso(texte) {
   return new Date(a, m - 1, j);
 }
 
+// --- Jours sans cours : vacances, jours fériés, périodes ajoutées ---
+// { nom, du, au (AAAA-MM-JJ, inclus), nature: 'vacances' | 'ferie' | 'autre' }
+// Ces jours-là, les cours n'ont pas lieu ; les événements de l'agenda, si ;
+// les activités aussi, sauf celles qui s'arrêtent pendant les vacances.
+
+let periodes = [];
+
+export function definirPeriodes(liste) {
+  periodes = [...liste].sort((a, b) => a.du.localeCompare(b.du));
+}
+export const toutesLesPeriodes = () => periodes;
+
+export function periodeDe(date) {
+  const d = isoLocal(date);
+  return periodes.find((p) => p.du <= d && d <= p.au) ?? null;
+}
+
+// Dimanche de Pâques (algorithme de Meeus, Jones et Butcher).
+export function paques(annee) {
+  const a = annee % 19;
+  const b = Math.floor(annee / 100);
+  const c = annee % 100;
+  const h = (19 * a + b - Math.floor(b / 4) - Math.floor((b - Math.floor((b + 8) / 25) + 1) / 3) + 15) % 30;
+  const l = (32 + 2 * (b % 4) + 2 * Math.floor(c / 4) - h - (c % 4)) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mois = Math.floor((h + l - 7 * m + 114) / 31);
+  return new Date(annee, mois - 1, ((h + l - 7 * m + 114) % 31) + 1);
+}
+
+export function joursFeries(annee) {
+  const p = paques(annee);
+  const f = (nom, d) => ({ nom, du: isoLocal(d), au: isoLocal(d), nature: 'ferie' });
+  return [
+    f('Jour de l’an', new Date(annee, 0, 1)),
+    f('Lundi de Pâques', ajouterJours(p, 1)),
+    f('Fête du Travail', new Date(annee, 4, 1)),
+    f('Victoire de 1945', new Date(annee, 4, 8)),
+    f('Ascension', ajouterJours(p, 39)),
+    f('Lundi de Pentecôte', ajouterJours(p, 50)),
+    f('Fête nationale', new Date(annee, 6, 14)),
+    f('Assomption', new Date(annee, 7, 15)),
+    f('Toussaint', new Date(annee, 10, 1)),
+    f('Armistice de 1918', new Date(annee, 10, 11)),
+    f('Noël', new Date(annee, 11, 25)),
+  ];
+}
+
 // --- Exceptions ---
 // { serie, dateOrigine (AAAA-MM-JJ), statut: 'annule' | 'deplace', motif,
 //   nouvelleDate, debut, fin (pour un déplacement) }
@@ -281,7 +328,10 @@ function occurrence(serie, jour) {
 function occurrencesDuMotif(jour) {
   const lettre = lettreSemaine(jour);
   const date = isoLocal(jour);
+  const sansCours = periodeDe(jour);
   return (seriesParJour.get(jour.getDay()) ?? [])
+    .filter((x) => !sansCours || x.type === 'evenement'
+      || (categorie(x.cle)?.nature === 'perso' && !categorie(x.cle).pauseVacances))
     .filter((x) => (!x.semaine || !lettre || x.semaine === lettre)
       && (!x.valideDu || x.valideDu <= date) && (!x.valideAu || date <= x.valideAu)
       // Toutes les N semaines, à compter de la première date.
@@ -352,7 +402,8 @@ export function prochainesOccurrences(apres, filtre, nombre = 1, limiteJours = 3
 
 export const estEcole = (o) => o.nature !== 'perso';
 
-export function prochainJourDeCours(apres, filtre = () => true, limite = 14) {
+// Limite : au-delà des grandes vacances.
+export function prochainJourDeCours(apres, filtre = () => true, limite = 75) {
   for (let i = 1; i <= limite; i++) {
     const jour = ajouterJours(debutJour(apres), i);
     const cours = coursDuJour(jour, filtre);

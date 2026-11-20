@@ -27,7 +27,7 @@ function client(worker) {
 
 function stockageMemoire(raison, graine) {
   const devoirs = [];
-  const edt = { categories: graine?.categories ?? [], series: graine?.series ?? [], exceptions: graine?.exceptions ?? [], reglages: {} };
+  const edt = { categories: graine?.categories ?? [], series: graine?.series ?? [], exceptions: graine?.exceptions ?? [], reglages: {}, periodes: [] };
   const remplacer = (liste, cle, x) => {
     const i = liste.findIndex((y) => cle(y) === cle(x));
     if (i >= 0) liste[i] = x; else liste.push(x);
@@ -45,6 +45,8 @@ function stockageMemoire(raison, graine) {
     reinitialiser: indisponible,
     emploiDuTemps: async () => structuredClone(edt),
     enregistrerReglage: async (cle, valeur) => { edt.reglages[cle] = valeur; },
+    enregistrerPeriode: async (x) => remplacer(edt.periodes, (y) => y.id, x),
+    supprimerPeriode: async (id) => retirer(edt.periodes, (y) => y.id === id),
     enregistrerCategorie: async (x) => remplacer(edt.categories, (y) => y.cle, x),
     enregistrerSerie: async (x) => remplacer(edt.series, (y) => y.id, x),
     enregistrerException: async (x) => remplacer(edt.exceptions, (y) => `${y.serie}@${y.dateOrigine}`, x),
@@ -81,6 +83,8 @@ export async function ouvrirStockage(graine) {
       reinitialiser: (graine) => appeler('reinitialiser', { graine }),
       emploiDuTemps: () => appeler('emploiDuTemps'),
       enregistrerReglage: (cle, valeur) => appeler('enregistrerReglage', { cle, valeur }),
+      enregistrerPeriode: (periode) => appeler('enregistrerPeriode', { periode }),
+      supprimerPeriode: (id) => appeler('supprimerPeriode', { id }),
       enregistrerCategorie: (categorie) => appeler('enregistrerCategorie', { categorie }),
       enregistrerSerie: (serie) => appeler('enregistrerSerie', { serie }),
       enregistrerException: (exception) => appeler('enregistrerException', { exception }),

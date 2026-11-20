@@ -323,6 +323,18 @@ async function faireCaptures(dossier) {
   await page.executeJavaScript(`document.querySelector('#menu').showPopover()`);
   await capturer('33-menu');
   await page.executeJavaScript(`document.querySelector('#menu').hidePopover()`);
+  // Vacances de Noël en zone B.
+  await proto('zoneVacances("B")');
+  await proto('scenario("2026-12-22T10:00", "college")');
+  await capturer('35-vacances-maintenant');
+  await proto('scenario("2026-12-22T10:00", "college", "jour", "2026-12-22")');
+  await capturer('36-vacances-jour');
+  await proto('scenario("2026-12-17T19:00", "college", "semaine", "2026-12-21")');
+  await capturer('37-vacances-semaine');
+  await proto('scenario("2026-12-17T19:00", "college", "edt")');
+  await page.executeJavaScript(`document.querySelector('[data-action="vacances-modifier"]').scrollIntoView({ block: 'center' })`);
+  await capturer('38-vacances-edt');
+  await proto('zoneVacances("")');
   await proto('scenario("2026-11-25T19:00", "college", "afaire")');
   await capturer('25-a-faire');
   await proto('scenario("2026-11-23T19:00", "college", "jour", "2026-11-24")');

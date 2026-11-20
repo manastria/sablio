@@ -7,7 +7,7 @@
 import sqlite3InitModule from './vendor/sqlite/index.mjs';
 
 const NOM = '/mydevoirs.sqlite3';
-const VERSION = 6;
+const VERSION = 7;
 const SCHEMA = `
   CREATE TABLE IF NOT EXISTS devoir (
     id TEXT PRIMARY KEY,
@@ -92,6 +92,19 @@ const MIGRATIONS = {
       supprime INTEGER NOT NULL DEFAULT 0
     );
   `,
+  // 7 : jours sans cours ajoutés à la main (stage, examens…) ; activités
+  // qui s'arrêtent pendant les vacances.
+  7: `
+    CREATE TABLE periode (
+      id TEXT PRIMARY KEY,
+      nom TEXT NOT NULL,
+      du TEXT NOT NULL,
+      au TEXT NOT NULL,
+      modifie_le INTEGER NOT NULL,
+      supprime INTEGER NOT NULL DEFAULT 0
+    );
+    ALTER TABLE categorie ADD COLUMN pause_vacances INTEGER;
+  `,
 };
 
 // --- Emploi du temps : écriture « insérer ou remplacer » (clé = identifiant) ---
@@ -99,9 +112,9 @@ const MIGRATIONS = {
 function ecrireCategorie(x) {
   db.exec({
     sql: `INSERT OR REPLACE INTO categorie (cle, nature, nom, court, picto, couleur, materiel, confidentialite,
-            garder_couleur, ordre, modifie_le, supprime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+            garder_couleur, ordre, pause_vacances, modifie_le, supprime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
     bind: [x.cle, x.nature, x.nom, x.court ?? null, x.picto ?? null, x.couleur, x.materiel ?? null,
-      x.confidentialite ?? null, x.garderCouleur ? 1 : 0, x.ordre ?? 0, Date.now()],
+      x.confidentialite ?? null, x.garderCouleur ? 1 : 0, x.ordre ?? 0, x.pauseVacances ? 1 : 0, Date.now()],
   });
 }
 
@@ -126,6 +139,13 @@ function ecrireException(x) {
 
 function completerEmploiDuTemps() {
   if (graineMigration && !db.selectValue('SELECT count(*) FROM categorie')) insererEmploiDuTemps(graineMigration);
+}
+
+function ecrirePeriode(x) {
+  db.exec({
+    sql: 'INSERT OR REPLACE INTO periode (id, nom, du, au, modifie_le, supprime) VALUES (?, ?, ?, ?, ?, 0)',
+    bind: [x.id, x.nom, x.du, x.au, Date.now()],
+  });
 }
 
 function insererEmploiDuTemps(graine) {
@@ -223,9 +243,11 @@ const operations = {
 
   emploiDuTemps() {
     const categories = db.selectObjects(
-      `SELECT cle, nature, nom, court, picto, couleur, materiel, confidentialite, garder_couleur AS garderCouleur, ordre
+      `SELECT cle, nature, nom, court, picto, couleur, materiel, confidentialite, garder_couleur AS garderCouleur, ordre,
+              pause_vacances AS pauseVacances
        FROM categorie WHERE supprime = 0 ORDER BY ordre, nom`,
-    ).map((x) => ({ ...x, garderCouleur: Boolean(x.garderCouleur) }));
+    ).map((x) => ({ ...x, garderCouleur: Boolean(x.garderCouleur), pauseVacances: Boolean(x.pauseVacances) }));
+    const periodes = db.selectObjects('SELECT id, nom, du, au FROM periode WHERE supprime = 0 ORDER BY du');
     const series = db.selectObjects(
       `SELECT id, coalesce(categorie, '') AS cle, titre, picto, salle, jour, debut, fin, semaine,
               valide_du AS valideDu, valide_au AS valideAu, type, intervalle, couleur, confidentialite
@@ -238,7 +260,13 @@ const operations = {
     const reglages = Object.fromEntries(
       db.selectObjects('SELECT cle, valeur FROM reglage WHERE supprime = 0').map((x) => [x.cle, JSON.parse(x.valeur)]),
     );
-    return { categories, series, exceptions, reglages };
+    return { categories, series, exceptions, reglages, periodes };
+  },
+
+  enregistrerPeriode({ periode }) { ecrirePeriode(periode); return true; },
+  supprimerPeriode({ id }) {
+    db.exec({ sql: 'UPDATE periode SET supprime = 1, modifie_le = ? WHERE id = ?', bind: [Date.now(), id] });
+    return true;
   },
 
   enregistrerReglage({ cle, valeur }) {

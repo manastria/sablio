@@ -698,6 +698,25 @@ details.carte.faits summary { margin: 0; }
 
 .vue-edt { flex: 1; display: grid; gap: 1rem; padding: 1rem; align-content: start; }
 .cycle-resume { gap: 0.8rem; margin: 0; }
+.periode-fixe { border-left-color: var(--bord); background: var(--surface-2); }
+.pastille-neutre { background: none; }
+
+/* Jours sans cours : hachures douces, partout où le jour apparaît. */
+.bandeau-sans-cours {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.8rem;
+  margin: 0.4rem 0 0.6rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  background: repeating-linear-gradient(135deg, var(--surface-2) 0 8px, transparent 8px 16px);
+  border: 1px solid var(--bord);
+}
+.bandeau-sans-cours span { color: var(--texte-doux); }
+.puce-jour.sans-cours:not(.choisi), .sj-frise.sans-cours {
+  background: repeating-linear-gradient(135deg, var(--surface-2) 0 6px, transparent 6px 12px);
+}
 .grille-edt { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); align-items: start; }
 .liste-edt { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; gap: 0.35rem; }
 .ligne-edt {

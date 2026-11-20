@@ -10,7 +10,7 @@ Emploi du temps de démonstration, modifiable : une semaine type de collégien a
 cd refonte/prototype
 npm install
 npm start            # fenêtre normale
-npm run captures     # 34 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
+npm run captures     # 38 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
 ```
 
 Dans la fenêtre :
@@ -36,6 +36,8 @@ Un rappel (notification + carillon) part 5 minutes avant chaque cours.
 **+ Événement** (vues Jour et Semaine, écran Emploi du temps) ajoute un rendez-vous à l'agenda : une activité (le psychologue) ou un titre libre (le dentiste), une date, des heures, et éventuellement une répétition (« chaque semaine, 3 fois »). La démonstration contient un rendez-vous chez le dentiste.
 
 **Verrou** (facultatif) : dans **Réglages et outils → Verrou de la configuration**, un code à 4 chiffres protège l'emploi du temps, les séances, les réglages et les données. L'élève garde ses devoirs, peut ajouter des événements et basculer le mode discret. Le code ouvre le mode adulte pour 10 minutes.
+
+**Vacances** : dans l'écran Emploi du temps, section « Vacances et jours sans cours », choisir la zone (dates officielles 2026-2028 incluses), les jours fériés, et ajouter des périodes (stage, examens). Ces jours-là, les cours disparaissent ; les activités continuent, sauf celles qui « s'arrêtent pendant les vacances ».
 
 Un clic sur une séance de la vue Jour permet de la dire annulée ou déplacée (avec un motif), puis de la rétablir ; ses devoirs la suivent.
 
@@ -105,6 +107,7 @@ L'exécutable n'est **pas signé** : le Contrôle intelligent des applications d
 | `src/preload.js` | Pont minimal entre la page et le système |
 | `src/emploi-du-temps.js` | Données et calculs de temps, sans DOM : séries, exceptions, occurrences, semaines A/B, états de la journée, temps relatif, démonstration |
 | `src/app.js` | Interface |
+| `src/vacances.js` | Vacances scolaires officielles (zones A, B, C), à mettre à jour chaque année |
 | `src/contenu.js` | Nettoyage du texte mis en forme d'un devoir, version brute |
 | `src/index.html`, `src/style.css` | Page et styles (thème clair et sombre) |
 | `src/stockage.js`, `src/stockage-worker.js` | Base SQLite (WebAssembly, OPFS) dans un worker, avec repli en mémoire |
