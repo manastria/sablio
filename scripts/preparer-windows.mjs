@@ -1,6 +1,6 @@
 // Prépare une version Windows portable du prototype dans dist/windows,
 // depuis Linux ou WSL : télécharge Electron pour Windows et y copie l'application.
-// Aucune installation : on lance dist/windows/MyDevoirs-prototype.exe.
+// Aucune installation : on lance dist/windows/Sablio-prototype.exe.
 
 import { downloadArtifact } from '@electron/get';
 import { execFileSync } from 'node:child_process';
@@ -17,7 +17,7 @@ const archive = await downloadArtifact({ version, artifactName: 'electron', plat
 fs.rmSync(destination, { recursive: true, force: true });
 fs.mkdirSync(destination, { recursive: true });
 execFileSync('unzip', ['-q', archive, '-d', destination]);
-fs.renameSync(path.join(destination, 'electron.exe'), path.join(destination, 'MyDevoirs-prototype.exe'));
+fs.renameSync(path.join(destination, 'electron.exe'), path.join(destination, 'Sablio-prototype.exe'));
 
 const app = path.join(destination, 'resources', 'app');
 fs.mkdirSync(app, { recursive: true });

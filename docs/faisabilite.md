@@ -1,6 +1,6 @@
 # Refonte : étude de faisabilité
 
-État : **faisabilité**. Un prototype existe (`refonte/prototype/`). Ce document consigne les contraintes, les choix provisoires et les risques, pour ne pas les redécouvrir.
+État : **faisabilité**. Un prototype existe (le dossier du projet). Ce document consigne les contraintes, les choix provisoires et les risques, pour ne pas les redécouvrir.
 
 ## Objectif
 
@@ -121,7 +121,7 @@ On ne peut pas choisir un poste représentatif. On fabrique donc un **outil de d
 
 ## Résultats du prototype (19 novembre 2026)
 
-Prototype dans `refonte/prototype/` (Electron 45.2.3). Mesuré sous WSL2 (WSLg, Wayland) et, pour le rendu, dans Edge sous Windows 11 Famille.
+Prototype dans le dossier du projet (Electron 45.2.3). Mesuré sous WSL2 (WSLg, Wayland) et, pour le rendu, dans Edge sous Windows 11 Famille.
 
 | Point | Résultat |
 |---|---|

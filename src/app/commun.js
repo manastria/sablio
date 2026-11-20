@@ -35,7 +35,7 @@ export const maintenant = () => new Date(horloge.simBase + (Date.now() - horloge
 export const MODES_DISCRET = ['manuel', 'automatique', 'toujours'];
 
 export const etat = {
-  profil: PROFILS[lirePreference('profil', '')] ? lirePreference('profil', '') : 'college',
+  profil: PROFILS[lirePreference('sablio-profil', '')] ? lirePreference('sablio-profil', '') : 'college',
   vue: 'maintenant', // l'accueil est toujours « Maintenant / Ensuite »
   jour: null, // jour affiché par la vue Jour
   devoirs: null, // chargés depuis la base (null tant qu'elle n'est pas ouverte)

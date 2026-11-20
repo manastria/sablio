@@ -256,7 +256,7 @@ export const actionsDonnees = {
 export function prendreVerrou() {
   if (!navigator.locks) return Promise.resolve(true);
   return new Promise((resolve) => {
-    navigator.locks.request('mydevoirs-base', { ifAvailable: true }, (verrou) => {
+    navigator.locks.request('sablio-base', { ifAvailable: true }, (verrou) => {
       resolve(Boolean(verrou));
       return verrou ? new Promise(() => {}) : undefined;
     });

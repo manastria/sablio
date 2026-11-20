@@ -1,7 +1,7 @@
 // Données de démonstration et calculs de temps.
 // Aucun accès au DOM : ce module se teste seul et pourra être repris.
 //
-// Vocabulaire (voir docs/refonte/modele-recurrence.md et specification.md) :
+// Vocabulaire (voir docs/modele-recurrence.md et docs/specification.md) :
 // - une série est un motif qui revient (« maths, lundi 8 h 55 ») ;
 // - une occurrence est une séance précise : série + date d'origine ;
 // - une exception annule ou déplace une occurrence.
@@ -9,7 +9,7 @@
 const MINUTE = 60_000;
 const JOUR = 86_400_000;
 
-// Lundi de référence de la semaine A (même convention que mydevoirs/alternance.py).
+// Lundi de référence de la semaine A (même convention que MyDevoirs).
 export const REFERENCE_AB = new Date(2025, 11, 29);
 export const LIBELLES_AB = ['A', 'B'];
 

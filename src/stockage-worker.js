@@ -7,7 +7,7 @@
 import sqlite3InitModule from './vendor/sqlite/index.mjs';
 import { SCHEMA, VERSION, etapesDeMigration } from './schema.js';
 
-const NOM = '/mydevoirs.sqlite3';
+const NOM = '/sablio.sqlite3';
 
 // --- Emploi du temps : écriture « insérer ou remplacer » (clé = identifiant) ---
 
@@ -106,8 +106,8 @@ const operations = {
     sqlite3 = await sqlite3InitModule();
     try {
       pool = await sqlite3.installOpfsSAHPoolVfs({
-        name: 'mydevoirs',
-        directory: '.mydevoirs',
+        name: 'sablio',
+        directory: '.sablio',
         // En cas d'échec (base déjà ouverte dans une autre fenêtre),
         // surtout ne rien effacer.
         preserveOnInitFailure: true,

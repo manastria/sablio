@@ -1,4 +1,4 @@
-// Couche « plateforme » : Electron fournit window.mydevoirs (voir preload.js) ;
+// Couche « plateforme » : Electron fournit window.sablio (voir preload.js) ;
 // dans un navigateur ou une fois installée en PWA, on utilise les API du web.
 // Aussi : son des rappels, installation de la PWA, service worker.
 
@@ -6,9 +6,7 @@ import { $, journaliser } from './commun.js';
 import { affichage } from './discret.js';
 import { stockage } from './donnees.js';
 
-// Couche « plateforme » : Electron fournit window.mydevoirs (voir preload.js) ;
-// dans un navigateur ou une fois installée en PWA, on utilise les API du web.
-export const dansElectron = Boolean(window.mydevoirs);
+export const dansElectron = Boolean(window.sablio);
 export const enPWA = !dansElectron && 'serviceWorker' in navigator && location.protocol.startsWith('http');
 
 export async function notifierNavigateur(titre, texte) {
@@ -48,7 +46,7 @@ export async function environnementNavigateur() {
   };
 }
 
-export const api = window.mydevoirs ?? {
+export const api = window.sablio ?? {
   environnement: environnementNavigateur,
   notifier: notifierNavigateur,
   testerSqlite: async () => ({ ok: false, erreur: 'pas encore dans la version navigateur' }),

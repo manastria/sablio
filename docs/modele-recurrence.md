@@ -4,7 +4,7 @@
 
 ## Le problème
 
-L'application actuelle gère l'alternance A/B (`mydevoirs/alternance.py`). C'est un cas particulier. Chez les étudiants, un cours peut suivre ce schéma :
+MyDevoirs gère l'alternance A/B (`mydevoirs/alternance.py` dans son dépôt). C'est un cas particulier. Chez les étudiants, un cours peut suivre ce schéma :
 
 > Mathématiques : 2 h par semaine. Semaine 1 le lundi, semaine 2 le mardi, semaine 3 : le cours saute, ou est déplacé dans une autre semaine, ou remplacé par un autre cours parce que le professeur est absent.
 

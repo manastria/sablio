@@ -12,7 +12,7 @@ const path = require('node:path');
 const { DatabaseSync } = require('node:sqlite');
 
 // Sous Windows, les notifications sont rattachées à cet identifiant.
-app.setAppUserModelId('fr.manastria.mydevoirs.prototype');
+app.setAppUserModelId('fr.manastria.sablio');
 // Le carillon de rappel doit pouvoir sonner sans clic préalable.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
@@ -132,7 +132,7 @@ function notifier(titre, texte) {
 // Écrit 1000 lignes dans un fichier temporaire, le renomme (écriture atomique),
 // relit le résultat puis efface le fichier.
 function testerSqlite(dossier) {
-  const final = path.join(dossier, 'mydevoirs-essai.sqlite');
+  const final = path.join(dossier, 'sablio-essai.sqlite');
   const temporaire = `${final}.tmp`;
   const debut = performance.now();
   try {
@@ -215,7 +215,7 @@ const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
 async function faireCaptures(dossier) {
   fs.mkdirSync(dossier, { recursive: true });
   const page = fenetre.webContents;
-  const proto = (code) => page.executeJavaScript(`window.prototypeMyDevoirs.${code}`);
+  const proto = (code) => page.executeJavaScript(`window.sablioEssais.${code}`);
   const capturer = async (nom) => {
     await attendre(500);
     const image = await page.capturePage();

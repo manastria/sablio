@@ -1,5 +1,5 @@
 // Essais d'interface pour les captures automatiques (main.js) et accès
-// window.prototypeMyDevoirs. Propre au prototype.
+// window.sablioEssais. Propre au prototype.
 
 import * as edt from '../emploi-du-temps.js';
 import * as sauvegarde from '../sauvegarde.js';
@@ -311,7 +311,7 @@ export async function essaisInterface() {
   $('#detail').close();
 }
 // Accès pour les captures automatiques (main.js).
-window.prototypeMyDevoirs = {
+window.sablioEssais = {
   scenario(iso, profil, vue = 'maintenant', jour = null) {
     changerProfil(profil);
     etat.vue = vue;

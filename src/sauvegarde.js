@@ -9,7 +9,7 @@
 // Le « handle » du dossier est gardé dans IndexedDB : on le retrouve d'une
 // session à l'autre, mais le navigateur peut redemander l'autorisation.
 
-const BASE = 'mydevoirs-reglages';
+const BASE = 'sablio-reglages';
 const MAGASIN = 'reglages';
 const CLE = 'dossier-sauvegarde';
 export const GARDER = 10;

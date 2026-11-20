@@ -150,6 +150,6 @@ export function changerProfil(profil) {
   etat.profil = profil;
   document.documentElement.dataset.profil = profil;
   $('#profil').value = profil;
-  ecrirePreference('profil', profil);
+  ecrirePreference('sablio-profil', profil);
   rendre(true);
 }

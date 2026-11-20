@@ -1,13 +1,23 @@
-# Prototype jetable de Sablio : « Maintenant / Ensuite » et vue Jour
+# Sablio
 
-But : juger la pile technique (Electron, interface web, SQLite intégré) et l'ergonomie des vues avant d'écrire l'application. Le code n'est pas destiné à être conservé tel quel. Les fonctions sont décrites dans `docs/refonte/specification.md`.
+Une application qui dit à l'élève : « voilà à quoi ressemble ta journée ». Elle réunit l'emploi du temps, les devoirs et l'agenda (rendez-vous de soin, activités), pour des élèves et étudiants qui se repèrent mal dans le temps. Le temps y est visible et relatif : « dans 28 min », « pour demain », « il te reste 2 soirs ».
 
-Emploi du temps de démonstration, modifiable : une semaine type de collégien avec semaines A/B, un créneau « DS » sans matière fixe (mercredi matin) et quatre activités personnelles (football, psychologue, orthophonie, piano). Les devoirs sont enregistrés (voir plus bas).
+En ligne : **https://sablio.manastria.fr/** (application web installable, hors ligne, données dans le navigateur, sauvegardes dans un dossier choisi).
+
+Sablio reprend l'idée de [MyDevoirs](https://github.com/manastria/mydevoirs), qui continue de son côté. C'est encore un **prototype** : il sert à juger l'ergonomie et la pile technique avant l'application définitive.
+
+Documents :
+
+- [docs/specification.md](docs/specification.md) : écrans et fonctions ;
+- [docs/faisabilite.md](docs/faisabilite.md) : contraintes, choix techniques, risques ;
+- [docs/modele-recurrence.md](docs/modele-recurrence.md) : cours répétés, exceptions ;
+- [docs/notice-professionnel.md](docs/notice-professionnel.md) : préparer l'emploi du temps d'un élève (ergothérapeute, enseignant).
+
+Emploi du temps de démonstration, modifiable : une semaine type de collégien avec semaines A/B, un créneau « DS » sans matière fixe (mercredi matin) et quatre activités personnelles (football, psychologue, orthophonie, piano). Pour un usage réel : Menu → Réglages et outils → « Repartir de zéro ».
 
 ## Lancer
 
 ```sh
-cd refonte/prototype
 npm install
 npm start            # fenêtre normale
 npm run captures     # 39 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
@@ -49,7 +59,7 @@ Un rappel (notification + carillon) part 5 minutes avant chaque cours.
 
 **+ Événement** (vues Jour et Semaine, écran Emploi du temps) ajoute un rendez-vous à l'agenda : une activité (le psychologue) ou un titre libre (le dentiste), une date, des heures, et éventuellement une répétition (« chaque semaine, 3 fois »). La démonstration contient un rendez-vous chez le dentiste.
 
-**Pour l'ergothérapeute** : dans l'écran Emploi du temps, **Exporter l'emploi du temps** produit un fichier JSON (matières, activités, cours, événements, vacances, semaines alternées) ; **Importer un emploi du temps…** le reprend sur l'ordinateur de la famille, en remplacement ou en ajout, sans doublon. Le prénom de l'élève figure dans le titre et le nom du fichier ; **Nouvel emploi du temps (vide)** prépare l'élève suivant. Notice : `docs/refonte/notice-professionnel.md`.
+**Pour l'ergothérapeute** : dans l'écran Emploi du temps, **Exporter l'emploi du temps** produit un fichier JSON (matières, activités, cours, événements, vacances, semaines alternées) ; **Importer un emploi du temps…** le reprend sur l'ordinateur de la famille, en remplacement ou en ajout, sans doublon. Le prénom de l'élève figure dans le titre et le nom du fichier ; **Nouvel emploi du temps (vide)** prépare l'élève suivant. Notice : `docs/notice-professionnel.md`.
 
 **Verrou** (facultatif) : dans **Réglages et outils → Verrou de la configuration**, un code à 4 chiffres protège l'emploi du temps, les séances, les réglages et les données. L'élève garde ses devoirs, peut ajouter des événements et basculer le mode discret. Le code ouvre le mode adulte pour 10 minutes. Code oublié : la fenêtre du code donne un code de demande ; la page `secours.html` (servie avec l'application, à publier sur sablio.manastria.fr/secours) en déduit un code de secours valable le jour même.
 
@@ -129,7 +139,7 @@ npm run verifier-en-ligne    # contrôle dans Chromium : console, base, service 
 npm run preparer-windows   # dist/windows/MyDevoirs-prototype.exe (358 Mo décompressé)
 ```
 
-L'exécutable n'est **pas signé** : le Contrôle intelligent des applications de Windows 11 le bloque (voir `docs/refonte/faisabilite.md`).
+L'exécutable n'est **pas signé** : le Contrôle intelligent des applications de Windows 11 le bloque (voir `docs/faisabilite.md`).
 
 ## Fichiers
 

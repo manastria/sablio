@@ -1,8 +1,8 @@
 {
-  "name": "mydevoirs-prototype",
+  "name": "sablio",
   "version": "0.0.1",
   "private": true,
-  "description": "Prototype jetable : vue Maintenant / Ensuite et relevé de l'environnement",
+  "description": "Sablio : se repérer dans sa journée, ses cours et ses devoirs (prototype)",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

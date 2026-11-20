@@ -3,7 +3,7 @@
 // Seul pont entre la page et le système : la page n'a pas accès à Node.
 const { contextBridge, ipcRenderer } = require('electron');
 
-contextBridge.exposeInMainWorld('mydevoirs', {
+contextBridge.exposeInMainWorld('sablio', {
   environnement: () => ipcRenderer.invoke('environnement'),
   notifier: (titre, texte) => ipcRenderer.invoke('notifier', titre, texte),
   testerSqlite: () => ipcRenderer.invoke('tester-sqlite'),
