@@ -571,7 +571,7 @@ function affichageCategorie(c, serie = null) {
 
 function construireEdt(n) {
   const zone = $('#vue-edt');
-  const series = edt.series();
+  const series = edt.semaineType();
   const verrou = 'disabled title="Désactivez le mode discret pour modifier"';
   const cartes = ORDRE_JOURS.map((j) => {
     const lignes = series.filter((x) => x.jour === j).sort((a, b) => a.debut.localeCompare(b.debut)).map((x) => {
@@ -617,6 +617,11 @@ function construireEdt(n) {
         <ul class="liste-edt">${edt.matieres().map(ligneCategorie).join('')}</ul>
       </section>
       <section class="carte">
+        <div class="entete-carte"><p class="etiquette">Agenda</p>
+          <button type="button" class="lien" data-action="evenement-nouveau" data-date="${edt.isoLocal(n)}">+ Événement</button></div>
+        ${htmlAgenda(n)}
+      </section>
+      <section class="carte">
         <div class="entete-carte"><p class="etiquette">Activités personnelles</p>
           <button type="button" class="lien" data-action="categorie-nouvelle" data-nature="perso">+ Activité</button></div>
         <ul class="liste-edt">${edt.activites().map(ligneCategorie).join('') || '<li class="vide">Aucune.</li>'}</ul>
@@ -641,7 +646,7 @@ function ouvrirSerie(id = null, jour = 1) {
   $('#serie-jour').innerHTML = ORDRE_JOURS.map((j) => `<option value="${j}">${edt.majuscule(NOMS_JOURS[j])}</option>`).join('');
   $('#serie-jour').value = String(x?.jour ?? jour);
   // Nouveau cours : il commence à la fin du dernier cours de ce jour.
-  const dernier = edt.series().filter((s) => s.jour === Number(jour)).sort((a, b) => b.fin.localeCompare(a.fin))[0];
+  const dernier = edt.semaineType().filter((s) => s.jour === Number(jour)).sort((a, b) => b.fin.localeCompare(a.fin))[0];
   const debut = x?.debut ?? dernier?.fin ?? '08:00';
   const [h, m] = debut.split(':').map(Number);
   const finDefaut = `${String(Math.min(23, h + Math.floor((m + 55) / 60))).padStart(2, '0')}:${String((m + 55) % 60).padStart(2, '0')}`;
@@ -717,6 +722,163 @@ async function supprimerSerieEditee() {
   journaliser(`Cours supprimé : ${edt.categorie(x.cle)?.nom ?? x.titre}, ${NOMS_JOURS[x.jour]} ${x.debut}`);
 }
 
+// --- Agenda : événements datés ---
+// « RDV psy le mercredi 25/11 à 17 h 30, pendant 3 semaines » : une série
+// de type « événement », de valideDu à valideAu, toutes les 1 ou 2 semaines.
+
+const dateMoyenne = (d) => d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+
+// « mer. 25 nov. », « mer. 25 nov., 2 déc. et 9 déc. », « chaque semaine du … au … ».
+function resumeDates(dates) {
+  if (!dates.length) return '';
+  if (dates.length === 1) return dateMoyenne(dates[0]);
+  if (dates.length <= 4) {
+    const autres = dates.slice(1).map((d) => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }));
+    return `${dateMoyenne(dates[0])}, ${autres.slice(0, -1).join(', ')}${autres.length > 1 ? ' et ' : ''}${autres.at(-1)}`;
+  }
+  return `du ${dateMoyenne(dates[0])} au ${dateMoyenne(dates.at(-1))}`;
+}
+
+function htmlAgenda(n) {
+  const aujourdhui = edt.isoLocal(n);
+  const liste = edt.evenements().slice().sort((a, b) => (a.valideDu ?? '').localeCompare(b.valideDu ?? ''));
+  const aVenir = liste.filter((x) => (x.valideAu ?? x.valideDu ?? '') >= aujourdhui);
+  const passes = liste.filter((x) => (x.valideAu ?? x.valideDu ?? '') < aujourdhui);
+  const ligne = (x) => {
+    const a = affichageCategorie(edt.categorie(x.cle) ?? { nature: 'perso', nom: x.titre, picto: x.picto, couleur: x.couleur, confidentialite: x.confidentialite, garderCouleur: true }, x);
+    if (a.masque) return '';
+    const dates = edt.datesEvenement(x);
+    const rythme = dates.length > 1 ? `, ${x.intervalle === 2 ? 'une semaine sur deux' : 'chaque semaine'}` : '';
+    const details = `${resumeDates(dates)}${rythme} · ${heureCourte(x.debut)} – ${heureCourte(x.fin)}`;
+    return `<li><button type="button" class="ligne-edt" data-evenement="${x.id}" data-css="${couleurs(a)}" ${a.cache ? 'disabled title="Désactivez le mode discret pour modifier"' : ''}>
+      ${pastille(a)}<span><strong>${echapper(a.nom)}</strong><span class="precision">${echapper(details)}</span></span></button></li>`;
+  };
+  return `${aVenir.length ? `<ul class="liste-edt">${aVenir.map(ligne).join('')}</ul>` : '<p class="vide">Aucun événement à venir.</p>'}
+    ${passes.length ? `<details class="faits"><summary>${pluriel(passes.length, 'événement')} passé${passes.length > 1 ? 's' : ''}</summary>
+      <ul class="liste-edt">${passes.map(ligne).join('')}</ul></details>` : ''}`;
+}
+
+let evenementEdite = null;
+
+function htmlChoixPictos(nom, choisi) {
+  const liste = choisi && !PICTOS.includes(choisi) ? [choisi, ...PICTOS] : PICTOS;
+  return liste.map((p) => `<label class="puce-picto"><input type="radio" name="${nom}" value="${p}" ${p === choisi ? 'checked' : ''}><span>${p}</span></label>`).join('');
+}
+
+function htmlChoixCouleurs(nom, choisie) {
+  const liste = PALETTE.includes(choisie) ? PALETTE : [choisie, ...PALETTE];
+  return liste.map((x) => `<label class="puce-couleur" data-css="--couleur:${x}">
+    <input type="radio" name="${nom}" value="${x}" ${x === choisie ? 'checked' : ''} aria-label="Couleur ${x}"><span></span></label>`).join('');
+}
+
+function ouvrirEvenement(id = null, date = null) {
+  const x = id ? edt.evenements().find((e) => e.id === id) : null;
+  evenementEdite = x;
+  const n = maintenant();
+  const option = (c) => `<option value="${c.cle}">${c.picto} ${echapper(c.nom)}</option>`;
+  const choix = $('#evt-categorie');
+  choix.innerHTML = `<optgroup label="Activités personnelles">${edt.activites().map(option).join('')}</optgroup>
+    <option value="">📌 Autre (titre libre)</option>
+    <optgroup label="École">${edt.matieres().map(option).join('')}</optgroup>`;
+  choix.value = x ? x.cle : '';
+  $('#evt-titre').value = x?.titre ?? '';
+  $('#evt-pictos').innerHTML = htmlChoixPictos('evt-picto', x?.picto ?? '📌');
+  $('#evt-couleurs').innerHTML = htmlChoixCouleurs('evt-couleur', x?.couleur ?? '#00838f');
+  appliquerStyles($('#evt-couleurs'));
+  document.querySelector(`input[name="evt-confidentialite"][value="${x?.confidentialite ?? 'visible'}"]`).checked = true;
+  $('#evt-date').value = x?.valideDu ?? date ?? edt.isoLocal(n);
+  $('#evt-debut').value = x?.debut ?? '17:00';
+  $('#evt-fin').value = x?.fin ?? '18:00';
+  $('#evt-lieu').value = x?.salle ?? '';
+  const nombre = x ? edt.datesEvenement(x).length : 1;
+  const rythme = nombre > 1 ? String(x.intervalle || 1) : '0';
+  document.querySelector(`input[name="evt-repetition"][value="${rythme}"]`).checked = true;
+  $('#evt-fois').value = nombre > 1 ? nombre : 3;
+  $('#evt-supprimer').hidden = !x;
+  $('#evenement-titre-dialogue').textContent = x ? 'Modifier l’événement' : 'Nouvel événement';
+  $('#evt-erreur').hidden = true;
+  majChampsEvenement();
+  $('#evenement').showModal();
+}
+
+// Le formulaire décrit l'événement ; on en déduit la série.
+function serieDuFormulaire() {
+  const cle = $('#evt-categorie').value;
+  const date = $('#evt-date').value;
+  const rythme = Number(document.querySelector('input[name="evt-repetition"]:checked').value);
+  const fois = rythme ? Math.max(2, Math.min(52, Number($('#evt-fois').value) || 2)) : 1;
+  const debut = date ? edt.dateDepuisIso(date) : null;
+  return {
+    id: evenementEdite?.id ?? crypto.randomUUID(),
+    type: 'evenement',
+    cle,
+    titre: cle ? null : $('#evt-titre').value.trim(),
+    picto: cle ? null : document.querySelector('input[name="evt-picto"]:checked')?.value ?? '📌',
+    couleur: cle ? null : document.querySelector('input[name="evt-couleur"]:checked')?.value ?? '#00838f',
+    confidentialite: cle ? null : document.querySelector('input[name="evt-confidentialite"]:checked').value,
+    salle: $('#evt-lieu').value.trim() || null,
+    jour: debut ? debut.getDay() : 0,
+    debut: $('#evt-debut').value,
+    fin: $('#evt-fin').value,
+    semaine: null,
+    valideDu: date || null,
+    valideAu: debut ? edt.isoLocal(edt.ajouterJours(debut, 7 * (rythme || 1) * (fois - 1))) : null,
+    intervalle: rythme > 1 ? rythme : null,
+  };
+}
+
+function majChampsEvenement() {
+  const libre = $('#evt-categorie').value === '';
+  $('#evt-libre').hidden = !libre;
+  $('#evt-titre').required = libre;
+  const repete = document.querySelector('input[name="evt-repetition"]:checked').value !== '0';
+  $('#evt-champ-fois').hidden = !repete;
+  const serie = serieDuFormulaire();
+  const dates = edt.datesEvenement(serie);
+  $('#evt-resume').textContent = dates.length
+    ? `${dates.length === 1 ? 'Une fois' : `${dates.length} fois`} : ${resumeDates(dates)}, de ${heureCourte(serie.debut || '00:00')} à ${heureCourte(serie.fin || '00:00')}.`
+    : '';
+}
+
+async function enregistrerEvenementFormulaire() {
+  const serie = serieDuFormulaire();
+  try {
+    await stockage.enregistrerSerie(serie);
+    await rechargerTout();
+    planifierSauvegarde();
+    journaliser(`Événement ${evenementEdite ? 'modifié' : 'ajouté'} : ${edt.categorie(serie.cle)?.nom ?? serie.titre}, ${resumeDates(edt.datesEvenement(serie))} à ${serie.debut}`);
+  } catch (e) {
+    journaliser(`Événement : échec (${e.message})`);
+  }
+}
+
+let evenementEnCours = Promise.resolve();
+$('#evenement form').addEventListener('submit', (e) => {
+  if (e.submitter?.value !== 'ok') return;
+  if ($('#evt-fin').value <= $('#evt-debut').value) {
+    e.preventDefault();
+    $('#evt-erreur').textContent = 'L’heure de fin doit être après l’heure de début.';
+    $('#evt-erreur').hidden = false;
+    return;
+  }
+  evenementEnCours = enregistrerEvenementFormulaire();
+});
+for (const evenement of ['input', 'change']) {
+  $('#evenement').addEventListener(evenement, (e) => {
+    if (!e.target.matches('#evt-titre')) majChampsEvenement();
+  });
+}
+
+async function supprimerEvenementEdite() {
+  const x = evenementEdite;
+  if (!x || !confirm(`Supprimer cet événement${edt.datesEvenement(x).length > 1 ? ' et toutes ses dates' : ''} ?`)) return;
+  $('#evenement').close();
+  await stockage.supprimerSerie(x.id);
+  await rechargerTout();
+  planifierSauvegarde();
+  journaliser(`Événement supprimé : ${edt.categorie(x.cle)?.nom ?? x.titre}`);
+}
+
 // Une matière ou une activité.
 let categorieEditee = null;
 let natureEditee = 'ecole';
@@ -787,7 +949,7 @@ $('#edt-categorie form').addEventListener('submit', (e) => {
 async function supprimerCategorieEditee() {
   const c = categorieEditee;
   if (!c) return;
-  const cours = edt.series().filter((x) => x.cle === c.cle).length;
+  const cours = edt.series().filter((x) => x.cle === c.cle).length; // cours et événements
   const devoirs = (etat.devoirs ?? []).filter((d) => d.matiere.cle === c.cle).length;
   if (cours || devoirs) {
     $('#cat-erreur').textContent = `Impossible : ${[cours ? pluriel(cours, 'cours') : '', devoirs ? pluriel(devoirs, 'devoir') : ''].filter(Boolean).join(' et ')} ${cours + devoirs > 1 ? 'l’utilisent' : 'l’utilise'}. Supprimez-les ou changez-les d’abord.`;
@@ -853,6 +1015,7 @@ function construireJour(n, profil) {
       <button type="button" data-action="jour-decaler" data-jours="1" aria-label="Jour suivant" title="Jour suivant (flèche droite)">→</button>
     </div>
     <h2>${echapper(edt.titreJour(jour, n))}</h2>
+    <button type="button" data-action="evenement-nouveau" data-date="${edt.isoLocal(jour)}">+ Événement</button>
     <button type="button" class="mise-en-avant" data-action="ajouter">+ Devoir</button>
     ${htmlBandeJours(jour, n)}`;
   $('#jour-edt').innerHTML = htmlJourEdt(jour, n);
@@ -1072,6 +1235,7 @@ function construireSemaine(n) {
     </div>
     ${badgeSemaine(lundi, n)}
     <h2>${echapper(edt.majuscule(edt.semaineRelative(lundi, n)))} · ${echapper(edt.plageDates(lundi, jours[6]))}</h2>
+    <button type="button" data-action="evenement-nouveau" data-date="${edt.isoLocal(edt.memeJour(lundi, edt.lundi(n)) ? n : lundi)}">+ Événement</button>
     <span class="semaine-total">${total.length ? `${pluriel(total.length, 'devoir')} à rendre · ${faits} fait${faits > 1 ? 's' : ''}` : 'Aucun devoir à rendre'}</span>`;
 
   const graduations = [];
@@ -1494,6 +1658,11 @@ function ouvrirSeance(cle) {
   $('#seance-fin').value = hhmmDe(o.fin);
   $('#seance-erreur').hidden = true;
   $('#seance-ajouter-devoir').hidden = o.nature === 'perso' || o.debut <= n;
+  // En mode discret, une activité non visible ne se modifie pas (comme dans l'écran Emploi du temps).
+  const serieComplete = edt.series().find((x) => x.id === o.serie);
+  const cache = o.nature === 'perso' && etat.discret && o.categorie?.confidentialite !== 'visible';
+  $('#seance-serie').hidden = !serieComplete || cache;
+  $('#seance-serie').textContent = serieComplete?.type === 'evenement' ? 'Modifier l’événement' : 'Modifier le cours (toute la série)';
   majChampsSeance();
   if (!$('#seance').open) $('#seance').showModal();
   document.querySelector('input[name="seance-statut"]:checked').focus();
@@ -1751,6 +1920,14 @@ const actions = {
   'serie-supprimer': supprimerSerieEditee,
   'categorie-nouvelle': (bouton) => ouvrirCategorie(null, bouton.dataset.nature),
   'categorie-supprimer': supprimerCategorieEditee,
+  'seance-serie': () => {
+    $('#seance').close();
+    const serie = edt.series().find((x) => x.id === seanceOuverte.serie);
+    if (serie?.type === 'evenement') ouvrirEvenement(serie.id);
+    else ouvrirSerie(serie.id);
+  },
+  'evenement-nouveau': (bouton) => ouvrirEvenement(null, bouton.dataset.date),
+  'evenement-supprimer': supprimerEvenementEdite,
   'seance-ajouter-devoir': () => {
     $('#seance').close();
     ouvrirAjout(null, seanceOuverte);
@@ -1806,6 +1983,11 @@ document.addEventListener('click', (e) => {
   const serie = e.target.closest('[data-serie]');
   if (serie) {
     ouvrirSerie(serie.dataset.serie);
+    return;
+  }
+  const evenementBouton = e.target.closest('[data-evenement]');
+  if (evenementBouton) {
+    ouvrirEvenement(evenementBouton.dataset.evenement);
     return;
   }
   const categorieBouton = e.target.closest('[data-categorie]');
@@ -2003,6 +2185,26 @@ async function essaisInterface() {
   window.confirm = confirmer;
   journaliser(`Essai emploi du temps : couleur ${equitation.couleur}, samedi ${edt.isoLocal(samedi)} → ${auCentre || 'rien'} ; suppression de l’activité utilisée ${refus} ; après suppression : ${edt.activites().some((x) => x.nom === 'Équitation') ? 'encore là' : 'retirée'}`);
 
+  // Agenda : RDV psy le mercredi suivant à 17 h 30, trois semaines de suite.
+  const mercredi = edt.ajouterJours(edt.lundi(edt.ajouterJours(maintenant(), 7)), 2);
+  ouvrirEvenement(null, edt.isoLocal(mercredi));
+  $('#evt-categorie').value = 'psy';
+  document.querySelector('input[name="evt-repetition"][value="1"]').checked = true;
+  $('#evt-fois').value = '3';
+  $('#evt-debut').value = '17:30';
+  $('#evt-fin').value = '18:15';
+  majChampsEvenement();
+  const resume = $('#evt-resume').textContent;
+  $('#evenement form').requestSubmit($('#evenement button[value="ok"]'));
+  await evenementEnCours;
+  const rdv = [0, 7, 14, 21].map((j) => edt.coursDuJour(edt.ajouterJours(mercredi, j), (o) => o.cle === 'psy').length);
+  evenementEdite = edt.evenements().find((x) => x.cle === 'psy');
+  const confirmerEvt = window.confirm;
+  window.confirm = () => true;
+  await supprimerEvenementEdite();
+  window.confirm = confirmerEvt;
+  journaliser(`Essai agenda : « ${resume} » ; psy les mercredis ${rdv.join('/')} (attendu 1/1/1/0) ; après suppression : ${edt.evenements().some((x) => x.cle === 'psy') ? 'encore là' : 'retiré'}`);
+
   // Modification : on ouvre le devoir, on le modifie, on enregistre.
   afficherDetail(ajoute.id);
   actions['modifier-devoir']();
@@ -2122,14 +2324,15 @@ const CLE_REFERENCE = 'sablio-demo-reference';
 function preparerDemo(reference) {
   // Devoirs et exceptions sont calculés sur l'emploi du temps sans exception :
   // un devoir de démonstration peut ainsi tomber sur le cours qui sera annulé.
-  edt.definirEmploiDuTemps({ categories: edt.DEMO_CATEGORIES, series: edt.DEMO_SERIES });
+  const series = [...edt.DEMO_SERIES, ...edt.evenementsDemo(reference)];
+  edt.definirEmploiDuTemps({ categories: edt.DEMO_CATEGORIES, series });
   edt.definirExceptions([]);
   const exceptions = edt.exceptionsDemo(reference);
   const devoirs = edt.devoirsDemo(reference).map((d) => ({
     id: crypto.randomUUID(), ...d, texte: d.contenu ? texteBrut(d.contenu) : d.texte,
   }));
   edt.definirExceptions(exceptions);
-  return { devoirs, categories: edt.DEMO_CATEGORIES, series: edt.DEMO_SERIES, exceptions };
+  return { devoirs, categories: edt.DEMO_CATEGORIES, series, exceptions };
 }
 
 // L'emploi du temps enregistré (matières, activités, séries, exceptions).

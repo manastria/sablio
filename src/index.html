@@ -121,6 +121,54 @@
     </form>
   </dialog>
 
+  <dialog id="evenement" class="large" aria-labelledby="evenement-titre-dialogue">
+    <form method="dialog" class="formulaire">
+      <h2 id="evenement-titre-dialogue">Nouvel événement</h2>
+      <label>Quoi <select id="evt-categorie"></select></label>
+      <div class="formulaire" id="evt-libre">
+        <label>Titre <input id="evt-titre" placeholder="Dentiste, anniversaire de Léa…" autocomplete="off"></label>
+        <fieldset class="rendu">
+          <legend>Pictogramme</legend>
+          <div class="choix-pictos" id="evt-pictos" role="radiogroup" aria-label="Pictogramme"></div>
+        </fieldset>
+        <fieldset class="rendu">
+          <legend>Couleur</legend>
+          <div class="choix-couleurs" id="evt-couleurs" role="radiogroup" aria-label="Couleur"></div>
+        </fieldset>
+        <fieldset class="rendu">
+          <legend>En mode discret</legend>
+          <div class="choix-seances" role="radiogroup" aria-label="Confidentialité">
+            <label class="choix-seance"><input type="radio" name="evt-confidentialite" value="visible"><span><strong>Visible</strong><span class="precision">titre réel</span></span></label>
+            <label class="choix-seance"><input type="radio" name="evt-confidentialite" value="discret"><span><strong>Discret</strong><span class="precision">« Rendez-vous »</span></span></label>
+          </div>
+        </fieldset>
+      </div>
+      <div class="ligne champs-courts">
+        <label>Date <input type="date" id="evt-date" required></label>
+        <label>De <input type="time" id="evt-debut" required></label>
+        <label>à <input type="time" id="evt-fin" required></label>
+      </div>
+      <label><span>Lieu <span class="facultatif">(facultatif)</span></span> <input id="evt-lieu" autocomplete="off"></label>
+      <fieldset class="rendu">
+        <legend>Répétition</legend>
+        <div class="choix-seances" role="radiogroup" aria-label="Répétition">
+          <label class="choix-seance"><input type="radio" name="evt-repetition" value="0"><span><strong>Une seule fois</strong></span></label>
+          <label class="choix-seance"><input type="radio" name="evt-repetition" value="1"><span><strong>Chaque semaine</strong></span></label>
+          <label class="choix-seance"><input type="radio" name="evt-repetition" value="2"><span><strong>Toutes les deux semaines</strong></span></label>
+        </div>
+        <label class="ligne champs-courts" id="evt-champ-fois"><span>Nombre de fois</span> <input type="number" id="evt-fois" min="2" max="52" value="3"></label>
+        <p class="vide" id="evt-resume" aria-live="polite"></p>
+      </fieldset>
+      <p class="erreur" id="evt-erreur" hidden></p>
+      <div class="ligne boutons">
+        <button value="ok" class="mise-en-avant">Enregistrer</button>
+        <button value="annuler" formnovalidate>Annuler</button>
+        <span class="espace"></span>
+        <button type="button" data-action="evenement-supprimer" id="evt-supprimer">Supprimer l’événement</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="edt-categorie" class="large" aria-labelledby="categorie-titre-dialogue">
     <form method="dialog" class="formulaire">
       <h2 id="categorie-titre-dialogue">Matière</h2>
@@ -220,6 +268,7 @@
         <button value="ok" class="mise-en-avant">Enregistrer</button>
         <button value="annuler" formnovalidate>Fermer</button>
         <span class="espace"></span>
+        <button type="button" data-action="seance-serie" id="seance-serie">Modifier toute la série</button>
         <button type="button" data-action="seance-ajouter-devoir" id="seance-ajouter-devoir">+ Devoir pour ce cours</button>
       </div>
     </form>

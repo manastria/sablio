@@ -659,6 +659,9 @@ details.carte.faits summary { margin: 0; }
 .ligne-edt .horaire { font-size: 0.8em; color: var(--texte-doux); font-variant-numeric: tabular-nums; line-height: 1.2; min-width: 3.6em; }
 .ligne-edt .pastille { font-size: 0.75em; }
 .champs-courts { gap: 0.8rem; align-items: end; }
+#evt-libre { padding: 0; }
+.formulaire #evt-champ-fois { display: flex; align-items: center; gap: 0.6rem; }
+#evt-fois { width: 5em; }
 .formulaire .champs-courts label { font-weight: 600; }
 .formulaire .champs-courts input, .formulaire .champs-courts select { width: auto; }
 .formulaire .champ-large { flex: 1; }

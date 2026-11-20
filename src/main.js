@@ -298,6 +298,22 @@ async function faireCaptures(dossier) {
   await page.executeJavaScript(`document.querySelector('[data-categorie="psy"]').click()`);
   await capturer('29-activite');
   await page.executeJavaScript(`document.querySelector('#edt-categorie').close()`);
+  // Agenda : le dentiste de la démonstration (le mercredi qui suit le jour de
+  // référence, ici le 25 novembre), la liste de l'agenda et la saisie.
+  await proto('scenario("2026-11-23T19:00", "college", "jour", "2026-11-25")');
+  await capturer('30-jour-dentiste');
+  await proto('scenario("2026-11-23T19:00", "college", "edt")');
+  await page.executeJavaScript(`document.querySelector('[data-evenement]').scrollIntoView({ block: 'center' })`);
+  await capturer('32-agenda');
+  await proto('scenario("2026-11-23T19:00", "college", "jour", "2026-11-25")');
+  await page.executeJavaScript(`document.querySelector('[data-action="evenement-nouveau"]').click();
+    document.querySelector('#evt-categorie').value = 'psy';
+    document.querySelector('input[name="evt-repetition"][value="1"]').checked = true;
+    document.querySelector('#evt-debut').value = '17:30';
+    document.querySelector('#evt-fin').value = '18:15';
+    document.querySelector('#evt-categorie').dispatchEvent(new Event('change', { bubbles: true }));`);
+  await capturer('31-evenement');
+  await page.executeJavaScript(`document.querySelector('#evenement').close()`);
   await proto('scenario("2026-11-25T19:00", "college", "afaire")');
   await capturer('25-a-faire');
   await proto('scenario("2026-11-23T19:00", "college", "jour", "2026-11-24")');

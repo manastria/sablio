@@ -10,7 +10,7 @@ Emploi du temps de démonstration, modifiable : une semaine type de collégien a
 cd refonte/prototype
 npm install
 npm start            # fenêtre normale
-npm run captures     # 29 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
+npm run captures     # 32 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
 ```
 
 Dans la fenêtre :
@@ -31,6 +31,8 @@ Un rappel (notification + carillon) part 5 minutes avant chaque cours.
 - **Semaine** : une ligne par jour, les séances en bandes de couleur sur une échelle horaire commune, les devoirs à rendre et leur progression. Un clic sur un jour ouvre la vue Jour. Le week-end, la semaine suivante s'affiche directement.
 
 Le bouton **Emploi du temps** de l'en-tête ouvre la saisie de la semaine type (cours, semaines A/B, période de validité), des matières (pictogramme, couleur, matériel) et des activités personnelles (confidentialité en mode discret).
+
+**+ Événement** (vues Jour et Semaine, écran Emploi du temps) ajoute un rendez-vous à l'agenda : une activité (le psychologue) ou un titre libre (le dentiste), une date, des heures, et éventuellement une répétition (« chaque semaine, 3 fois »). La démonstration contient un rendez-vous chez le dentiste.
 
 Un clic sur une séance de la vue Jour permet de la dire annulée ou déplacée (avec un motif), puis de la rétablir ; ses devoirs la suivent.
 

@@ -81,6 +81,17 @@ Repris de MyDevoirs : semaine suivante affichée le week-end, numéro et lettre 
 - En mode discret, les activités non visibles restent neutres et ne sont pas modifiables.
 - Enregistré dans la base (tables `categorie`, `serie`, `exception`), avec suppression douce pour la fusion entre appareils.
 
+### Agenda
+
+À côté de la semaine type, des **événements datés** : « RDV psy le mercredi 25/11 à 17 h 30, pendant 3 semaines », « Dentiste le 2 décembre ».
+
+- **« + Événement »** dans les vues Jour (le jour affiché est proposé) et Semaine, et dans l'écran Emploi du temps (section « Agenda »).
+- **Quoi** : une activité personnelle existante (elle apporte nom, couleur, pictogramme et confidentialité), « Autre » avec un titre libre (pictogramme, couleur et confidentialité choisis dans la fenêtre), ou une matière (réunion, sortie).
+- **Quand** : date, heures, lieu. **Répétition** : une seule fois, chaque semaine ou toutes les deux semaines, et un nombre de fois. La fenêtre récapitule : « 3 fois : mer. 25 nov., 2 déc. et 9 déc., de 17 h 30 à 18 h 15. »
+- Un événement est une série de type « événement » (champs `type`, `intervalle`, et pour un titre libre `couleur`, `confidentialite`), de `valide_du` à `valide_au`. Il s'affiche donc partout comme une séance : vues, rappels, mode discret ; une seule date peut être annulée ou déplacée depuis la vue Jour.
+- Depuis la fenêtre d'une séance, **« Modifier l'événement »** (ou « Modifier le cours (toute la série) » pour un cours) ouvre la série entière.
+- Dans l'écran Emploi du temps, l'agenda liste les événements à venir ; les événements passés sont repliés.
+
 ### Préparer le sac
 
 Liste déduite de l'emploi du temps du prochain jour de classe : ses matières, avec pour chacune le matériel habituel (champ facultatif de la matière : « calculatrice », « tenue de sport »). Affichée dans Maintenant / Ensuite après le dernier cours, et dans la vue Jour du lendemain. Cases à cocher, remises à zéro chaque jour.

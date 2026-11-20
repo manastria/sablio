@@ -127,6 +127,33 @@ const parOrdre = (a, b) => (a.ordre ?? 0) - (b.ordre ?? 0) || a.nom.localeCompar
 export const matieres = () => [...categories.values()].filter((x) => x.nature === 'ecole').sort(parOrdre);
 export const activites = () => [...categories.values()].filter((x) => x.nature === 'perso').sort(parOrdre);
 export const series = () => toutesLesSeries;
+// La semaine type (cours, créneaux, activités régulières) et l'agenda
+// (événements datés, uniques ou répétés quelques semaines).
+export const semaineType = () => toutesLesSeries.filter((x) => x.type !== 'evenement');
+export const evenements = () => toutesLesSeries.filter((x) => x.type === 'evenement');
+
+// Un événement à titre libre (« Dentiste ») porte lui-même ce qu'une
+// catégorie donnerait : nom, pictogramme, couleur, confidentialité.
+function categorieDeSerie(serie) {
+  const c = categorie(serie.cle);
+  if (c || serie.type !== 'evenement') return c;
+  return {
+    cle: '', nature: 'perso', nom: serie.titre || 'Événement', court: serie.titre || 'Événement',
+    picto: serie.picto || '📌', couleur: serie.couleur || '#5f7380',
+    confidentialite: serie.confidentialite || 'visible', garderCouleur: true,
+  };
+}
+
+// Dates d'un événement répété : de valideDu à valideAu, toutes les `intervalle` semaines.
+export function datesEvenement(serie, limite = 60) {
+  if (!serie.valideDu) return [];
+  const fin = serie.valideAu ? dateDepuisIso(serie.valideAu) : dateDepuisIso(serie.valideDu);
+  const dates = [];
+  for (let d = dateDepuisIso(serie.valideDu); d <= fin && dates.length < limite; d = ajouterJours(d, 7 * (serie.intervalle || 1))) {
+    dates.push(d);
+  }
+  return dates;
+}
 
 // --- Dates ---
 
@@ -221,7 +248,7 @@ const exceptionDe = (serie, dateOrigine) =>
 // --- Occurrences ---
 
 function occurrence(serie, jour) {
-  const cat = categorie(serie.cle);
+  const cat = categorieDeSerie(serie);
   const dateOrigine = isoLocal(jour);
   return {
     id: `${serie.id}@${dateOrigine}`,
@@ -233,6 +260,7 @@ function occurrence(serie, jour) {
     titre: serie.titre ?? cat?.nom ?? '',
     picto: serie.picto ?? cat?.picto ?? '',
     salle: serie.salle,
+    type: serie.type ?? 'cours',
     debut: aHeure(jour, serie.debut),
     fin: aHeure(jour, serie.fin),
     statut: 'normal',
@@ -244,7 +272,10 @@ function occurrencesDuMotif(jour) {
   const date = isoLocal(jour);
   return (seriesParJour.get(jour.getDay()) ?? [])
     .filter((x) => (!x.semaine || x.semaine === lettre)
-      && (!x.valideDu || x.valideDu <= date) && (!x.valideAu || date <= x.valideAu))
+      && (!x.valideDu || x.valideDu <= date) && (!x.valideAu || date <= x.valideAu)
+      // Toutes les N semaines, à compter de la première date.
+      && (!(x.intervalle > 1) || !x.valideDu
+        || Math.round((lundi(jour) - lundi(dateDepuisIso(x.valideDu))) / (7 * JOUR)) % x.intervalle === 0))
     .map((x) => occurrence(x, jour));
 }
 
@@ -363,6 +394,16 @@ export function situation(maintenant, filtre = () => true) {
 
 // Exceptions et devoirs de démonstration, calculés à partir d'un jour de
 // référence pour tomber dans les jours qui suivent.
+// Un rendez-vous ponctuel dans l'agenda : dentiste, le mercredi suivant.
+export function evenementsDemo(reference) {
+  const mercredi = ajouterJours(lundi(ajouterJours(reference, 7)), 2);
+  return [{
+    id: 'e-dentiste', type: 'evenement', jour: 3, cle: '', titre: 'Dentiste', picto: '🦷', couleur: '#00838f',
+    confidentialite: 'visible', salle: 'Cabinet dentaire', debut: '16:30', fin: '17:15', semaine: null,
+    valideDu: isoLocal(mercredi), valideAu: isoLocal(mercredi), intervalle: null,
+  }];
+}
+
 export function exceptionsDemo(reference) {
   const liste = [];
   const [svt] = prochainesOccurrences(debutJour(ajouterJours(reference, 1)), (o) => o.cle === 'svt');
