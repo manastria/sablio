@@ -4,13 +4,33 @@
 // tout de suite pendant la mise au point), le cache si le réseau ne répond pas.
 // L'application définitive mettra plutôt tout en cache d'un bloc, par version.
 
-const CACHE = 'mydevoirs-prototype-6';
+const CACHE = 'mydevoirs-prototype-7';
 const DELAI_RESEAU = 3000;
 const FICHIERS = [
   './',
   './index.html',
   './style.css',
   './app.js',
+  './app/actions.js',
+  './app/afaire.js',
+  './app/agenda.js',
+  './app/commun.js',
+  './app/devoirs.js',
+  './app/discret.js',
+  './app/donnees.js',
+  './app/echange.js',
+  './app/emploi-du-temps.js',
+  './app/essais.js',
+  './app/fenetres.js',
+  './app/jour.js',
+  './app/jours-sans-cours.js',
+  './app/outils.js',
+  './app/plateforme.js',
+  './app/rendu.js',
+  './app/sac.js',
+  './app/seance.js',
+  './app/semaine.js',
+  './app/verrou.js',
   './emploi-du-temps.js',
   './contenu.js',
   './vacances.js',

@@ -110,7 +110,14 @@ L'exécutable n'est **pas signé** : le Contrôle intelligent des applications d
 | `src/main.js` | Processus principal : fenêtre, mode compact, notifications, essai SQLite, captures |
 | `src/preload.js` | Pont minimal entre la page et le système |
 | `src/emploi-du-temps.js` | Données et calculs de temps, sans DOM : séries, exceptions, occurrences, semaines A/B, états de la journée, temps relatif, démonstration |
-| `src/app.js` | Interface |
+| `src/app.js` | Point d'entrée de l'interface : charge les modules, démarre |
+| `src/app/commun.js` | Socle : constantes, état, horloge, préférences, utilitaires (ne dépend d'aucun autre module) |
+| `src/app/rendu.js`, `discret.js`, `plateforme.js` | Rendu et accueil, mode discret, couche plateforme (Electron ou navigateur) |
+| `src/app/jour.js`, `semaine.js`, `afaire.js`, `sac.js`, `seance.js` | Vues Jour, Semaine, À faire ; sac ; fenêtre d'une séance |
+| `src/app/devoirs.js` | Devoirs : listes, détail, saisie, report |
+| `src/app/emploi-du-temps.js`, `agenda.js`, `jours-sans-cours.js`, `echange.js` | Écran Emploi du temps : cours, matières, activités, cycle ; agenda ; vacances ; export et import |
+| `src/app/verrou.js`, `donnees.js`, `outils.js`, `actions.js`, `fenetres.js` | Verrou, base et sauvegardes, panneau d'outils, actions et clavier, fenêtres |
+| `src/app/essais.js` | Essais d'interface lancés par les captures (propre au prototype) |
 | `src/secours.js`, `src/secours.html`, `src/secours-page.js` | Code adulte oublié : code de demande et code de secours du jour |
 | `src/vacances.js` | Vacances scolaires officielles (zones A, B, C), à mettre à jour chaque année |
 | `src/contenu.js` | Nettoyage du texte mis en forme d'un devoir, version brute |
