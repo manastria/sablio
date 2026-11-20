@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; img-src 'self'">
+  <title>Sablio – guide</title>
+  <meta name="description" content="Sablio réunit l’emploi du temps, les devoirs et les rendez-vous, et rend le temps visible : dans 28 min, pour demain, il te reste 2 soirs.">
+  <link rel="icon" href="../icones/favicon.png">
+  <link rel="stylesheet" href="guide.css">
+</head>
+<body>
+  <header class="entete">
+    <img src="../icones/icone-192.png" alt="" width="64" height="64">
+    <div>
+      <h1>Sablio</h1>
+      <p>Voilà à quoi ressemble ta journée.</p>
+    </div>
+    <a class="bouton principal" href="../">Ouvrir Sablio</a>
+  </header>
+
+  <nav class="sommaire" aria-label="Sommaire">
+    <a href="#pourquoi">Pourquoi</a>
+    <a href="#vues">Les vues</a>
+    <a href="#devoirs">Devoirs</a>
+    <a href="#seances">Cours et rendez-vous</a>
+    <a href="#commencer">Commencer</a>
+    <a href="#adultes">Pour les adultes</a>
+    <a href="#donnees">Données</a>
+  </nav>
+
+  <main>
+    <section id="pourquoi">
+      <h2>Pourquoi Sablio</h2>
+      <p>Sablio réunit au même endroit l’<strong>emploi du temps</strong>, les <strong>devoirs</strong> et l’<strong>agenda</strong> (rendez-vous, sport, musique). Il est pensé pour les élèves et les étudiants qui ont du mal à se repérer dans le temps.</p>
+      <p>Le temps y est <strong>visible</strong> et <strong>relatif</strong> : « encore 28 min », « pour demain », « il te reste 2 soirs ». On sait ce qui se passe maintenant, ce qui vient ensuite, et ce qu’il faut préparer.</p>
+      <ul class="points">
+        <li>Fonctionne <strong>sans connexion</strong>, une fois ouvert une première fois.</li>
+        <li><strong>Aucun compte</strong> : les données restent sur l’ordinateur.</li>
+        <li>S’installe comme une application, <strong>sans droits d’administrateur</strong> (Edge, Chrome).</li>
+      </ul>
+    </section>
+
+    <section id="vues">
+      <h2>Les vues</h2>
+
+      <figure>
+        <img src="images/maintenant.webp" alt="Vue Maintenant : pause, reprise à 11 h 00 dans 28 minutes, prochain cours d’anglais, frise de la journée, devoirs à faire" width="1100" height="720" loading="lazy">
+        <figcaption><strong>Maintenant</strong>, l’écran d’accueil : le cours en cours ou la pause, le temps qui reste (la barre se vide), le cours suivant, la frise de la journée avec « vous êtes ici », et les devoirs à faire.</figcaption>
+      </figure>
+
+      <figure>
+        <img src="images/jour.webp" alt="Vue Jour : emploi du temps du lundi, le cours d’anglais en cours avec le repère vous êtes ici, devoirs à rendre ce jour et travail du soir" width="1100" height="720" loading="lazy">
+        <figcaption><strong>Jour</strong> : l’emploi du temps de la journée, ce qui est à rendre, le travail du soir et le sac à préparer. La bande du haut permet d’aller à un autre jour d’un clic ; « Aller à » accepte une date, un numéro de semaine ou « demain ».</figcaption>
+      </figure>
+
+      <figure>
+        <img src="images/semaine.webp" alt="Vue Semaine : une ligne par jour, les cours en bandes de couleur, les devoirs à rendre et leur progression" width="1100" height="720" loading="lazy">
+        <figcaption><strong>Semaine</strong> : une ligne par jour, les cours en bandes de couleur et les devoirs à rendre. Un cours annulé est hachuré, un cours déplacé en pointillés. Un clic sur un jour ouvre la vue Jour.</figcaption>
+      </figure>
+
+      <figure>
+        <img src="images/a-faire.webp" alt="Écran À faire : devoirs en retard, pour aujourd’hui, pour demain" width="1100" height="720" loading="lazy">
+        <figcaption><strong>À faire</strong> : tous les devoirs non faits, rangés par échéance : en retard, pour aujourd’hui, pour demain, cette semaine, plus tard.</figcaption>
+      </figure>
+
+      <figure class="petite">
+        <img src="images/etroit.webp" alt="Vue Jour sur un écran étroit" width="420" height="900" loading="lazy">
+        <figcaption>Sablio s’adapte aux écrans étroits et à l’âge : le profil « Primaire » agrandit tout et parle en nuits (« dans 2 nuits »).</figcaption>
+      </figure>
+    </section>
+
+    <section id="devoirs">
+      <h2>Les devoirs</h2>
+
+      <figure>
+        <img src="images/saisie.webp" alt="Saisie d’un devoir : choix du jour puis du cours où le rendre" width="1100" height="720" loading="lazy">
+        <figcaption>On choisit d’abord <strong>quand le rendre</strong> : un jour, puis un cours. La matière s’en déduit. Le plus rapide : le bouton <strong>+</strong> à côté d’un cours dans la vue Jour.</figcaption>
+      </figure>
+
+      <figure>
+        <img src="images/detail.webp" alt="Détail d’un devoir avec une consigne mise en forme" width="1100" height="720" loading="lazy">
+        <figcaption>Le texte peut être long et mis en forme : une consigne copiée depuis l’ENT garde ses listes et son gras. Un clic sur un devoir l’affiche en entier ; seule la case le marque fait.</figcaption>
+      </figure>
+
+      <p>Un devoir <strong>suit son cours</strong> : si le cours est déplacé, le devoir suit ; s’il est annulé, Sablio le signale et propose de le reporter au cours suivant. Le soir, « Préparer le sac » liste les matières du lendemain et leur matériel.</p>
+    </section>
+
+    <section id="seances">
+      <h2>Cours, rendez-vous et vacances</h2>
+
+      <figure>
+        <img src="images/seance.webp" alt="Fenêtre d’une séance : a lieu, annulée ou déplacée" width="1100" height="720" loading="lazy">
+        <figcaption>Un clic sur un cours permet de le dire <strong>annulé</strong> ou <strong>déplacé</strong> (professeur absent, sortie), juste pour cette fois.</figcaption>
+      </figure>
+
+      <figure>
+        <img src="images/evenement.webp" alt="Ajout d’un rendez-vous chez le psychologue, chaque semaine, trois fois" width="1100" height="720" loading="lazy">
+        <figcaption>L’<strong>agenda</strong> : un rendez-vous ponctuel ou répété (« chaque semaine, 3 fois »).</figcaption>
+      </figure>
+
+      <figure>
+        <img src="images/jour-discret.webp" alt="Mode discret : le rendez-vous chez le psychologue apparaît comme Rendez-vous" width="1100" height="720" loading="lazy">
+        <figcaption>Le <strong>mode discret</strong> : en classe, l’écran se voit. Les rendez-vous personnels s’affichent comme « Rendez-vous », avec leur couleur ou en gris, selon le réglage. Il peut s’activer tout seul pendant les cours.</figcaption>
+      </figure>
+
+      <figure>
+        <img src="images/vacances.webp" alt="Pendant les vacances de Noël : un bandeau indique la reprise ; les cours ne s’affichent plus" width="1100" height="720" loading="lazy">
+        <figcaption>Les <strong>vacances</strong> de sa zone (A, B ou C) et les jours fériés sont connus : pas de cours ces jours-là, et la date de reprise est annoncée.</figcaption>
+      </figure>
+    </section>
+
+    <section id="commencer">
+      <h2>Commencer</h2>
+      <ol class="etapes">
+        <li><strong>Découvrir.</strong> Au premier lancement, Sablio s’ouvre sur un <strong>exemple</strong> (une semaine de collège), signalé par un bandeau. On peut tout essayer.</li>
+        <li><strong>Passer à l’usage réel.</strong> Dans le bandeau, « Passer à l’usage réel… » : effacer l’exemple (la liste des matières est gardée) ou garder ce qui a déjà été adapté.
+          <figure class="petite"><img src="images/usage-reel.webp" alt="Fenêtre Passer à l’usage réel" width="1100" height="720" loading="lazy"></figure>
+        </li>
+        <li><strong>Choisir un dossier de sauvegarde</strong> (menu ☰) : une clé USB ou un dossier OneDrive. Sablio y écrit une copie par jour et garde les dix derniers jours.</li>
+        <li><strong>Saisir l’emploi du temps</strong> : menu ☰ → Emploi du temps et agenda. Les cours de la semaine type, les semaines A et B, la zone de vacances, les activités.
+          <figure class="petite"><img src="images/emploi-du-temps.webp" alt="Écran Emploi du temps : la semaine type, jour par jour" width="1100" height="720" loading="lazy"></figure>
+        </li>
+        <li><strong>Installer l’application</strong> : dans Edge, l’icône « Installer » de la barre d’adresse (ou menu ☰ → Installer l’application). Sablio s’ouvre alors dans sa propre fenêtre, depuis le menu Démarrer.</li>
+      </ol>
+    </section>
+
+    <section id="adultes">
+      <h2>Pour les adultes</h2>
+      <ul class="points">
+        <li><strong>Verrou</strong> (facultatif) : un code à 4 chiffres protège l’emploi du temps et les réglages. L’élève garde ses devoirs, peut ajouter ses propres rendez-vous et basculer le mode discret. Code oublié : <a href="../secours">page de secours</a>.</li>
+        <li><strong>Ergothérapeute, enseignant</strong> : on peut préparer l’emploi du temps d’un élève dans son propre Sablio, l’<strong>exporter</strong> dans un fichier (menu ☰ → Emploi du temps et agenda) et l’envoyer à la famille, qui l’<strong>importe</strong>. Le fichier ne contient ni les devoirs ni le code du verrou ; il peut contenir des rendez-vous de soin : à transmettre comme une donnée de santé.</li>
+      </ul>
+    </section>
+
+    <section id="donnees">
+      <h2>Données et confidentialité</h2>
+      <ul class="points">
+        <li>Tout reste <strong>dans le navigateur de l’ordinateur</strong> : pas de compte, pas de serveur, aucune donnée envoyée.</li>
+        <li>Effacer les données de navigation du site efface Sablio : la <strong>sauvegarde dans un dossier</strong> est la vraie protection. On restaure depuis menu ☰ → Réglages → Données.</li>
+        <li>Chaque élève utilise Sablio dans <strong>sa propre session</strong> de l’ordinateur.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>Sablio est un prototype, inspiré de <a href="https://github.com/manastria/mydevoirs">MyDevoirs</a>. <a href="../">Ouvrir Sablio</a></p>
+  </footer>
+</body>
+</html>

@@ -167,6 +167,7 @@ L'exécutable n'est **pas signé** : le Contrôle intelligent des applications d
 | `scripts/copier-sqlite.mjs` | Copie SQLite WebAssembly dans `src/vendor/` (après `npm install`) |
 | `src/manifest.json`, `src/icones/` | Rendent la page installable (nom, icônes, fenêtre dédiée) |
 | `src/sw.js` | *Service worker* : hors-ligne, retour à l'application au clic sur une notification |
+| `src/guide/` | Guide en ligne (`/guide/`) : présentation, captures, mode d'emploi ; images produites par `scripts/images-guide.py` à partir des captures |
 | `scripts/publier.sh`, `scripts/verifier-en-ligne.js`, `web/.htaccess` | Publication sur sablio.manastria.fr et contrôle en ligne |
 | `scripts/preparer-windows.mjs` | Assemble la version Windows portable depuis Linux |
 | `scripts/icones.py` | Dessine les icônes : un sablier (Pillow) |

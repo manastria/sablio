@@ -334,6 +334,7 @@ window.sablioEssais = {
   async essaiRepartirDeZero() {
     // Démonstration intacte et vieille de 10 jours : recalculée au démarrage.
     const aujourdhui = edt.isoLocal(edt.debutJour(maintenant()));
+    try { sessionStorage.removeItem('sablio-bandeau-demo-masque'); } catch { /* sans stockage */ }
     await stockage.reinitialiser(preparerDemo(edt.ajouterJours(edt.debutJour(maintenant()), -10)));
     await rechargerTout();
     await rafraichirDemoPerimee();

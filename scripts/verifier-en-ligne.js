@@ -46,6 +46,10 @@ app.whenReady().then(async () => {
   await attendre(1000);
   verifier('page de secours', await page(`document.title`) === 'Sablio – code oublié');
 
+  await fenetre.loadURL(new URL('guide/', adresse).href);
+  await attendre(1500);
+  verifier('guide', await page(`document.title === 'Sablio – guide' && document.images[1].complete && document.images[1].naturalWidth > 0`));
+
   verifier('aucune erreur dans la console', erreurs.length === 0, erreurs.join(' | ').slice(0, 300));
   console.log(resultats.join('\n'));
   fs.rmSync(donnees, { recursive: true, force: true });

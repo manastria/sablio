@@ -20,6 +20,10 @@ Tout est en français : interface, code (noms, commentaires), documents, message
 - Identifiants de stockage préfixés `sablio-` (localStorage, IndexedDB, OPFS `.sablio`, cache du service worker, verrou de fenêtre). Changer le nom de la base ou du dossier OPFS fait perdre les données des utilisateurs.
 - Chaque nouveau fichier de `src/` doit être ajouté à la liste `FICHIERS` de `src/sw.js`, et `CACHE` incrémenté à chaque publication qui change des fichiers.
 
+## Guide
+
+- `src/guide/index.html` : page publique de présentation et mode d'emploi (`/guide/`). Ne jamais y nommer un trouble (élève non étiqueté). Après un changement visible, `npm run captures` puis `python3 scripts/images-guide.py` pour rafraîchir les images.
+
 ## Publier
 
 - `scripts/publier.sh --essai`, puis `npm run publier`, puis `npm run verifier-en-ligne`. Hébergement Infomaniak via rclone, partage `infomaniak-web`, dossier `sites/sablio.manastria.fr` (chemin relatif). Ne jamais synchroniser plus large : d'autres sites sont dans `sites/`.

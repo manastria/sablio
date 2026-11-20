@@ -222,6 +222,9 @@ async function faireCaptures(dossier) {
     fs.writeFileSync(path.join(dossier, `${nom}.png`), image.toPNG());
   };
 
+  // Captures propres (elles servent aussi au guide) : sans l'étiquette
+  // « heure simulée » du prototype.
+  await page.executeJavaScript(`document.documentElement.dataset.capture = ''`);
   fenetre.setContentSize(1100, 720);
   // Lundi 23 novembre 2026 (semaine B).
   const scenarios = [
@@ -235,6 +238,8 @@ async function faireCaptures(dossier) {
   for (const [nom, heure, profil] of scenarios) {
     await proto(`scenario(${JSON.stringify(heure)}, ${JSON.stringify(profil)})`);
     await capturer(nom);
+    // Le bandeau de démonstration figure sur la première capture seulement.
+    await page.executeJavaScript(`document.querySelector('[data-action="demo-masquer"]').click()`);
   }
 
   fenetre.setContentSize(420, 720);
