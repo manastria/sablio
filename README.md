@@ -143,4 +143,4 @@ L'exécutable n'est **pas signé** : le Contrôle intelligent des applications d
 | `src/manifest.json`, `src/icones/` | Rendent la page installable (nom, icônes, fenêtre dédiée) |
 | `src/sw.js` | *Service worker* : hors-ligne, retour à l'application au clic sur une notification |
 | `scripts/preparer-windows.mjs` | Assemble la version Windows portable depuis Linux |
-| `scripts/icones.py` | Dessine les icônes (Pillow) |
+| `scripts/icones.py` | Dessine les icônes : un sablier (Pillow) |

@@ -1,6 +1,6 @@
 {
-  "name": "MyDevoirs – prototype",
-  "short_name": "MyDevoirs",
+  "name": "Sablio – prototype",
+  "short_name": "Sablio",
   "description": "Prototype : se repérer dans sa journée de cours et ses devoirs.",
   "id": "./index.html",
   "start_url": "./index.html",

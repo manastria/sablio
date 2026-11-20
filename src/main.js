@@ -44,7 +44,7 @@ function creerFenetre() {
     minWidth: 320,
     minHeight: 240,
     show: false,
-    title: 'MyDevoirs – prototype',
+    title: 'Sablio – prototype',
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#141416' : '#f6f4ef',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
