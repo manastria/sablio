@@ -38,6 +38,7 @@
       <button type="button" class="mise-en-avant" data-action="reprendre-sauvegarde" hidden>Reprendre la sauvegarde</button>
       <button type="button" data-action="compact">Mode compact</button>
       <button type="button" data-action="plein-ecran" title="F11">Plein écran</button>
+      <button type="button" data-action="vue" data-vue="edt">Emploi du temps</button>
       <button type="button" data-action="outils" aria-expanded="false" aria-controls="outils">Outils</button>
     </div>
   </header>
@@ -84,6 +85,77 @@
   </main>
 
   <main class="vue-afaire" id="vue-afaire" hidden></main>
+
+  <main class="vue-edt" id="vue-edt" hidden></main>
+
+  <dialog id="edt-serie" class="large" aria-labelledby="serie-titre-dialogue">
+    <form method="dialog" class="formulaire">
+      <h2 id="serie-titre-dialogue">Cours</h2>
+      <label>Matière ou activité <select id="serie-categorie"></select></label>
+      <label id="serie-champ-titre">Nom du créneau <input id="serie-titre" placeholder="DS, vie de classe…" autocomplete="off"></label>
+      <div class="ligne champs-courts">
+        <label>Jour <select id="serie-jour"></select></label>
+        <label>De <input type="time" id="serie-debut" required></label>
+        <label>à <input type="time" id="serie-fin" required></label>
+      </div>
+      <label><span>Salle ou lieu <span class="facultatif">(facultatif)</span></span> <input id="serie-salle" autocomplete="off"></label>
+      <fieldset class="rendu">
+        <legend>Semaines</legend>
+        <div class="choix-seances" role="radiogroup" aria-label="Semaines">
+          <label class="choix-seance"><input type="radio" name="serie-semaine" value=""><span><strong>Toutes</strong></span></label>
+          <label class="choix-seance"><input type="radio" name="serie-semaine" value="A"><span><strong>Semaine A</strong><span class="precision">une semaine sur deux</span></span></label>
+          <label class="choix-seance"><input type="radio" name="serie-semaine" value="B"><span><strong>Semaine B</strong><span class="precision">une semaine sur deux</span></span></label>
+        </div>
+      </fieldset>
+      <div class="ligne champs-courts">
+        <label><span>À partir du <span class="facultatif">(facultatif)</span></span> <input type="date" id="serie-du"></label>
+        <label><span>Jusqu’au <span class="facultatif">(facultatif)</span></span> <input type="date" id="serie-au"></label>
+      </div>
+      <p class="erreur" id="serie-erreur" hidden></p>
+      <div class="ligne boutons">
+        <button value="ok" class="mise-en-avant">Enregistrer</button>
+        <button value="annuler" formnovalidate>Annuler</button>
+        <span class="espace"></span>
+        <button type="button" data-action="serie-supprimer" id="serie-supprimer">Supprimer ce cours</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="edt-categorie" class="large" aria-labelledby="categorie-titre-dialogue">
+    <form method="dialog" class="formulaire">
+      <h2 id="categorie-titre-dialogue">Matière</h2>
+      <div class="ligne champs-courts">
+        <label class="champ-large">Nom <input id="cat-nom" required autocomplete="off"></label>
+        <label>Abrégé <input id="cat-court" maxlength="6" size="6" autocomplete="off"></label>
+      </div>
+      <fieldset class="rendu">
+        <legend>Pictogramme</legend>
+        <div class="choix-pictos" id="cat-pictos" role="radiogroup" aria-label="Pictogramme"></div>
+      </fieldset>
+      <fieldset class="rendu">
+        <legend>Couleur</legend>
+        <div class="choix-couleurs" id="cat-couleurs" role="radiogroup" aria-label="Couleur"></div>
+      </fieldset>
+      <label id="cat-champ-materiel"><span>Matériel à prendre <span class="facultatif">(pour « Préparer le sac »)</span></span>
+        <input id="cat-materiel" placeholder="calculatrice, équerre" autocomplete="off"></label>
+      <fieldset class="rendu" id="cat-champ-confidentialite">
+        <legend>En mode discret</legend>
+        <div class="choix-seances" role="radiogroup" aria-label="Confidentialité">
+          <label class="choix-seance"><input type="radio" name="cat-confidentialite" value="visible"><span><strong>Visible</strong><span class="precision">nom réel</span></span></label>
+          <label class="choix-seance"><input type="radio" name="cat-confidentialite" value="discret"><span><strong>Discret</strong><span class="precision">« Rendez-vous »</span></span></label>
+          <label class="choix-seance"><input type="radio" name="cat-confidentialite" value="masque"><span><strong>Masqué</strong><span class="precision">n’apparaît pas</span></span></label>
+        </div>
+        <label class="bascule-fait"><input type="checkbox" id="cat-garder"> Garder sa couleur en mode discret</label>
+      </fieldset>
+      <p class="erreur" id="cat-erreur" hidden></p>
+      <div class="ligne boutons">
+        <button value="ok" class="mise-en-avant">Enregistrer</button>
+        <button value="annuler" formnovalidate>Annuler</button>
+        <span class="espace"></span>
+        <button type="button" data-action="categorie-supprimer" id="cat-supprimer">Supprimer</button>
+      </div>
+    </form>
+  </dialog>
 
   <dialog id="ajout" class="large" aria-labelledby="ajout-titre">
     <form method="dialog" class="formulaire">

@@ -290,6 +290,14 @@ async function faireCaptures(dossier) {
   await page.executeJavaScript(`document.querySelector('#seance input[value="deplace"]').click()`);
   await capturer('26-seance');
   await proto('fermerSeance()');
+  await proto('scenario("2026-11-23T19:00", "college", "edt")');
+  await capturer('27-emploi-du-temps');
+  await page.executeJavaScript(`document.querySelector('[data-serie="s3-1005-creneau"]').click()`);
+  await capturer('28-cours');
+  await page.executeJavaScript(`document.querySelector('#edt-serie').close()`);
+  await page.executeJavaScript(`document.querySelector('[data-categorie="psy"]').click()`);
+  await capturer('29-activite');
+  await page.executeJavaScript(`document.querySelector('#edt-categorie').close()`);
   await proto('scenario("2026-11-25T19:00", "college", "afaire")');
   await capturer('25-a-faire');
   await proto('scenario("2026-11-23T19:00", "college", "jour", "2026-11-24")');

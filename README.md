@@ -2,7 +2,7 @@
 
 But : juger la pile technique (Electron, interface web, SQLite intégré) et l'ergonomie des vues avant d'écrire l'application. Le code n'est pas destiné à être conservé tel quel. Les fonctions sont décrites dans `docs/refonte/specification.md`.
 
-Emploi du temps en dur : une semaine type de collégien avec semaines A/B, un créneau « DS » sans matière fixe (mercredi matin) et quatre activités personnelles (football, psychologue, orthophonie, piano). Les devoirs sont enregistrés (voir plus bas).
+Emploi du temps de démonstration, modifiable : une semaine type de collégien avec semaines A/B, un créneau « DS » sans matière fixe (mercredi matin) et quatre activités personnelles (football, psychologue, orthophonie, piano). Les devoirs sont enregistrés (voir plus bas).
 
 ## Lancer
 
@@ -10,7 +10,7 @@ Emploi du temps en dur : une semaine type de collégien avec semaines A/B, un cr
 cd refonte/prototype
 npm install
 npm start            # fenêtre normale
-npm run captures     # 26 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
+npm run captures     # 29 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
 ```
 
 Dans la fenêtre :
@@ -29,6 +29,8 @@ Un rappel (notification + carillon) part 5 minutes avant chaque cours.
 
 - **À faire** : tous les devoirs non faits, groupés par échéance (en retard, aujourd'hui, demain, cette semaine, la semaine prochaine, plus tard).
 - **Semaine** : une ligne par jour, les séances en bandes de couleur sur une échelle horaire commune, les devoirs à rendre et leur progression. Un clic sur un jour ouvre la vue Jour. Le week-end, la semaine suivante s'affiche directement.
+
+Le bouton **Emploi du temps** de l'en-tête ouvre la saisie de la semaine type (cours, semaines A/B, période de validité), des matières (pictogramme, couleur, matériel) et des activités personnelles (confidentialité en mode discret).
 
 Un clic sur une séance de la vue Jour permet de la dire annulée ou déplacée (avec un motif), puis de la rétablir ; ses devoirs la suivent.
 

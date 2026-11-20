@@ -16,7 +16,8 @@ L'environnement de l'enfant varie beaucoup : âge, activités, présence d'un ad
 | **Jour** | Emploi du temps du jour et devoirs du jour. Navigation jour par jour. |
 | **Semaine** | Vue d'ensemble, légère : pastilles et progression par jour. Un clic sur un jour ouvre la vue Jour. |
 | **À faire** | Devoirs non faits, groupés par échéance : en retard, pour aujourd'hui, pour demain, cette semaine, la semaine prochaine, plus tard ; devoirs faits repliés. En temps relatif (liste « À faire » de MyDevoirs). |
-| **Réglages** | Profil, matières, activités, emploi du temps, sauvegarde. |
+| **Emploi du temps** | Saisie de la semaine type (cours, créneaux, activités), des matières et des activités. Surtout pour l'adulte : bouton dans l'en-tête, pas dans les onglets de l'élève. |
+| **Réglages** | Profil, sauvegarde. |
 
 ### Vue Jour
 
@@ -69,6 +70,16 @@ Samedi 28 et dimanche 29 : rien de prévu
 Navigation : semaine précédente / « Cette semaine » / suivante (et flèches du clavier), « Aller à » comme dans la vue Jour. Titre en temps relatif (« Semaine prochaine · 30 novembre – 6 décembre »), total des devoirs de la semaine.
 
 Repris de MyDevoirs : semaine suivante affichée le week-end, numéro et lettre de semaine, « semaine prochaine » / « dans 3 semaines », saut à une date. Pas encore repris : le choix du premier jour de la semaine (le prototype commence le lundi).
+
+### Emploi du temps
+
+- **Semaine type**, une carte par jour : chaque cours (matière, activité ou créneau sans matière fixe comme le DS), ses heures, sa salle, ses semaines (toutes, A ou B) et, au besoin, une période de validité (« à partir du », « jusqu'au »). « + Ajouter » sur chaque jour ; le nouveau cours commence à la fin du dernier.
+- **Matières** : nom, abrégé, pictogramme (choix dans une liste), couleur (palette de couleurs distinctes ; les couleurs déjà prises sont marquées, la première libre est proposée), matériel pour « Préparer le sac ».
+- **Activités personnelles** : mêmes champs, plus la confidentialité en mode discret (visible, discret, masqué) et « garder sa couleur ».
+- On ne supprime pas une matière ou une activité encore utilisée par un cours ou un devoir. Supprimer un cours laisse ses devoirs rattachés à leur date.
+- Modifier un cours le modifie pour **toute la série**, passé compris. Pour une seule séance : vue Jour (annuler, déplacer). « Celle-ci et les suivantes » reste à faire : pour l'instant, on ferme l'ancien cours (« jusqu'au ») et on en crée un nouveau (« à partir du »).
+- En mode discret, les activités non visibles restent neutres et ne sont pas modifiables.
+- Enregistré dans la base (tables `categorie`, `serie`, `exception`), avec suppression douce pour la fusion entre appareils.
 
 ### Préparer le sac
 

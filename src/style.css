@@ -639,6 +639,48 @@ button.lien:hover { text-decoration: underline; }
 .groupe-demain, .groupe-aujourdhui { border-left: 6px solid var(--accent); }
 details.carte.faits summary { margin: 0; }
 
+/* --- Écran « Emploi du temps » --- */
+
+.vue-edt { flex: 1; display: grid; gap: 1rem; padding: 1rem; align-content: start; }
+.grille-edt { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); align-items: start; }
+.liste-edt { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; gap: 0.35rem; }
+.ligne-edt {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  border: 1px solid var(--bord);
+  border-left: 6px solid var(--couleur);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.ligne-edt .horaire { font-size: 0.8em; color: var(--texte-doux); font-variant-numeric: tabular-nums; line-height: 1.2; min-width: 3.6em; }
+.ligne-edt .pastille { font-size: 0.75em; }
+.champs-courts { gap: 0.8rem; align-items: end; }
+.formulaire .champs-courts label { font-weight: 600; }
+.formulaire .champs-courts input, .formulaire .champs-courts select { width: auto; }
+.formulaire .champ-large { flex: 1; }
+.formulaire .champ-large input { width: 100%; }
+.choix-pictos, .choix-couleurs { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.formulaire .puce-picto, .formulaire .puce-couleur { position: relative; display: grid; place-items: center; cursor: pointer; font-weight: 400; }
+.puce-picto span { display: grid; place-items: center; width: 2.2em; height: 2.2em; border: 1px solid var(--bord); border-radius: 8px; font-size: 1.1em; }
+.puce-picto:has(input:checked) span { border-color: var(--texte); box-shadow: 0 0 0 2px var(--texte); background: var(--surface-2); }
+.puce-couleur span {
+  display: grid;
+  place-items: center;
+  width: 2em;
+  height: 2em;
+  border-radius: 50%;
+  background: var(--couleur);
+  color: #fff;
+  font-weight: 700;
+}
+.puce-couleur:has(input:checked) span { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--texte); }
+.puce-picto input, .puce-couleur input { position: absolute; opacity: 0; pointer-events: none; }
+.puce-picto:has(input:focus-visible), .puce-couleur:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+
 /* --- Saisie d'un devoir --- */
 
 dialog {
@@ -748,7 +790,7 @@ dialog.large { width: min(42rem, calc(100vw - 2rem)); }
 .detail-infos { display: grid; grid-template-columns: max-content 1fr; gap: 0.3rem 0.8rem; margin: 0 0 1rem; }
 .detail-infos dt { color: var(--texte-doux); }
 .detail-infos dd { margin: 0; }
-.bascule-fait { display: flex; align-items: center; gap: 0.4rem; font-weight: 600; cursor: pointer; }
+.bascule-fait, .formulaire .bascule-fait { display: flex; align-items: center; gap: 0.4rem; font-weight: 600; cursor: pointer; }
 .bascule-fait input { width: 1.3em; height: 1.3em; }
 .boutons { margin: 0.4rem 0 0; }
 
