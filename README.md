@@ -20,7 +20,7 @@ Emploi du temps de démonstration, modifiable : une semaine type de collégien a
 ```sh
 npm install
 npm start            # fenêtre normale
-npm run captures     # 41 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
+npm run captures     # 43 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
 ```
 
 ## Tests

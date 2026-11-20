@@ -23,7 +23,9 @@ L'environnement de l'enfant varie beaucoup : âge, activités, présence d'un ad
 
 **Réglages, À propos, Mise au point** : le menu ouvre « Réglages » (verrou, profil, données et sauvegarde ; verrouillé) et « À propos de Sablio » (version, liens, environnement technique, rapport à copier). Les outils de test (heure simulée, essais techniques, démonstration, perte de données simulée) sont dans « Mise au point », un lien discret en bas d'« À propos », verrouillé comme les réglages.
 
-**Démonstration** : à la création de la base, Sablio s'ouvre sur un exemple calé sur le jour même (devoirs sur les prochains cours, une séance annulée, une déplacée, un rendez-vous la semaine suivante). « Repartir de zéro » passe à l'usage réel ; « Réinitialiser la démonstration » (Mise au point) recalcule l'exemple pour aujourd'hui.
+**Démonstration** : à la création de la base, Sablio s'ouvre sur un exemple calé sur le jour même (devoirs sur les prochains cours, une séance annulée, une déplacée, un rendez-vous la semaine suivante). Un **bandeau** le dit (« Vous découvrez Sablio avec un exemple, calé sur le… ») et propose le guide, « Mettre l'exemple à jour » et « Passer à l'usage réel… » : effacer l'exemple (on garde les matières) ou garder ce qui est saisi. Un exemple **intact** de plus d'une semaine est recalculé de lui-même à l'ouverture ; un exemple modifié ne l'est jamais sans accord.
+
+**Alertes du menu** : un point rouge sur l'icône du menu, et le même point sur l'entrée concernée, avec ce qu'il faut faire et pourquoi (« Vos données ne sont encore sauvegardées nulle part… ») et « Ne plus me le rappeler ». Rien n'est signalé pendant la démonstration. Une autorisation de sauvegarde à redonner est toujours signalée.
 
 **Fenêtres** (détail d'un devoir, saisie, séance…) : elles se ferment par un clic à côté, par Échap ou par leur bouton. Une fenêtre de saisie déjà modifiée demande d'abord « Abandonner les modifications ? ».
 

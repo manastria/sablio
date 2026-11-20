@@ -3,12 +3,14 @@
 
 import * as edt from '../emploi-du-temps.js';
 import { construireAFaire } from './afaire.js';
-import { $, DISCRET_PAUSE, MINUTE, PROFILS, RAPPEL_AVANT, appliquerStyles, couleurs, echapper, etat, horloge, jourCourt, journaliser, maintenant, pastille, pluriel } from './commun.js';
+import * as sauvegarde from '../sauvegarde.js';
+import { $, DISCRET_PAUSE, MINUTE, PROFILS, RAPPEL_AVANT, appliquerStyles, couleurs, echapper, etat, horloge, jourCourt, journaliser, lirePreference, maintenant, pastille, pluriel } from './commun.js';
+import { sauvegardeEtat } from './donnees.js';
 import { htmlDevoirs } from './devoirs.js';
 import { affichage, discret, discretActif, visible } from './discret.js';
 import { construireEdt } from './emploi-du-temps.js';
 import { badgeSemaine, cleJour, construireJour } from './jour.js';
-import { api, jouerCarillon } from './plateforme.js';
+import { api, dansElectron, jouerCarillon } from './plateforme.js';
 import { htmlSac } from './sac.js';
 import { construireSemaine } from './semaine.js';
 import { adulte, majVerrou } from './verrou.js';
@@ -62,9 +64,35 @@ export function rendre(forcer = false) {
 // Point rouge sur l'icône du menu : une action importante y attend
 // (activer les rappels, reprendre la sauvegarde). « Installer » n'est pas
 // signalé : Edge le propose dans tout onglet, même l'application déjà installée.
+// Alertes du menu : chacune s'explique et peut être écartée. Pendant la
+// démonstration, rien n'est signalé (sauvegarder un exemple n'a pas de sens).
 export function majPointMenu() {
-  const attente = [...document.querySelectorAll('#menu [data-signale]')].some((b) => !b.hidden);
-  $('[data-champ="point-menu"]').hidden = !attente;
+  const reelle = Boolean(etat.demo?.reelle);
+  let sauvegardeAttendue = null;
+  if (sauvegarde.disponible) {
+    if (sauvegardeEtat.dossier && sauvegardeEtat.autorisation && sauvegardeEtat.autorisation !== 'granted') {
+      sauvegardeAttendue = 'autorisation'; // vrai problème : toujours signalé
+    } else if (!sauvegardeEtat.dossier && reelle && lirePreference('sablio-sans-rappel-sauvegarde', '') !== '1') {
+      sauvegardeAttendue = 'dossier';
+    }
+  }
+  const blocSauvegarde = $('#alerte-sauvegarde');
+  blocSauvegarde.hidden = !sauvegardeAttendue;
+  if (sauvegardeAttendue === 'autorisation') {
+    $('[data-action="reprendre-sauvegarde"]').textContent = 'Reprendre la sauvegarde';
+    $('#alerte-sauvegarde-texte').textContent = `Le navigateur demande de nouveau l’autorisation d’écrire dans « ${sauvegardeEtat.dossier.name} ». Sans elle, rien n’est sauvegardé.`;
+  } else if (sauvegardeAttendue === 'dossier') {
+    $('[data-action="reprendre-sauvegarde"]').textContent = 'Choisir un dossier de sauvegarde';
+  }
+  blocSauvegarde.querySelector('[data-action="sans-rappel-sauvegarde"]').hidden = sauvegardeAttendue !== 'dossier';
+  const notifications = !dansElectron && 'Notification' in window && Notification.permission === 'default';
+  $('#alerte-rappels').hidden = !(notifications && reelle && lirePreference('sablio-sans-rappel-notifications', '') !== '1');
+  $('#reglage-notifications').hidden = !notifications;
+
+  const attente = !blocSauvegarde.hidden || !$('#alerte-rappels').hidden;
+  const point = $('[data-champ="point-menu"]');
+  point.hidden = !attente;
+  point.title = attente ? 'Une action vous attend dans le menu' : '';
   $('.bouton-menu').setAttribute('aria-label', attente ? 'Menu (une action vous attend)' : 'Menu');
 }
 

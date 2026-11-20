@@ -10,7 +10,7 @@ import { evenementEnCours, majChampsEvenement, ouvrirEvenement, supprimerEveneme
 import { $, etat, journaliser, maintenant } from './commun.js';
 import { afficherDetail, ajoutEnCours, cleSeance, ouvrirAjout, reporter, saisie } from './devoirs.js';
 import { basculerDiscret, changerModeDiscret, discret } from './discret.js';
-import { actionsDonnees, rechargerTout, stockage } from './donnees.js';
+import { actionsDonnees, preparerDemo, rafraichirDemoPerimee, rechargerTout, stockage } from './donnees.js';
 import { exportEmploiDuTemps, importEnCours, proposerImport, viderEmploiDuTemps } from './echange.js';
 import { categorieEnCours, cycleEnCours, majChampsSerie, majCycle, ouvrirCategorie, ouvrirCycle, ouvrirSerie, serieEnCours, supprimerCategorieEditee, supprimerSerieEditee } from './emploi-du-temps.js';
 import { allerAuJour, texteSemaine } from './jour.js';
@@ -225,6 +225,9 @@ export async function essaisInterface() {
   ouvrirEvenement('e-dentiste');
   const adulteProtege = $('#verrou').open && !$('#evenement').open;
   $('#verrou').close();
+  // L'événement « close » arrive après : on l'attend, sinon l'ouverture du
+  // mode adulte qui suit ferait rejouer l'action refusée.
+  await new Promise((r) => setTimeout(r, 50));
   etat.adulteJusqua = Date.now() + DUREE_ADULTE;
   await stockage.supprimerSerie(anniversaire.id);
   await rechargerTout();
@@ -329,6 +332,19 @@ window.sablioEssais = {
   fermerDetail: () => $('#detail').close(),
   // Dernier essai (il efface tout) : « Repartir de zéro ».
   async essaiRepartirDeZero() {
+    // Démonstration intacte et vieille de 10 jours : recalculée au démarrage.
+    const aujourdhui = edt.isoLocal(edt.debutJour(maintenant()));
+    await stockage.reinitialiser(preparerDemo(edt.ajouterJours(edt.debutJour(maintenant()), -10)));
+    await rechargerTout();
+    await rafraichirDemoPerimee();
+    const recalculee = etat.demo?.demo?.reference === aujourdhui;
+    const bandeauDemo = !$('#bandeau-demo').hidden;
+    const pointEnDemo = !$('[data-champ="point-menu"]').hidden;
+    // « Garder ce qui est saisi » : la base devient réelle, le bandeau part.
+    $('#usage-reel').showModal();
+    $('#usage-reel form').requestSubmit($('#usage-reel button[value="garder"]'));
+    await new Promise((r) => setTimeout(r, 300));
+    journaliser(`Essai démonstration : périmée → ${recalculee ? 'recalculée pour aujourd’hui' : 'NON recalculée'} ; bandeau ${bandeauDemo ? 'affiché' : 'NON affiché'} ; point rouge en démonstration ${pointEnDemo ? 'affiché à tort' : 'absent'} ; « garder » → ${etat.demo?.reelle && $('#bandeau-demo').hidden ? 'usage réel, bandeau retiré' : 'ÉCHEC'}`);
     const confirmer = window.confirm;
     window.confirm = () => true;
     await actionsDonnees['repartir-zero']();

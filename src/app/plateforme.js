@@ -109,15 +109,11 @@ export async function installer() {
 export async function activerRappels() {
   const reponse = await Notification.requestPermission();
   journaliser(`Autorisation des notifications : ${reponse}`);
-  $('[data-action="activer-rappels"]').hidden = reponse !== 'default';
 }
 
 export function preparerNavigateur() {
   // Fonctions propres à Electron, absentes de la version navigateur.
   for (const bouton of document.querySelectorAll('[data-action="compact"], [data-action^="test-sqlite"]')) bouton.hidden = true;
-  if ('Notification' in window && Notification.permission === 'default') {
-    $('[data-action="activer-rappels"]').hidden = false;
-  }
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault(); // on garde l'invitation pour notre propre bouton
     invitationInstallation = e;

@@ -130,6 +130,61 @@ select, input[type="datetime-local"] {
 .commandes { margin-left: auto; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 button.icone { position: relative; display: grid; place-items: center; width: 2.4em; height: 2.4em; padding: 0; }
 button.icone svg { width: 1.3em; height: 1.3em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* Alertes du menu : un point rouge, ce qu'il faut faire et pourquoi. */
+.menu-alerte {
+  position: relative;
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.5rem 0.6rem 0.5rem 1.4rem;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+.menu-alerte::before {
+  content: "";
+  position: absolute;
+  left: 0.5rem;
+  top: 1rem;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--alerte);
+}
+.menu-alerte p { margin: 0; font-size: 0.88em; color: var(--texte-doux); }
+.menu-alerte .lien { justify-self: start; font-size: 0.85em; font-weight: 400; color: var(--texte-doux); }
+.menu-alerte .mise-en-avant { justify-self: start; }
+
+/* Bandeau de démonstration, sous l'en-tête. */
+.bandeau-demo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem 1rem;
+  margin: 0.8rem 1rem 0;
+  padding: 0.5rem 0.9rem;
+  border: 1px dashed var(--accent);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.bandeau-demo p { margin: 0; }
+.bandeau-demo .ligne { margin: 0; }
+a.bouton {
+  display: inline-block;
+  padding: 0.35em 0.8em;
+  border: 1px solid var(--bord);
+  border-radius: 8px;
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+}
+a.bouton:hover { background: var(--surface-2); }
+html[data-compact] .bandeau-demo { display: none; }
+
+/* Fenêtre « Passer à l'usage réel » : deux grands choix. */
+.formulaire .choix-usage { display: grid; gap: 0.2rem; padding: 0.7rem 0.9rem; text-align: left; }
+.choix-usage span { font-weight: 400; font-size: 0.92em; }
+.choix-usage.mise-en-avant span { color: inherit; opacity: 0.9; }
+
 .point-menu {
   position: absolute;
   top: -3px;

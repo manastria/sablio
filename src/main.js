@@ -329,6 +329,9 @@ async function faireCaptures(dossier) {
   await page.executeJavaScript(`document.querySelector('#apropos [data-panneau="debug"]').click()`);
   await capturer('41-mise-au-point');
   await page.executeJavaScript(`document.querySelector('#debug [data-panneau="debug"]').click()`);
+  await page.executeJavaScript(`document.querySelector('[data-action="usage-reel"]').click()`);
+  await capturer('42-usage-reel');
+  await page.executeJavaScript(`document.querySelector('#usage-reel').close()`);
   // Vacances de Noël en zone B.
   await proto('zoneVacances("B")');
   await proto('scenario("2026-12-22T10:00", "college")');
@@ -362,6 +365,11 @@ async function faireCaptures(dossier) {
 
   await proto('lancerTests()');
   await proto('essaiRepartirDeZero()');
+  // Usage réel, sans dossier de sauvegarde : l'alerte du menu s'explique.
+  await proto('scenario("2026-11-23T19:00", "college")');
+  await page.executeJavaScript(`document.querySelector('#menu').showPopover()`);
+  await capturer('43-menu-usage-reel');
+  await page.executeJavaScript(`document.querySelector('#menu').hidePopover()`);
   const rapport = await proto('rapport()');
   fs.writeFileSync(path.join(dossier, 'rapport.txt'), rapport);
   console.log(rapport);

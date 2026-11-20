@@ -41,6 +41,24 @@ function ecrireException(x) {
 
 // Sauf si la base a été remise à zéro pour un usage réel : la démonstration
 // ne doit plus revenir.
+// La démonstration retient le jour sur lequel elle est calée et l'instant de
+// sa création : ce qui a été modifié ensuite vient de l'utilisateur.
+function ecrireReglage(cle, valeur) {
+  db.exec({
+    sql: 'INSERT OR REPLACE INTO reglage (cle, valeur, modifie_le, supprime) VALUES (?, ?, ?, 0)',
+    bind: [cle, JSON.stringify(valeur), Date.now()],
+  });
+}
+
+function marquerDemo(reference) {
+  if (reference) ecrireReglage('demo', { reference, creeeLe: Date.now() });
+}
+
+function lireReglage(cle) {
+  const valeur = db.selectValue('SELECT valeur FROM reglage WHERE cle = ? AND supprime = 0', [cle]);
+  return valeur ? JSON.parse(valeur) : null;
+}
+
 function completerEmploiDuTemps() {
   const reelle = db.selectValue("SELECT count(*) FROM reglage WHERE cle = 'base' AND supprime = 0");
   if (graineMigration && !reelle && !db.selectValue('SELECT count(*) FROM categorie')) insererEmploiDuTemps(graineMigration);
@@ -123,6 +141,7 @@ const operations = {
     if (pool && !existait && graine) {
       inserer(graine.devoirs ?? []);
       insererEmploiDuTemps(graine);
+      marquerDemo(graine.reference);
     }
     // Base d'une version précédente : l'emploi du temps était écrit dans le
     // code ; on reprend celui de la démonstration.
@@ -290,7 +309,31 @@ const operations = {
     await operations.effacer();
     inserer(graine.devoirs ?? []);
     insererEmploiDuTemps(graine);
+    marquerDemo(graine.reference);
     return { nombre: compter() };
+  },
+
+  // La base sert-elle encore d'exemple ? A-t-on touché à l'exemple depuis sa
+  // création (une ligne modifiée après) ? Une base sans marque « demo » vient
+  // d'une version précédente : on la considère comme modifiée, par prudence.
+  etatDemo() {
+    const reelle = Boolean(lireReglage('base'));
+    const demo = lireReglage('demo');
+    if (reelle || !demo) return { reelle, demo: null, modifiee: true };
+    const apres = demo.creeeLe + 5000;
+    const touchee = ['devoir', 'categorie', 'serie', 'exception', 'periode']
+      .some((table) => db.selectValue(`SELECT count(*) FROM ${table} WHERE modifie_le > ?`, [apres]))
+      || db.selectValue("SELECT count(*) FROM reglage WHERE cle NOT IN ('demo', 'base') AND modifie_le > ?", [apres]);
+    return { reelle, demo, modifiee: Boolean(touchee) };
+  },
+
+  // « J'ai déjà adapté l'exemple » : la base devient réelle telle quelle.
+  marquerReelle() {
+    db.transaction(() => {
+      ecrireReglage('base', { reelle: true, depuis: new Date().toISOString() });
+      db.exec({ sql: "UPDATE reglage SET supprime = 1, modifie_le = ? WHERE cle = 'demo'", bind: [Date.now()] });
+    });
+    return true;
   },
 
   exporter() {

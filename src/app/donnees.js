@@ -7,7 +7,8 @@ import { texteBrut } from '../contenu.js';
 import { VACANCES } from '../vacances.js';
 import { ouvrirStockage } from '../stockage.js';
 import { $, GRIS, dateMoyenne, echapper, ecrirePreference, etat, journaliser, lirePreference, maintenant, pluriel, remplirListe } from './commun.js';
-import { rendre } from './rendu.js';
+import { majPointMenu, rendre } from './rendu.js';
+import { bloque } from './verrou.js';
 
 // --- Données : base SQLite et sauvegarde dans un fichier ---
 
@@ -18,13 +19,7 @@ export const sauvegardeEtat = { dossier: null, autorisation: '', derniere: null,
 // la sauvegarde (le navigateur redemande l'autorisation). Signalé par le
 // point rouge : c'est la seule vraie protection des données.
 export function majBoutonSauvegarde() {
-  const bouton = $('[data-action="reprendre-sauvegarde"]');
-  if (!sauvegarde.disponible) {
-    bouton.hidden = true;
-    return;
-  }
-  bouton.textContent = sauvegardeEtat.dossier ? 'Reprendre la sauvegarde' : 'Choisir un dossier de sauvegarde';
-  bouton.hidden = Boolean(sauvegardeEtat.dossier) && sauvegardeEtat.autorisation === 'granted';
+  majPointMenu();
 }
 
 export async function majListeSauvegardes() {
@@ -53,7 +48,7 @@ export function preparerDemo(reference) {
     id: crypto.randomUUID(), ...d, texte: d.contenu ? texteBrut(d.contenu) : d.texte,
   }));
   edt.definirExceptions(exceptions);
-  return { devoirs, categories: edt.DEMO_CATEGORIES, series, exceptions };
+  return { devoirs, categories: edt.DEMO_CATEGORIES, series, exceptions, reference: edt.isoLocal(reference) };
 }
 
 // L'emploi du temps enregistré (matières, activités, séries, exceptions).
@@ -215,8 +210,8 @@ export const actionsDonnees = {
   },
   // Passer de la démonstration à un usage réel : base vidée, matières de base
   // gardées (à modifier), et plus jamais de démonstration.
-  'repartir-zero': async () => {
-    if (!confirm('Repartir de zéro ?\n\nTout est effacé : devoirs, cours, activités, événements, vacances, réglages et code du verrou. Seule la liste des matières est gardée, à modifier ensuite.\n\nLes sauvegardes des jours précédents restent dans le dossier de sauvegarde.')) return;
+  'repartir-zero': async (_bouton, { confirmer = true } = {}) => {
+    if (confirmer && !confirm('Repartir de zéro ?\n\nTout est effacé : devoirs, cours, activités, événements, vacances, réglages et code du verrou. Seule la liste des matières est gardée, à modifier ensuite.\n\nLes sauvegardes des jours précédents restent dans le dossier de sauvegarde.')) return;
     try {
       await stockage.repartirDeZero(edt.DEMO_CATEGORIES.filter((c) => c.nature === 'ecole'));
       try {
@@ -228,6 +223,7 @@ export const actionsDonnees = {
       await rechargerTout();
       sauvegardeEtat.suspendue = false;
       planifierSauvegarde();
+      await chargerEtatDemo();
       journaliser('Base remise à zéro pour un usage réel (matières gardées)');
     } catch (e) {
       journaliser(`Remise à zéro : échec (${e.message})`);
@@ -237,19 +233,90 @@ export const actionsDonnees = {
   reinitialiser: async () => {
     if (!confirm('Remplacer tous les devoirs et l’emploi du temps par ceux de la démonstration, recalculés à partir d’aujourd’hui ?')) return;
     try {
-      const reference = edt.debutJour(maintenant());
-      const graine = preparerDemo(reference);
-      await stockage.reinitialiser(graine);
-      ecrirePreference(CLE_REFERENCE, edt.isoLocal(reference));
-      await rechargerTout();
-      planifierSauvegarde();
-      journaliser(`Démonstration réinitialisée : ${graine.devoirs.length} devoirs, ${graine.series.length} séances par semaine`);
+      await renouvelerDemo();
     } catch (e) {
       journaliser(`Réinitialisation : échec (${e.message})`);
     }
     afficherDonnees();
   },
+  // Bandeau de démonstration.
+  'demo-renouveler': async () => {
+    if (etat.demo?.modifiee && !confirm('Mettre l’exemple à jour pour aujourd’hui ?\n\nCe que vous avez changé dans l’exemple sera effacé.')) return;
+    await renouvelerDemo();
+  },
+  'usage-reel': () => {
+    if (bloque('Passer à l’usage réel', () => actionsDonnees['usage-reel']())) return;
+    $('#usage-reel').showModal();
+  },
+  'demo-masquer': () => {
+    try { sessionStorage.setItem('sablio-bandeau-demo-masque', '1'); } catch { /* tant pis */ }
+    majBandeauDemo();
+  },
+  // Alertes du menu écartées.
+  'sans-rappel-sauvegarde': () => {
+    ecrirePreference('sablio-sans-rappel-sauvegarde', '1');
+    majPointMenu();
+  },
+  'sans-rappel-notifications': () => {
+    ecrirePreference('sablio-sans-rappel-notifications', '1');
+    majPointMenu();
+  },
 };
+
+// --- Démonstration ---
+// Elle est calée sur le jour où la base est créée. Tant qu'on n'y a pas
+// touché, elle est recalculée d'elle-même quand elle a plus d'une semaine ;
+// sinon, le bandeau propose de la mettre à jour.
+
+const DEMO_PERIMEE = 7; // jours
+
+export async function renouvelerDemo() {
+  const reference = edt.debutJour(maintenant());
+  const graine = preparerDemo(reference);
+  await stockage.reinitialiser(graine);
+  ecrirePreference(CLE_REFERENCE, edt.isoLocal(reference));
+  await rechargerTout();
+  await chargerEtatDemo();
+  journaliser(`Démonstration recalculée pour le ${edt.dateLongue(reference)} : ${graine.devoirs.length} devoirs`);
+}
+
+export async function chargerEtatDemo() {
+  etat.demo = await stockage.etatDemo();
+  majBandeauDemo();
+  majPointMenu();
+}
+
+export function majBandeauDemo() {
+  let masque = false;
+  try { masque = sessionStorage.getItem('sablio-bandeau-demo-masque') === '1'; } catch { /* pas de stockage */ }
+  const bandeau = $('#bandeau-demo');
+  bandeau.hidden = !etat.demo || etat.demo.reelle || masque;
+  const reference = etat.demo?.demo?.reference ?? lirePreference(CLE_REFERENCE, '');
+  $('#bandeau-demo-date').textContent = reference ? edt.dateLongue(edt.dateDepuisIso(reference)) : 'jour de la première ouverture';
+}
+
+// Au démarrage : une démonstration intacte et périmée est recalculée.
+export async function rafraichirDemoPerimee() {
+  await chargerEtatDemo();
+  const d = etat.demo;
+  journaliser(d.reelle ? 'Base : usage réel' : `Base : exemple${d.demo ? ` calé sur le ${d.demo.reference}, ${d.modifiee ? 'modifié' : 'intact'}` : ''}`);
+  if (d.reelle || !d.demo || d.modifiee) return;
+  if (edt.ecartJours(edt.dateDepuisIso(d.demo.reference), maintenant()) < DEMO_PERIMEE) return;
+  await renouvelerDemo();
+}
+
+let usageEnCours = Promise.resolve();
+$('#usage-reel form').addEventListener('submit', (e) => {
+  const choix = e.submitter?.value;
+  if (choix === 'zero') usageEnCours = actionsDonnees['repartir-zero'](null, { confirmer: false });
+  else if (choix === 'garder') {
+    usageEnCours = (async () => {
+      await stockage.marquerReelle();
+      await chargerEtatDemo();
+      journaliser('Base passée à l’usage réel (exemple gardé tel quel)');
+    })();
+  }
+});
 
 // Une seule fenêtre peut ouvrir la base. Le verrou (Web Locks) est gardé tant
 // que la page est ouverte et libéré automatiquement à sa fermeture.
@@ -293,6 +360,7 @@ export async function demarrerStockage() {
   journaliser(`Base : ${info.mode}${info.creee && info.persistant ? ', créée avec les devoirs de démonstration' : `, ${info.nombre} devoirs`}`);
   if (!info.persistant) alerter(`Attention : rien de ce que vous saisissez ne sera enregistré (${info.mode}).`);
   await rechargerTout();
+  await rafraichirDemoPerimee();
   if (sauvegarde.disponible) {
     sauvegardeEtat.dossier = (await sauvegarde.dossierEnregistre()) ?? null;
     if (sauvegardeEtat.dossier) {

@@ -46,8 +46,16 @@
        rappels, sauvegarde) ; « Installer » est proposé sans être signalé. -->
   <div id="menu" class="menu" popover>
     <button type="button" class="mise-en-avant" data-action="installer" hidden>Installer l’application</button>
-    <button type="button" class="mise-en-avant" data-action="activer-rappels" data-signale hidden>Activer les rappels</button>
-    <button type="button" class="mise-en-avant" data-action="reprendre-sauvegarde" data-signale hidden>Reprendre la sauvegarde</button>
+    <div class="menu-alerte" id="alerte-sauvegarde" data-signale hidden>
+      <button type="button" class="mise-en-avant" data-action="reprendre-sauvegarde">Choisir un dossier de sauvegarde</button>
+      <p id="alerte-sauvegarde-texte">Vos données ne sont encore sauvegardées nulle part. Choisissez un dossier (clé USB, OneDrive) : Sablio y enregistre une copie chaque jour.</p>
+      <button type="button" class="lien" data-action="sans-rappel-sauvegarde">Ne plus me le rappeler</button>
+    </div>
+    <div class="menu-alerte" id="alerte-rappels" data-signale hidden>
+      <button type="button" class="mise-en-avant" data-action="activer-rappels">Activer les rappels</button>
+      <p>Pour être prévenu cinq minutes avant chaque cours, le navigateur doit autoriser les notifications.</p>
+      <button type="button" class="lien" data-action="sans-rappel-notifications">Ne plus me le rappeler</button>
+    </div>
     <button type="button" data-action="vue" data-vue="edt">Emploi du temps et agenda</button>
     <label class="menu-ligne">Profil
       <select id="profil">
@@ -61,6 +69,17 @@
     <button type="button" data-action="panneau" data-panneau="apropos" aria-expanded="false" aria-controls="apropos">À propos de Sablio</button>
     <button type="button" data-action="deverrouiller" hidden>🔒 Mode adulte (code)</button>
     <button type="button" data-action="verrouiller" hidden>🔒 Verrouiller maintenant</button>
+  </div>
+
+  <!-- Bandeau tant que la base sert d'exemple : on sait où on est et comment en sortir. -->
+  <div class="bandeau-demo" id="bandeau-demo" hidden>
+    <p>🧪 Vous découvrez Sablio avec un <strong>exemple</strong>, calé sur le <span id="bandeau-demo-date"></span>.</p>
+    <div class="ligne">
+      <a class="bouton" href="guide/" target="_blank" rel="noopener">Guide</a>
+      <button type="button" data-action="demo-renouveler">Mettre l’exemple à jour</button>
+      <button type="button" class="mise-en-avant" data-action="usage-reel">Passer à l’usage réel…</button>
+      <button type="button" class="lien" data-action="demo-masquer" aria-label="Masquer ce bandeau" title="Masquer jusqu’à la prochaine ouverture">✕</button>
+    </div>
   </div>
 
   <p class="alerte-globale" id="alerte" role="alert" hidden></p>
@@ -186,6 +205,19 @@
       <p class="vide">Les matières de même nom sont reconnues (pas de doublon). Les devoirs ne sont pas touchés ; ceux rattachés à un cours retiré restent rattachés à leur date.</p>
       <div class="ligne boutons">
         <button value="ok" class="mise-en-avant">Importer</button>
+        <button value="annuler" formnovalidate>Annuler</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="usage-reel" class="large" aria-labelledby="usage-reel-titre">
+    <form method="dialog" class="formulaire">
+      <h2 id="usage-reel-titre">Passer à l’usage réel</h2>
+      <p>Sablio s’est ouvert sur un exemple. Pour l’utiliser vraiment :</p>
+      <button value="zero" class="choix-usage mise-en-avant"><strong>Effacer l’exemple et commencer</strong><span>La liste des matières est gardée, à modifier. Devoirs, cours, activités et rendez-vous de l’exemple sont effacés.</span></button>
+      <button value="garder" class="choix-usage"><strong>Garder ce qui est saisi</strong><span>J’ai déjà remplacé l’exemple par mon emploi du temps et mes devoirs.</span></button>
+      <p class="vide">Ensuite : choisissez un dossier de sauvegarde (menu ☰), puis votre emploi du temps (menu ☰ → Emploi du temps et agenda).</p>
+      <div class="ligne boutons">
         <button value="annuler" formnovalidate>Annuler</button>
       </div>
     </form>
@@ -441,6 +473,9 @@
     </div>
 
     <h3>Réglages du profil</h3>
+    <div class="ligne">
+      <button type="button" data-action="activer-rappels" id="reglage-notifications">Autoriser les notifications (rappels)</button>
+    </div>
     <div class="ligne">
       <label>Mode discret
         <select id="discret-mode">
