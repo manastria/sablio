@@ -118,6 +118,41 @@
     </form>
   </dialog>
 
+  <dialog id="seance" class="large" aria-labelledby="seance-titre">
+    <form method="dialog" class="formulaire">
+      <div class="detail-entete">
+        <span id="seance-pastille"></span>
+        <div>
+          <h2 id="seance-titre"></h2>
+          <p class="seance-quand" id="seance-quand"></p>
+        </div>
+      </div>
+      <div id="seance-devoirs"></div>
+      <fieldset class="rendu">
+        <legend>Cette séance</legend>
+        <div class="choix-seances" role="radiogroup" aria-label="État de la séance">
+          <label class="choix-seance"><input type="radio" name="seance-statut" value="normal"><span><strong>A lieu</strong><span class="precision">comme prévu</span></span></label>
+          <label class="choix-seance"><input type="radio" name="seance-statut" value="annule"><span><strong>Annulée</strong><span class="precision">absence, grève…</span></span></label>
+          <label class="choix-seance"><input type="radio" name="seance-statut" value="deplace"><span><strong>Déplacée</strong><span class="precision">autre jour ou autre heure</span></span></label>
+        </div>
+        <div class="ligne seance-deplacement" id="seance-deplacement">
+          <label>Jour <input type="date" id="seance-date"></label>
+          <label>De <input type="time" id="seance-debut"></label>
+          <label>à <input type="time" id="seance-fin"></label>
+        </div>
+        <label id="seance-champ-motif"><span>Motif <span class="facultatif">(facultatif)</span></span>
+          <input id="seance-motif" placeholder="professeur absent, sortie au musée…" autocomplete="off"></label>
+        <p class="erreur" id="seance-erreur" hidden></p>
+      </fieldset>
+      <div class="ligne boutons">
+        <button value="ok" class="mise-en-avant">Enregistrer</button>
+        <button value="annuler" formnovalidate>Fermer</button>
+        <span class="espace"></span>
+        <button type="button" data-action="seance-ajouter-devoir" id="seance-ajouter-devoir">+ Devoir pour ce cours</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="detail" class="large" aria-labelledby="detail-titre">
     <div class="detail-entete">
       <span id="detail-pastille"></span>

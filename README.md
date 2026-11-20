@@ -10,7 +10,7 @@ Emploi du temps en dur : une semaine type de collégien avec semaines A/B, un cr
 cd refonte/prototype
 npm install
 npm start            # fenêtre normale
-npm run captures     # 25 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
+npm run captures     # 26 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
 ```
 
 Dans la fenêtre :
@@ -29,6 +29,8 @@ Un rappel (notification + carillon) part 5 minutes avant chaque cours.
 
 - **À faire** : tous les devoirs non faits, groupés par échéance (en retard, aujourd'hui, demain, cette semaine, la semaine prochaine, plus tard).
 - **Semaine** : une ligne par jour, les séances en bandes de couleur sur une échelle horaire commune, les devoirs à rendre et leur progression. Un clic sur un jour ouvre la vue Jour. Le week-end, la semaine suivante s'affiche directement.
+
+Un clic sur une séance de la vue Jour permet de la dire annulée ou déplacée (avec un motif), puis de la rétablir ; ses devoirs la suivent.
 
 Un clic sur un devoir l'ouvre (texte complet, échéance, cours, boutons **Modifier** et **Supprimer**) ; seule la case le marque fait. Le devoir de français de la démonstration montre une longue consigne mise en forme, comme sur l'ENT.
 

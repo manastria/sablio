@@ -284,6 +284,12 @@ async function faireCaptures(dossier) {
   await proto('scenario("2026-11-23T11:20", "primaire", "semaine", "2026-11-23")');
   await capturer('24-semaine-etroit');
   fenetre.setContentSize(1100, 720);
+  // Une séance : celle du DS de mercredi, avec son devoir.
+  await proto('scenario("2026-11-23T19:00", "college", "jour", "2026-11-25")');
+  await proto('ouvrirSeance("o|s3-1005-creneau")');
+  await page.executeJavaScript(`document.querySelector('#seance input[value="deplace"]').click()`);
+  await capturer('26-seance');
+  await proto('fermerSeance()');
   await proto('scenario("2026-11-25T19:00", "college", "afaire")');
   await capturer('25-a-faire');
   await proto('scenario("2026-11-23T19:00", "college", "jour", "2026-11-24")');

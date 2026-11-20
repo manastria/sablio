@@ -38,6 +38,7 @@ L'environnement de l'enfant varie beaucoup : âge, activités, présence d'un ad
 - **Bande des jours** de la semaine affichée, sous l'en-tête : un clic pour aller deux ou trois jours plus loin, le nombre de devoirs à rendre sur chaque jour, « « » et « » » pour changer de semaine. Les jours sans cours sont grisés.
 - Un cours porte une pastille (`•1`) quand un devoir est à lui rendre.
 - Pendant un cours, le repère « Vous êtes ici » est **dans ce cours** : une ligne qui descend avec le temps, et « En cours · encore 35 min ». Entre deux séances, il est entre elles.
+- **Un clic sur une séance** l'ouvre : devoirs à lui rendre, et son état : « A lieu », « Annulée » ou « Déplacée » (jour, heures), avec un motif facultatif. Revenir à « A lieu » rétablit la séance. Les devoirs rattachés suivent la séance.
 - Chaque cours à venir a un bouton **« + »** : ajouter un devoir à rendre à ce cours. Pour un devoir de la semaine prochaine : aller au jour (bande des jours ou « Aller à »), puis « + » sur le cours.
 - Les exceptions se voient : cours annulé barré, cours déplacé avec une pastille.
 - « Ce soir » : voir [Jour de travail](#jour-de-travail).

@@ -445,7 +445,21 @@ button.lien:hover { text-decoration: underline; }
   background: var(--surface-2);
 }
 .seance .horaire { font-variant-numeric: tabular-nums; font-size: 0.85em; color: var(--texte-doux); line-height: 1.25; }
-.seance-texte { min-width: 0; }
+.seance { cursor: pointer; }
+.seance-texte {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  display: block;
+}
+.seance-texte:hover { background: none; text-decoration: underline; text-decoration-thickness: 1px; }
+.seance-texte strong { display: block; }
+.seance-quand { margin: 0; color: var(--texte-doux); }
+.formulaire .seance-deplacement { gap: 0.8rem; }
+.formulaire .seance-deplacement label { font-weight: 400; }
+.formulaire .seance-deplacement input { width: auto; }
 .seance.passe { opacity: 0.45; }
 .seance.actuel { outline: 3px solid var(--texte); outline-offset: 1px; }
 .seance.annule strong { text-decoration: line-through; }

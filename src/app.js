@@ -715,13 +715,13 @@ function ligneSeance(o, n, ecart) {
     ? `<button type="button" class="ajout-seance" data-ajouter-seance="${cleSeance(o)}"
         aria-label="Ajouter un devoir pour ${echapper(a.nom)}, ${echapper(edt.dateLongue(o.debut))} à ${edt.heureTexte(o.debut)}"
         title="Ajouter un devoir à rendre à ce cours">+</button>` : '';
-  return `<li class="${classes.join(' ')}" data-css="${couleurs(a)}" data-debut="${o.debut.getTime()}" data-fin="${o.fin.getTime()}">
+  return `<li class="${classes.join(' ')}" data-css="${couleurs(a)}" data-debut="${o.debut.getTime()}" data-fin="${o.fin.getTime()}" data-seance="${cleSeance(o)}">
       <span class="horaire">${edt.heureTexte(o.debut)}<br>${edt.heureTexte(o.fin)}</span>
       ${pastille(a)}
-      <span class="seance-texte"><strong>${echapper(a.nom)}</strong>
+      <button type="button" class="seance-texte" title="Annuler, déplacer, voir les devoirs"><strong>${echapper(a.nom)}</strong>
         ${a.lieu ? `<span class="precision">${echapper(a.lieu)}</span>` : ''}
         ${statut ? `<span class="statut">${echapper(statut)}</span>` : ''}
-        ${actuel ? '<span class="statut en-cours" data-champ="encore"></span>' : ''}</span>
+        ${actuel ? '<span class="statut en-cours" data-champ="encore"></span>' : ''}</button>
       <span class="seance-fin">${badge}${plus}</span>
       ${actuel ? '<span class="ici-dans" aria-hidden="true"><span>Vous êtes ici</span></span>' : ''}
     </li>`;
@@ -1197,6 +1197,88 @@ document.addEventListener('mousedown', (e) => {
   if (e.target.closest('[data-format]')) e.preventDefault();
 });
 
+// --- Une séance : annuler, déplacer, rétablir ---
+// L'exception porte sur la séance prévue (série + date d'origine) ; les
+// devoirs qui lui sont rattachés la suivent d'eux-mêmes.
+
+let seanceOuverte = null;
+const hhmmDe = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+
+function ouvrirSeance(cle) {
+  const [, serie, dateOrigine] = cle.split('|');
+  const o = edt.trouverOccurrence(serie, dateOrigine);
+  if (!o) return;
+  seanceOuverte = o;
+  const n = maintenant();
+  const a = affichage(o);
+  const prevu = o.origine ?? { debut: o.debut, fin: o.fin };
+  $('#seance-pastille').innerHTML = pastille(a);
+  appliquerStyles($('#seance-pastille'));
+  $('#seance-titre').textContent = a.nom;
+  $('#seance-quand').textContent = [
+    `Prévue ${edt.dateLongue(prevu.debut)}, ${edt.heureTexte(prevu.debut)} – ${edt.heureTexte(prevu.fin)}`, a.lieu,
+  ].filter(Boolean).join(' · ');
+  const devoirs = o.nature === 'perso' ? [] : devoirsDe(o);
+  $('#seance-devoirs').innerHTML = devoirs.length
+    ? `<p class="etiquette">À rendre à cette séance</p><ul class="liste-devoirs">${devoirs.map((d) => ligneDevoir(d, {})).join('')}</ul>
+       <p class="vide">Si la séance est déplacée, ${devoirs.length > 1 ? 'ces devoirs la suivent' : 'ce devoir la suit'}.</p>`
+    : '';
+  appliquerStyles($('#seance-devoirs'));
+  const statut = o.statut === 'annule' || o.statut === 'deplace' ? o.statut : 'normal';
+  document.querySelector(`input[name="seance-statut"][value="${statut}"]`).checked = true;
+  $('#seance-motif').value = o.motif ?? '';
+  $('#seance-date').value = edt.isoLocal(o.debut);
+  $('#seance-debut').value = hhmmDe(o.debut);
+  $('#seance-fin').value = hhmmDe(o.fin);
+  $('#seance-erreur').hidden = true;
+  $('#seance-ajouter-devoir').hidden = o.nature === 'perso' || o.debut <= n;
+  majChampsSeance();
+  if (!$('#seance').open) $('#seance').showModal();
+  document.querySelector('input[name="seance-statut"]:checked').focus();
+}
+
+function majChampsSeance() {
+  const statut = document.querySelector('input[name="seance-statut"]:checked')?.value;
+  $('#seance-deplacement').hidden = statut !== 'deplace';
+  $('#seance-champ-motif').hidden = statut === 'normal';
+  for (const id of ['#seance-date', '#seance-debut', '#seance-fin']) $(id).required = statut === 'deplace';
+}
+
+async function enregistrerSeance() {
+  const o = seanceOuverte;
+  const statut = document.querySelector('input[name="seance-statut"]:checked').value;
+  const motif = $('#seance-motif').value.trim() || null;
+  const cle = { serie: o.serie, dateOrigine: o.dateOrigine };
+  try {
+    if (statut === 'normal') await stockage.supprimerException(o.serie, o.dateOrigine);
+    else if (statut === 'annule') await stockage.enregistrerException({ ...cle, statut, motif });
+    else {
+      await stockage.enregistrerException({
+        ...cle, statut, motif, nouvelleDate: $('#seance-date').value, debut: $('#seance-debut').value, fin: $('#seance-fin').value,
+      });
+    }
+    await rechargerTout();
+    planifierSauvegarde();
+    const libelle = { normal: 'rétablie', annule: 'annulée', deplace: `déplacée au ${$('#seance-date').value} à ${$('#seance-debut').value}` }[statut];
+    journaliser(`Séance ${affichage(o).nom} du ${o.dateOrigine} ${libelle}`);
+  } catch (e) {
+    journaliser(`Séance : échec (${e.message})`);
+  }
+}
+
+let seanceEnCours = Promise.resolve();
+$('#seance form').addEventListener('submit', (e) => {
+  if (e.submitter?.value !== 'ok') return;
+  const statut = document.querySelector('input[name="seance-statut"]:checked')?.value;
+  if (statut === 'deplace' && $('#seance-fin').value <= $('#seance-debut').value) {
+    e.preventDefault();
+    $('#seance-erreur').textContent = 'L’heure de fin doit être après l’heure de début.';
+    $('#seance-erreur').hidden = false;
+    return;
+  }
+  seanceEnCours = enregistrerSeance();
+});
+
 // Cours annulé : on rattache le devoir à la séance suivante de la même série
 // de cours (même matière, ou même créneau pour un DS).
 async function reporter(id) {
@@ -1403,6 +1485,10 @@ const actions = {
   'jour-aujourdhui': () => allerAuJour(maintenant()),
   ajouter: () => ouvrirAjout(),
   'fermer-detail': () => $('#detail').close(),
+  'seance-ajouter-devoir': () => {
+    $('#seance').close();
+    ouvrirAjout(null, seanceOuverte);
+  },
   'modifier-devoir': () => {
     const d = etat.devoirs?.find((x) => x.id === etat.detail);
     if (!d) return;
@@ -1444,6 +1530,11 @@ document.addEventListener('click', (e) => {
   if (plus) {
     const [, serie, dateOrigine] = plus.dataset.ajouterSeance.split('|');
     ouvrirAjout(null, edt.trouverOccurrence(serie, dateOrigine));
+    return;
+  }
+  const ligneSeance = e.target.closest('#jour-edt [data-seance]');
+  if (ligneSeance) {
+    ouvrirSeance(ligneSeance.dataset.seance);
     return;
   }
   const ouvrir = e.target.closest('[data-ouvrir]');
@@ -1493,6 +1584,8 @@ document.addEventListener('change', (e) => {
     choisirJourSaisie(edt.dateDepuisIso(cible.value));
   } else if (cible.id === 'ajout-date' && cible.value) {
     choisirJourSaisie(edt.dateDepuisIso(cible.value));
+  } else if (cible.name === 'seance-statut') {
+    majChampsSeance();
   } else if (cible.name === 'rendu-seance') {
     saisie.seance = cible.value;
     $('#ajout-erreur-rendu').hidden = true;
@@ -1579,6 +1672,29 @@ async function essaisInterface() {
   etats.push(etat.discret);
   journaliser(`Essai mode discret (${etat.reglages.discret}) : ${etats.map((x) => (x ? 'actif' : 'inactif')).join(' → ')}`);
 
+  // Séance : on déplace celle du DS (un devoir y est rattaché), puis on la rétablit.
+  const ds = etat.devoirs.find((d) => d.seance?.nature === 'creneau');
+  if (ds) {
+    const avantDeplacement = edt.dateLongue(ds.rendu);
+    ouvrirSeance(cleSeance(ds.seance));
+    $('#seance input[value="deplace"]').checked = true;
+    majChampsSeance();
+    $('#seance-date').value = edt.isoLocal(edt.ajouterJours(ds.seance.debut, 1));
+    $('#seance-debut').value = '14:00';
+    $('#seance-fin').value = '15:50';
+    $('#seance-motif').value = 'essai';
+    $('#seance form').requestSubmit($('#seance button[value="ok"]'));
+    await seanceEnCours;
+    const deplace = etat.devoirs.find((d) => d.id === ds.id);
+    const apresDeplacement = `${edt.dateLongue(deplace.rendu)} à ${edt.heureTexte(deplace.seance.debut)} (${deplace.seance.statut})`;
+    ouvrirSeance(cleSeance(deplace.seance));
+    $('#seance input[value="normal"]').checked = true;
+    $('#seance form').requestSubmit($('#seance button[value="ok"]'));
+    await seanceEnCours;
+    const retabli = etat.devoirs.find((d) => d.id === ds.id);
+    journaliser(`Essai séance : « ${ds.texte} » ${avantDeplacement} → déplacée : ${apresDeplacement} → rétablie : ${edt.dateLongue(retabli.rendu)} (${retabli.seance.statut})`);
+  }
+
   // Modification : on ouvre le devoir, on le modifie, on enregistre.
   afficherDetail(ajoute.id);
   actions['modifier-devoir']();
@@ -1627,6 +1743,8 @@ window.prototypeMyDevoirs = {
   ouvrirAjout,
   fermerAjout: () => $('#ajout').close(),
   essaisInterface,
+  ouvrirSeance: (debutCle) => ouvrirSeance(document.querySelector(`[data-seance^="${debutCle}"]`).dataset.seance),
+  fermerSeance: () => $('#seance').close(),
   afficherDetail: (texte) => afficherDetail(etat.devoirs.find((d) => d.texte.startsWith(texte))?.id),
   fermerDetail: () => $('#detail').close(),
   lancerTests,
