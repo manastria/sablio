@@ -45,15 +45,29 @@ L'environnement de l'enfant varie beaucoup : âge, activités, présence d'un ad
 
 ### Vue Semaine
 
-Elle reste utile pour anticiper, mais MyDevoirs la rend trop chargée. Dans Sablio, chaque jour ne montre que :
+Elle reste utile pour anticiper, mais MyDevoirs la rend trop chargée. Dans Sablio, **une ligne par jour** :
 
-- les cours sous forme de bandes de couleur, sans texte détaillé ;
-- le nombre de devoirs à rendre et la barre de progression ;
-- les jours sans cours repliés.
+```
+←  [Cette semaine]  →   [S48|B]  Cette semaine · 23 – 29 novembre      Aller à [    ]
+7 devoirs à rendre · 0 fait
+        8 h    9 h    10 h   11 h   12 h   13 h   14 h   15 h   16 h   17 h
+Lun 23  [📖][📐] [┊🌍┊][💬•]|            [🧪][🏃      ]              📐 💬  ▭ 0/2
+Mar 24  [⚙️     ] [📐][📖•]          [💬][🎵]       [┊🌍•┊][📍]          🌍 📖  ▭ 0/2
+…
+Samedi 28 et dimanche 29 : rien de prévu
+```
 
-Repris de MyDevoirs : premier jour de la semaine, semaine suivante affichée le week-end, numéro et lettre de semaine, « semaine prochaine » / « dans 3 semaines », saut à une date (`12`, `12/2027`, `JJ/MM/AAAA`, et en plus « demain », « lundi »).
+- les séances en **bandes de couleur sur une échelle horaire commune** à la semaine, avec le pictogramme seul ; le détail est dans l'infobulle et dans la vue Jour ;
+- une **pastille blanche** sur une séance à laquelle un devoir est à rendre ;
+- les exceptions se voient : séance annulée **hachurée**, séance partie ailleurs en **pointillés**, séance arrivée d'ailleurs **bordée de pointillés** ;
+- à droite, les devoirs à rendre ce jour (pictogrammes de leurs matières, estompés une fois faits) et la progression ;
+- aujourd'hui est encadré, avec une **ligne rouge à l'heure actuelle** ; les séances passées sont estompées ;
+- un jour de week-end vide est **replié** en une ligne (« Samedi 28 et dimanche 29 : rien de prévu ») ;
+- **un clic sur un jour ouvre la vue Jour** ; le badge de semaine de la vue Jour ouvre la vue Semaine.
 
-Les jours affichés se déduisent de l'emploi du temps (jours avec au moins un cours ou une activité), avec la possibilité de forcer un jour.
+Navigation : semaine précédente / « Cette semaine » / suivante (et flèches du clavier), « Aller à » comme dans la vue Jour. Titre en temps relatif (« Semaine prochaine · 30 novembre – 6 décembre »), total des devoirs de la semaine.
+
+Repris de MyDevoirs : semaine suivante affichée le week-end, numéro et lettre de semaine, « semaine prochaine » / « dans 3 semaines », saut à une date. Pas encore repris : le choix du premier jour de la semaine (le prototype commence le lundi).
 
 ### Préparer le sac
 

@@ -540,6 +540,20 @@ export function titreJour(jour, maintenant) {
   return `${majuscule(date)} · ${n > 0 ? `dans ${n} jours` : `il y a ${-n} jours`}`;
 }
 
+// « 23 – 29 novembre », « 30 novembre – 6 décembre », « 28 déc. 2026 – 3 janv. 2027 »
+// (comme plage_de_dates dans MyDevoirs).
+export function plageDates(debut, fin) {
+  const f = (d, options) => d.toLocaleDateString('fr-FR', options);
+  if (debut.getFullYear() !== fin.getFullYear()) {
+    const o = { day: 'numeric', month: 'short', year: 'numeric' };
+    return `${f(debut, o)} – ${f(fin, o)}`;
+  }
+  if (debut.getMonth() !== fin.getMonth()) {
+    return `${f(debut, { day: 'numeric', month: 'long' })} – ${f(fin, { day: 'numeric', month: 'long' })}`;
+  }
+  return `${debut.getDate()} – ${f(fin, { day: 'numeric', month: 'long' })}`;
+}
+
 export const majuscule = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 // Texte noir ou blanc selon la couleur de fond (luminance relative WCAG).

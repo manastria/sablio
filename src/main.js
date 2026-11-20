@@ -275,6 +275,15 @@ async function faireCaptures(dossier) {
   // En plein cours : le repère est dans le cours.
   await proto('scenario("2026-11-23T11:20", "college", "jour", "2026-11-23")');
   await capturer('21-jour-en-cours');
+  // Vue Semaine : la semaine en cours (cours déplacé, cours annulé, DS), à 11 h 20.
+  await proto('scenario("2026-11-23T11:20", "college", "semaine", "2026-11-23")');
+  await capturer('22-semaine');
+  await proto('scenario("2026-11-23T11:20", "college", "semaine", "2026-11-30")');
+  await capturer('23-semaine-suivante');
+  fenetre.setContentSize(420, 900);
+  await proto('scenario("2026-11-23T11:20", "primaire", "semaine", "2026-11-23")');
+  await capturer('24-semaine-etroit');
+  fenetre.setContentSize(1100, 720);
   await proto('scenario("2026-11-23T19:00", "college", "jour", "2026-11-24")');
   await proto('afficherDetail("Lire le chapitre 3")');
   await capturer('19-detail');

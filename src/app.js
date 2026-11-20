@@ -239,11 +239,14 @@ function rendre(forcer = false) {
     etat.vue, s.etat, s.actuel?.id, s.suivant?.id, s.demain?.jour?.getTime(),
     edt.debutJour(n).getTime(), etat.profil, etat.versionDevoirs, etat.discret,
     etat.vue === 'jour' ? cleJour(n) : '',
+    // Vue Semaine : reconstruite toutes les 5 minutes (cours passés grisés).
+    etat.vue === 'semaine' ? `${etat.semaine?.getTime()}:${Math.floor(n / (5 * MINUTE))}` : '',
   ].join('|');
   if (forcer || cle !== cleStructure) {
     cleStructure = cle;
     afficherVue();
     if (etat.vue === 'jour') construireJour(n, profil);
+    else if (etat.vue === 'semaine') construireSemaine(n);
     else construire(s, n, profil);
   }
   mettreAJour(s, n, profil);
@@ -255,6 +258,7 @@ function rendre(forcer = false) {
 function afficherVue() {
   $('#vue-maintenant').hidden = etat.vue !== 'maintenant';
   $('#vue-jour').hidden = etat.vue !== 'jour';
+  $('#vue-semaine').hidden = etat.vue !== 'semaine';
   for (const b of document.querySelectorAll('[data-action="vue"]')) {
     if (b.dataset.vue === etat.vue) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
@@ -554,27 +558,30 @@ function badgeSemaine(jour, n, variante = '') {
     <span class="bs-num"><small>S</small>${semaine}</span><span class="bs-lettre">${echapper(edt.lettreSemaine(jour))}</span></span>`;
 }
 
-// Champ « Aller à » : un numéro de semaine, une date ou un jour.
-$('#aller').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const saisie = $('#aller-saisie');
-  const erreur = $('#aller-erreur');
-  try {
-    const jour = edt.interpreterSaisie(saisie.value, maintenant());
+// Champs « Aller à » (vues Jour et Semaine) : une semaine, une date ou un jour.
+for (const formulaire of document.querySelectorAll('form.aller')) {
+  const saisie = formulaire.querySelector('input');
+  const erreur = formulaire.querySelector('.erreur');
+  formulaire.addEventListener('submit', (e) => {
+    e.preventDefault();
+    try {
+      const jour = edt.interpreterSaisie(saisie.value, maintenant());
+      erreur.hidden = true;
+      saisie.removeAttribute('aria-invalid');
+      saisie.value = '';
+      if (formulaire.dataset.cible === 'semaine') allerALaSemaine(jour);
+      else allerAuJour(jour);
+    } catch (err) {
+      erreur.textContent = err.message;
+      erreur.hidden = false;
+      saisie.setAttribute('aria-invalid', 'true');
+    }
+  });
+  saisie.addEventListener('input', () => {
     erreur.hidden = true;
     saisie.removeAttribute('aria-invalid');
-    saisie.value = '';
-    allerAuJour(jour);
-  } catch (err) {
-    erreur.textContent = err.message;
-    erreur.hidden = false;
-    saisie.setAttribute('aria-invalid', 'true');
-  }
-});
-$('#aller-saisie').addEventListener('input', () => {
-  $('#aller-erreur').hidden = true;
-  $('#aller-saisie').removeAttribute('aria-invalid');
-});
+  });
+}
 
 // Les sept jours de la semaine affichée, avec le nombre de devoirs à rendre.
 function htmlBandeJours(jour, n) {
@@ -597,7 +604,8 @@ function htmlBandeJours(jour, n) {
   const { semaine } = edt.numeroSemaine(jour);
   return `<nav class="bande-jours" aria-label="Jours de la semaine ${semaine}">
     <button type="button" class="puce-semaine" data-action="jour-decaler" data-jours="-7" aria-label="Semaine précédente" title="Semaine précédente">«</button>
-    ${badgeSemaine(jour, n, 'grand')}
+    <button type="button" class="lien-semaine" data-action="voir-semaine" data-date="${edt.isoLocal(jour)}"
+      title="Voir la semaine" aria-label="Voir la semaine ${edt.numeroSemaine(jour).semaine}">${badgeSemaine(jour, n, 'grand')}</button>
     ${puces.join('')}
     <button type="button" class="puce-semaine" data-action="jour-decaler" data-jours="7" aria-label="Semaine suivante" title="Semaine suivante">»</button>
   </nav>`;
@@ -703,6 +711,109 @@ function precisionRendu(d, n) {
   return o.nature === 'creneau' ? `${o.titre} de ${edt.heureTexte(o.debut)}` : `cours de ${edt.heureTexte(o.debut)}`;
 }
 
+// --- Vue Semaine ---
+// Une ligne par jour : les séances en bandes de couleur (pictogramme seul,
+// le détail est dans l'infobulle et dans la vue Jour), puis les devoirs à
+// rendre ce jour et leur progression. Un clic sur un jour ouvre la vue Jour.
+
+// Le week-end, on montre directement la semaine suivante (comme MyDevoirs).
+function semaineParDefaut(n) {
+  const jour = n.getDay();
+  return edt.ajouterJours(edt.lundi(n), jour === 0 || jour === 6 ? 7 : 0);
+}
+
+function allerALaSemaine(date) {
+  etat.semaine = edt.lundi(date);
+  etat.vue = 'semaine';
+  rendre(true);
+}
+
+function construireSemaine(n) {
+  etat.semaine ??= semaineParDefaut(n);
+  const lundi = etat.semaine;
+  const jours = Array.from({ length: 7 }, (_, i) => edt.ajouterJours(lundi, i));
+  const seances = jours.map((j) => edt.occurrencesDuJour(j).filter(visible));
+  const devoirs = jours.map((j) => (etat.devoirs ?? []).filter((d) => edt.memeJour(d.rendu, j)));
+
+  // Échelle horaire commune à toute la semaine, en heures pleines.
+  const toutes = seances.flat();
+  const heure = (d) => d.getHours() + d.getMinutes() / 60;
+  const hMin = toutes.length ? Math.floor(Math.min(...toutes.map((o) => heure(o.debut)))) : 8;
+  const hMax = toutes.length ? Math.ceil(Math.max(...toutes.map((o) => heure(o.fin)))) : 17;
+  const pct = (d) => ((heure(d) - hMin) / (hMax - hMin)) * 100;
+
+  const courante = edt.memeJour(lundi, edt.lundi(n));
+  const total = devoirs.flat();
+  const faits = total.filter((d) => d.fait).length;
+  $('#semaine-entete').innerHTML = `
+    <div class="jour-nav">
+      <button type="button" data-action="semaine-decaler" data-semaines="-1" aria-label="Semaine précédente" title="Semaine précédente (flèche gauche)">←</button>
+      <button type="button" data-action="semaine-courante" ${courante ? 'disabled' : ''}>Cette semaine</button>
+      <button type="button" data-action="semaine-decaler" data-semaines="1" aria-label="Semaine suivante" title="Semaine suivante (flèche droite)">→</button>
+    </div>
+    ${badgeSemaine(lundi, n)}
+    <h2>${echapper(edt.majuscule(edt.semaineRelative(lundi, n)))} · ${echapper(edt.plageDates(lundi, jours[6]))}</h2>
+    <span class="semaine-total">${total.length ? `${pluriel(total.length, 'devoir')} à rendre · ${faits} fait${faits > 1 ? 's' : ''}` : 'Aucun devoir à rendre'}</span>`;
+
+  const graduations = [];
+  for (let h = hMin; h <= hMax; h++) {
+    graduations.push(`<span data-css="--position:${(((h - hMin) / (hMax - hMin)) * 100).toFixed(3)}">${h} h</span>`);
+  }
+  const lignes = [`<div class="sg" aria-hidden="true"><span></span><span class="graduations-semaine">${graduations.join('')}</span><span></span></div>`];
+  const replies = [];
+  jours.forEach((j, i) => {
+    const weekend = j.getDay() === 0 || j.getDay() === 6;
+    // Un jour de week-end sans rien est replié en une seule ligne.
+    if (weekend && !seances[i].length && !devoirs[i].length) {
+      replies.push(j);
+      return;
+    }
+    lignes.push(ligneJourSemaine(j, n, seances[i], devoirs[i], pct));
+  });
+  if (replies.length) {
+    const noms = replies.map((j) => `${j.toLocaleDateString('fr-FR', { weekday: 'long' })} ${j.getDate()}`);
+    lignes.push(`<p class="sj-repli">${echapper(edt.majuscule(noms.join(' et ')))} : rien de prévu</p>`);
+  }
+  const grille = $('#semaine-grille');
+  grille.innerHTML = lignes.join('');
+  grille.dataset.hmin = hMin;
+  grille.dataset.hmax = hMax;
+  appliquerStyles($('#vue-semaine'));
+}
+
+function ligneJourSemaine(j, n, seances, devoirs, pct) {
+  const ecart = edt.ecartJours(n, j);
+  const blocs = seances.map((o) => {
+    const a = affichage(o);
+    const classes = ['sb'];
+    if (o.statut === 'annule') classes.push('annule');
+    if (o.statut === 'parti') classes.push('parti');
+    if (o.statut === 'deplace') classes.push('deplace');
+    if (ecart < 0 || (ecart === 0 && o.fin <= n)) classes.push('passe');
+    const statut = { annule: ', annulé', parti: ', déplacé ailleurs', deplace: ', déplacé ici' }[o.statut] ?? '';
+    const aRendre = o.nature !== 'perso' && o.statut !== 'parti' && devoirsDe(o).some((d) => !d.fait);
+    const titre = `${a.nom}, ${edt.heureTexte(o.debut)} – ${edt.heureTexte(o.fin)}${statut}${aRendre ? ', devoir à rendre' : ''}`;
+    return `<span class="${classes.join(' ')}" title="${echapper(titre)}"
+      data-css="${couleurs(a)};--debut:${pct(o.debut).toFixed(3)};--largeur:${(pct(o.fin) - pct(o.debut)).toFixed(3)}">${a.picto}${aRendre ? '<span class="point"></span>' : ''}</span>`;
+  }).join('');
+  const faits = devoirs.filter((d) => d.fait).length;
+  const droite = devoirs.length
+    ? `<span class="sj-pastilles">${devoirs.map((d) => `<span class="mini-pastille${d.fait ? ' fait' : ''}" data-css="${couleurs(d.matiere)}" title="${echapper(`${d.matiere.nom} : ${d.texte.split('\n')[0]}${d.fait ? ' (fait)' : ''}`)}">${d.matiere.picto}</span>`).join('')}</span>
+       <span class="progression"><span class="mini-barre" data-css="--fait:${faits / devoirs.length}"></span>${faits}/${devoirs.length}</span>`
+    : '<span class="vide">rien à rendre</span>';
+  const relatif = ecart === 0 ? 'aujourd’hui' : ecart === 1 ? 'demain' : '';
+  const classes = ['sj'];
+  if (ecart === 0) classes.push('aujourdhui');
+  if (ecart < 0) classes.push('passe');
+  const etiquette = `${edt.dateLongue(j)}${relatif ? `, ${relatif}` : ''} : ${pluriel(seances.filter((o) => o.statut !== 'parti').length, 'séance')}, ${devoirs.length ? `${pluriel(devoirs.length, 'devoir')} à rendre dont ${faits} fait${faits > 1 ? 's' : ''}` : 'rien à rendre'}`;
+  return `<button type="button" class="${classes.join(' ')}" data-action="voir-jour" data-date="${edt.isoLocal(j)}" aria-label="${echapper(etiquette)}">
+      <span class="sj-date"><span class="sj-nom">${echapper(j.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', ''))}</span>
+        <span class="sj-num">${j.getDate()}</span>${relatif ? `<span class="sj-rel">${relatif}</span>` : ''}</span>
+      <span class="sj-frise">${seances.length ? blocs : '<span class="sj-vide">pas de cours</span>'}${ecart === 0 ? '<span class="sj-maintenant" data-champ="semaine-maintenant"></span>' : ''}</span>
+      <span class="sj-devoirs">${droite}</span>
+    </button>`;
+}
+
 function allerAuJour(jour) {
   etat.jour = edt.debutJour(jour);
   etat.vue = 'jour';
@@ -728,6 +839,16 @@ function mettreAJour(s, n, profil) {
       actuel.style.setProperty('--avance', Math.min(1, Math.max(0, (n - d) / (f - d))).toFixed(4));
       const encore = actuel.querySelector('[data-champ="encore"]');
       if (encore) encore.textContent = `En cours · encore ${edt.dureeTexte(f - n, profil.motsLongs)}`;
+    }
+  }
+  if (etat.vue === 'semaine') {
+    const ligne = $('[data-champ="semaine-maintenant"]');
+    const grille = $('#semaine-grille');
+    if (ligne) {
+      const [hMin, hMax] = [Number(grille.dataset.hmin), Number(grille.dataset.hmax)];
+      const position = ((n.getHours() + n.getMinutes() / 60 + n.getSeconds() / 3600 - hMin) / (hMax - hMin)) * 100;
+      ligne.hidden = position < 0 || position > 100;
+      ligne.style.setProperty('--position', position.toFixed(3));
     }
   }
   if (etat.vue !== 'maintenant') return;
@@ -1215,8 +1336,12 @@ const actions = {
   vue: (bouton) => {
     etat.vue = bouton.dataset.vue;
     if (etat.vue === 'jour') etat.jour = edt.debutJour(maintenant());
+    if (etat.vue === 'semaine') etat.semaine = semaineParDefaut(maintenant());
     rendre(true);
   },
+  'voir-semaine': (bouton) => allerALaSemaine(edt.dateDepuisIso(bouton.dataset.date)),
+  'semaine-decaler': (bouton) => allerALaSemaine(edt.ajouterJours(etat.semaine, 7 * Number(bouton.dataset.semaines))),
+  'semaine-courante': () => allerALaSemaine(maintenant()),
   'voir-jour': (bouton) => allerAuJour(edt.dateDepuisIso(bouton.dataset.date)),
   'jour-decaler': (bouton) => allerAuJour(edt.ajouterJours(etat.jour, Number(bouton.dataset.jours))),
   'jour-aujourdhui': () => allerAuJour(maintenant()),
@@ -1415,12 +1540,16 @@ document.addEventListener('keydown', (e) => {
     api.basculerPleinEcran();
     return;
   }
-  // Flèches gauche et droite : jour précédent ou suivant dans la vue Jour.
-  const champ = e.target.closest?.('input, select, textarea, dialog');
-  if (etat.vue === 'jour' && !champ && !e.altKey && !e.ctrlKey && !e.metaKey
-    && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+  // Flèches gauche et droite : jour (vue Jour) ou semaine (vue Semaine) précédent ou suivant.
+  const champ = e.target.closest?.('input, select, textarea, dialog, [contenteditable]');
+  if (champ || e.altKey || e.ctrlKey || e.metaKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+  const sens = e.key === 'ArrowLeft' ? -1 : 1;
+  if (etat.vue === 'jour') {
     e.preventDefault();
-    allerAuJour(edt.ajouterJours(etat.jour, e.key === 'ArrowLeft' ? -1 : 1));
+    allerAuJour(edt.ajouterJours(etat.jour, sens));
+  } else if (etat.vue === 'semaine') {
+    e.preventDefault();
+    allerALaSemaine(edt.ajouterJours(etat.semaine, 7 * sens));
   }
 });
 
@@ -1435,6 +1564,7 @@ window.prototypeMyDevoirs = {
     changerProfil(profil);
     etat.vue = vue;
     etat.jour = jour ? edt.dateDepuisIso(jour) : edt.debutJour(new Date(iso));
+    etat.semaine = edt.lundi(etat.jour);
     reglerHorloge({ date: new Date(iso), vitesse: 0 });
   },
   modeDiscret: changerModeDiscret,
@@ -1707,6 +1837,10 @@ if (parametres.get('heure')) {
 if (parametres.get('vue') === 'jour') {
   etat.vue = 'jour';
   etat.jour = parametres.get('jour') ? edt.dateDepuisIso(parametres.get('jour')) : edt.debutJour(maintenant());
+}
+if (parametres.get('vue') === 'semaine') {
+  etat.vue = 'semaine';
+  etat.semaine = parametres.get('jour') ? edt.lundi(edt.dateDepuisIso(parametres.get('jour'))) : semaineParDefaut(maintenant());
 }
 changerProfil(parametres.get('profil') ?? etat.profil);
 planifier();

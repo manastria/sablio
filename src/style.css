@@ -522,6 +522,97 @@ button.lien:hover { text-decoration: underline; }
 .sac input { width: 1.3em; height: 1.3em; accent-color: var(--couleur); flex: none; }
 .sac input:checked ~ span { color: var(--texte-doux); text-decoration: line-through; }
 
+/* --- Vue Semaine --- */
+
+.vue-semaine { flex: 1; display: grid; gap: 1rem; padding: 1rem; align-content: start; }
+.semaine-entete { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem 0.75rem; }
+.semaine-entete-dyn { display: contents; }
+.semaine-entete h2 { margin: 0; font-size: 1.5em; flex: 1; min-width: 0; }
+.semaine-entete .badge-semaine { font-size: 1rem; }
+.semaine-total { color: var(--texte-doux); order: 3; flex-basis: 100%; }
+.lien-semaine { padding: 0; border: 0; background: none; display: flex; align-self: stretch; }
+.lien-semaine:hover { background: none; filter: brightness(1.08); }
+.lien-semaine .badge-semaine { cursor: pointer; }
+
+.semaine-grille { display: grid; gap: 0.45rem; }
+/* Mêmes colonnes pour les graduations et chaque jour : date, frise, devoirs. */
+.sj, .sg { display: grid; grid-template-columns: 5.5em minmax(0, 1fr) 13em; align-items: center; gap: 0.9rem; }
+.sg { padding: 0 0.8rem; }
+.sj {
+  width: 100%;
+  padding: 0.5rem 0.8rem;
+  text-align: left;
+  border: 1px solid var(--bord);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--ombre);
+}
+.sj:hover { background: var(--surface); border-color: var(--accent); }
+.sj.aujourdhui { border: 2px solid var(--accent); }
+.sj.passe .sj-date { opacity: 0.55; }
+.sj-date { display: grid; line-height: 1.15; }
+.sj-nom { font-size: 0.8em; color: var(--texte-doux); text-transform: capitalize; }
+.sj-num { font-size: 1.4em; font-weight: 700; }
+.sj-rel { font-size: 0.75em; font-weight: 700; color: var(--accent); }
+.sj-frise { position: relative; height: calc(40px * var(--echelle)); border-radius: 8px; background: var(--surface-2); }
+.sj-vide { position: absolute; inset: 0; display: grid; place-items: center; color: var(--texte-doux); font-size: 0.85em; }
+.sb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: calc(var(--debut) * 1%);
+  width: calc(var(--largeur) * 1%);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--couleur);
+  font-size: 0.9em;
+}
+.sb.passe { opacity: 0.35; }
+/* Annulé : hachuré ; parti ailleurs : contour en pointillés ; arrivé ici : bord pointillé. */
+.sb.annule { background: repeating-linear-gradient(135deg, var(--couleur) 0 4px, transparent 4px 9px); opacity: 0.6; }
+.sb.parti { background: none; border: 2px dashed var(--couleur); opacity: 0.6; }
+.sb.deplace { outline: 2px dashed var(--texte); outline-offset: -2px; }
+.sb .point {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 0 0 2px var(--texte);
+}
+.sj-maintenant {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  left: calc(var(--position, 0) * 1%);
+  width: 3px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: var(--alerte);
+  z-index: 1;
+  transition: left var(--tick) linear;
+}
+.sj-devoirs { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 0.3rem 0.6rem; }
+.sj-devoirs .vide { margin: 0; font-size: 0.9em; }
+.sj-pastilles { display: flex; flex-wrap: wrap; gap: 3px; }
+.mini-pastille {
+  display: grid;
+  place-items: center;
+  width: 1.7em;
+  height: 1.7em;
+  border-radius: 50%;
+  background: var(--couleur);
+  font-size: 0.8em;
+}
+.mini-pastille.fait { opacity: 0.3; }
+.graduations-semaine { position: relative; height: 1.3em; color: var(--texte-doux); font-size: 0.8em; }
+.graduations-semaine span { position: absolute; left: calc(var(--position) * 1%); transform: translateX(-50%); white-space: nowrap; }
+.sj-repli { margin: 0; padding: 0.2rem 0.8rem; color: var(--texte-doux); }
+
 /* --- Saisie d'un devoir --- */
 
 dialog {
@@ -695,6 +786,14 @@ html[data-compact] .sortir-compact {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "maintenant" "ensuite" "frise" "devoirs";
   }
+  .sj, .sg { grid-template-columns: 3.2em minmax(0, 1fr); gap: 0.4rem 0.6rem; }
+  .sj-devoirs { grid-column: 2; justify-content: flex-start; }
+  .sg > :last-child { display: none; }
+  /* Une graduation sur deux, faute de place. */
+  .graduations-semaine span:nth-child(even) { display: none; }
+  /* La bordure du jour suffit à repérer aujourd'hui. */
+  .sj-rel { display: none; }
+  .semaine-entete h2 { flex: 1 1 100%; order: -1; font-size: 1.25em; }
   .vue-jour {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "entete" "edt" "devoirs" "sac";

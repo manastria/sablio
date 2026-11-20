@@ -10,7 +10,7 @@ Emploi du temps en dur : une semaine type de collégien avec semaines A/B, un cr
 cd refonte/prototype
 npm install
 npm start            # fenêtre normale
-npm run captures     # 21 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
+npm run captures     # 24 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
 ```
 
 Dans la fenêtre :
@@ -26,6 +26,8 @@ Un rappel (notification + carillon) part 5 minutes avant chaque cours.
 
 - **Maintenant** (accueil) : séance en cours, temps restant, séance suivante, frise du jour, devoirs à faire. Après le dernier cours, la frise laisse la place à « Préparer le sac » pour le prochain jour de classe.
 - **Jour** : emploi du temps du jour avec le repère « Vous êtes ici », devoirs à rendre ce jour (avec leur progression), travail du soir, sac à préparer. Pour changer de jour : les boutons `←` `Aujourd’hui` `→`, les touches `←` `→`, ou la bande des jours de la semaine (`«` `»` pour changer de semaine). Le champ **Aller à** accepte un numéro de semaine (`48`, `48/2027`), une date (`25/12`, `25 décembre`) ou un jour (`demain`, `lundi`).
+
+- **Semaine** : une ligne par jour, les séances en bandes de couleur sur une échelle horaire commune, les devoirs à rendre et leur progression. Un clic sur un jour ouvre la vue Jour. Le week-end, la semaine suivante s'affiche directement.
 
 Un clic sur un devoir l'ouvre (texte complet, échéance, cours, boutons **Modifier** et **Supprimer**) ; seule la case le marque fait. Le devoir de français de la démonstration montre une longue consigne mise en forme, comme sur l'ENT.
 
@@ -56,7 +58,7 @@ Depuis WSL, le serveur est joignable par Edge sous Windows à l'adresse `http://
 - **Installer l'application** (bouton dans l'en-tête, ou icône dans la barre d'adresse d'Edge) : elle obtient sa fenêtre et une entrée dans le menu Démarrer.
 - **Activer les rappels** : le navigateur demande l'autorisation d'afficher des notifications.
 - **Hors ligne** : une fois la page ouverte une première fois, elle fonctionne serveur arrêté.
-- `?heure=2026-11-23T10:32&profil=primaire` fige l'horloge et choisit le profil ; `&vue=jour&jour=2026-11-24` ouvre la vue Jour sur ce jour.
+- `?heure=2026-11-23T10:32&profil=primaire` fige l'horloge et choisit le profil ; `&vue=jour&jour=2026-11-24` ouvre la vue Jour sur ce jour (`&vue=semaine` : la vue Semaine).
 - Le mode compact n'est pas encore disponible dans cette version.
 
 ## Données et sauvegarde
