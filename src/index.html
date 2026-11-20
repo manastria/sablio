@@ -37,11 +37,12 @@
   </header>
 
   <!-- Menu : tout ce qui ne sert pas à chaque minute. Un point rouge sur
-       l'icône signale une action en attente (installer, rappels, sauvegarde). -->
+       l'icône signale une action importante en attente (data-signale :
+       rappels, sauvegarde) ; « Installer » est proposé sans être signalé. -->
   <div id="menu" class="menu" popover>
     <button type="button" class="mise-en-avant" data-action="installer" hidden>Installer l’application</button>
-    <button type="button" class="mise-en-avant" data-action="activer-rappels" hidden>Activer les rappels</button>
-    <button type="button" class="mise-en-avant" data-action="reprendre-sauvegarde" hidden>Reprendre la sauvegarde</button>
+    <button type="button" class="mise-en-avant" data-action="activer-rappels" data-signale hidden>Activer les rappels</button>
+    <button type="button" class="mise-en-avant" data-action="reprendre-sauvegarde" data-signale hidden>Reprendre la sauvegarde</button>
     <button type="button" data-action="vue" data-vue="edt">Emploi du temps et agenda</button>
     <label class="menu-ligne">Profil
       <select id="profil">

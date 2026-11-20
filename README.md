@@ -49,7 +49,7 @@ Ce que la démonstration montre :
 
 **+ Devoir**, ou **+** sur un cours de l'emploi du temps, ouvre la saisie. On choisit d'abord **à rendre quand** : un jour (les dix prochains jours de classe, ou une autre date), puis un cours de ce jour ; la matière s'en déduit (sauf pour le DS ou « Sans cours précis »). Le travail s'écrit dans une zone de texte riche (gras, italique, souligné, listes) ; un texte collé depuis l'ENT garde sa mise en forme, nettoyée (`src/contenu.js`).
 
-L'en-tête ne garde que l'essentiel : onglets, **Mode discret**, plein écran et **menu** (☰). Le menu contient l'emploi du temps et l'agenda, le profil, le mode compact, les réglages et outils, et les actions ponctuelles (installer, activer les rappels, reprendre la sauvegarde), signalées par un point rouge sur l'icône.
+L'en-tête ne garde que l'essentiel : onglets, **Mode discret**, plein écran et **menu** (☰). Le menu contient l'emploi du temps et l'agenda, le profil, le mode compact, les réglages et outils, et les actions ponctuelles (installer, activer les rappels, reprendre la sauvegarde). Un point rouge sur l'icône signale les rappels à activer ou la sauvegarde à reprendre.
 
 Dans **Menu → Réglages et outils → Réglages du profil** : mode discret manuel, automatique (pendant les cours, par défaut) ou toujours actif (une désactivation dure 30 minutes, ou jusqu'à la réouverture) ; champ « à faire le » proposé ou non ; sac préparé la veille au soir (par défaut) ou le matin même.
 

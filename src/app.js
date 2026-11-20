@@ -259,10 +259,11 @@ function rendre(forcer = false) {
   if (etat.durees.length > 300) etat.durees.shift();
 }
 
-// Point rouge sur l'icône du menu : une action y attend (installer,
-// activer les rappels, reprendre la sauvegarde).
+// Point rouge sur l'icône du menu : une action importante y attend
+// (activer les rappels, reprendre la sauvegarde). « Installer » n'est pas
+// signalé : Edge le propose dans tout onglet, même l'application déjà installée.
 function majPointMenu() {
-  const attente = [...document.querySelectorAll('#menu .mise-en-avant')].some((b) => !b.hidden);
+  const attente = [...document.querySelectorAll('#menu [data-signale]')].some((b) => !b.hidden);
   $('[data-champ="point-menu"]').hidden = !attente;
   $('.bouton-menu').setAttribute('aria-label', attente ? 'Menu (une action vous attend)' : 'Menu');
 }
@@ -1349,6 +1350,7 @@ function allerAuJour(jour) {
 // --- Mise à jour fine (chaque seconde) ---
 
 function mettreAJour(s, n, profil) {
+  majPointMenu();
   $('[data-champ="heure"]').textContent = edt.heureTexte(n);
   $('[data-champ="simulee"]').hidden = !horloge.simulee;
   const champDate = $('[data-champ="date"]');
