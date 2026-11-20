@@ -344,7 +344,7 @@ const operations = {
   async importer({ octets }) {
     if (!pool) throw new Error('restauration impossible : la base n’est pas enregistrée');
     const entete = new TextDecoder().decode(octets.slice(0, 15));
-    if (entete !== 'SQLite format 3') throw new Error('ce fichier n’est pas une sauvegarde MyDevoirs');
+    if (entete !== 'SQLite format 3') throw new Error('ce fichier n’est pas une sauvegarde Sablio');
     const copie = pool.exportFile(NOM);
     db.close();
     try {

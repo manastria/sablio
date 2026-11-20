@@ -460,11 +460,15 @@
     <h3>Données</h3>
     <dl class="environnement" id="donnees"></dl>
     <div class="ligne">
-      <button type="button" data-action="choisir-sauvegarde">Choisir le fichier de sauvegarde…</button>
+      <button type="button" data-action="choisir-sauvegarde">Choisir le dossier de sauvegarde…</button>
       <button type="button" data-action="sauvegarder">Sauvegarder maintenant</button>
     </div>
     <div class="ligne">
-      <button type="button" data-action="restaurer">Restaurer depuis un fichier…</button>
+      <label>Sauvegardes du dossier <select id="sauvegardes-liste"></select></label>
+      <button type="button" data-action="restaurer-datee">Restaurer celle-ci</button>
+    </div>
+    <div class="ligne">
+      <button type="button" data-action="restaurer">Restaurer depuis un autre fichier…</button>
       <button type="button" data-action="perte">Simuler une perte de données</button>
     </div>
     <div class="ligne">

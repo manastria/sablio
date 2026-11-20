@@ -81,8 +81,8 @@ Les devoirs sont dans une base SQLite (WebAssembly) enregistrée dans le stockag
 
 Dans **Menu → Réglages et outils → Données** :
 
-- **Choisir le fichier de sauvegarde** : ensuite, chaque modification est sauvegardée dans ce fichier au bout de 2 secondes ;
-- **Restaurer depuis un fichier** : remplace les données par celles d'une sauvegarde (un fichier invalide est refusé) ;
+- **Choisir le dossier de sauvegarde** : ensuite, chaque modification est sauvegardée au bout de 2 secondes, dans un fichier par jour (`sablio-2026-11-20.sqlite`) ; les 10 derniers jours sont gardés. Une mauvaise manipulation n'écrase que la sauvegarde du jour, et une base vide n'est jamais sauvegardée. Tant qu'aucun dossier n'est choisi, le menu le propose avec un point rouge ;
+- **Restaurer celle-ci** : remplace les données par une des sauvegardes datées du dossier ; **Restaurer depuis un autre fichier** : depuis n'importe quel fichier (un fichier invalide est refusé) ;
 - **Simuler une perte de données** : vide la base du navigateur, sans toucher au fichier. La sauvegarde automatique est alors suspendue, pour ne pas écraser le fichier avec une base vide.
 
 Si le navigateur demande de nouveau l'autorisation d'écrire dans le fichier, le bouton **Reprendre la sauvegarde** apparaît dans l'en-tête.

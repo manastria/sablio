@@ -2270,7 +2270,7 @@ function basculerOutils() {
     $('#reglage-afaire').checked = etat.reglages.aFaireLe;
     $('#reglage-sac').value = etat.reglages.sac;
     afficherEnvironnement();
-    afficherDonnees();
+    majListeSauvegardes().then(afficherDonnees);
   }
 }
 
@@ -2719,6 +2719,24 @@ async function essaisInterface() {
   await vacancesEnCours;
   journaliser(`Essai vacances : ${pendant} (attendu psy, puis rien) ; reprise ${reprise} (attendu 2027-01-04) ; 11 novembre : ${noel('2026-11-11')} (férié)`);
 
+  // Sauvegardes datées : 12 jours écrits dans un dossier d'essai (stockage
+  // privé, même API qu'un vrai dossier) ; on doit en garder 10, les plus récentes.
+  try {
+    const racine = await navigator.storage.getDirectory();
+    const dossierEssai = await racine.getDirectoryHandle('essai-sauvegardes', { create: true });
+    const octets = await stockage.exporter();
+    for (let i = 0; i < 12; i++) {
+      await sauvegarde.ecrireDuJour(dossierEssai, octets, edt.isoLocal(edt.ajouterJours(new Date(2026, 10, 1), i)));
+    }
+    await sauvegarde.ecrireDuJour(dossierEssai, octets, '2026-11-12'); // même jour : réécrit
+    const liste = await sauvegarde.lister(dossierEssai);
+    const relu = await sauvegarde.lire(dossierEssai, liste[0].nom);
+    await racine.removeEntry('essai-sauvegardes', { recursive: true });
+    journaliser(`Essai sauvegardes datées : ${liste.length} gardées (attendu ${sauvegarde.GARDER}), de ${liste.at(-1).date} à ${liste[0].date} ; relecture ${relu.length === octets.length ? 'identique' : 'DIFFÉRENTE'}`);
+  } catch (e) {
+    journaliser(`Essai sauvegardes datées : échec (${e.message})`);
+  }
+
   // Modification : on ouvre le devoir, on le modifie, on enregistre.
   afficherDetail(ajoute.id);
   actions['modifier-devoir']();
@@ -2832,7 +2850,29 @@ if (!dansElectron) preparerNavigateur();
 // --- Données : base SQLite et sauvegarde dans un fichier ---
 
 let stockage = null;
-const sauvegardeEtat = { fichier: null, autorisation: '', derniere: null, minuterie: null, suspendue: false };
+const sauvegardeEtat = { dossier: null, autorisation: '', derniere: null, minuterie: null, suspendue: false, liste: [] };
+
+// Le bouton du menu : choisir un dossier (aucun n'est choisi) ou reprendre
+// la sauvegarde (le navigateur redemande l'autorisation). Signalé par le
+// point rouge : c'est la seule vraie protection des données.
+function majBoutonSauvegarde() {
+  const bouton = $('[data-action="reprendre-sauvegarde"]');
+  if (!sauvegarde.disponible) {
+    bouton.hidden = true;
+    return;
+  }
+  bouton.textContent = sauvegardeEtat.dossier ? 'Reprendre la sauvegarde' : 'Choisir un dossier de sauvegarde';
+  bouton.hidden = Boolean(sauvegardeEtat.dossier) && sauvegardeEtat.autorisation === 'granted';
+}
+
+async function majListeSauvegardes() {
+  if (!sauvegardeEtat.dossier || sauvegardeEtat.autorisation !== 'granted') return;
+  try {
+    sauvegardeEtat.liste = await sauvegarde.lister(sauvegardeEtat.dossier);
+  } catch (e) {
+    journaliser(`Liste des sauvegardes : échec (${e.message})`);
+  }
+}
 
 // Démonstration : exceptions (un cours annulé, un cours déplacé) et devoirs
 // rattachés aux prochains cours, calculés à partir d'un jour de référence
@@ -2910,24 +2950,31 @@ function planifierSauvegarde() {
 
 // `interactif` : appelé depuis un clic, le navigateur peut donc demander l'autorisation.
 async function sauvegarder(interactif) {
-  const fichier = sauvegardeEtat.fichier;
-  if (!fichier) {
-    if (interactif) journaliser('Sauvegarde : choisissez d’abord un fichier');
+  const dossier = sauvegardeEtat.dossier;
+  if (!dossier) {
+    if (interactif) journaliser('Sauvegarde : choisissez d’abord un dossier');
+    majBoutonSauvegarde();
     return;
   }
   try {
-    sauvegardeEtat.autorisation = await sauvegarde.autorisation(fichier, interactif);
-    const enAttente = sauvegardeEtat.autorisation !== 'granted';
-    $('[data-action="reprendre-sauvegarde"]').hidden = !enAttente;
-    if (enAttente) {
+    sauvegardeEtat.autorisation = await sauvegarde.autorisation(dossier, interactif);
+    majBoutonSauvegarde();
+    if (sauvegardeEtat.autorisation !== 'granted') {
       journaliser(`Sauvegarde en attente : autorisation « ${sauvegardeEtat.autorisation} »`);
       return;
     }
+    // Une base vide ne remplace pas une sauvegarde : c'est sans doute une perte.
+    if (!etat.devoirs?.length && !edt.matieres().length) {
+      journaliser('Sauvegarde ignorée : la base est vide');
+      return;
+    }
     const octets = await stockage.exporter();
-    await sauvegarde.ecrire(fichier, octets);
+    // Le nom suit la vraie date (pas l'heure simulée du prototype).
+    const { nom, supprimees } = await sauvegarde.ecrireDuJour(dossier, octets, edt.isoLocal(new Date()));
     sauvegardeEtat.derniere = new Date();
     sauvegardeEtat.suspendue = false;
-    journaliser(`Sauvegarde : ${Math.ceil(octets.length / 1024)} Ko écrits dans ${fichier.name}`);
+    await majListeSauvegardes();
+    journaliser(`Sauvegarde : ${Math.ceil(octets.length / 1024)} Ko dans ${dossier.name}/${nom}${supprimees ? ` (${pluriel(supprimees, 'ancienne')} supprimée${supprimees > 1 ? 's' : ''})` : ''}`);
   } catch (e) {
     journaliser(`Sauvegarde : échec (${e.message})`);
   } finally {
@@ -2942,25 +2989,43 @@ function afficherDonnees() {
     ['Base', info?.mode ?? 'ouverture…'],
     ['SQLite', info?.sqlite ?? '–'],
     ['Devoirs', etat.devoirs ? String(etat.devoirs.length) : '–'],
-    ['Fichier de sauvegarde', !sauvegarde.disponible ? 'impossible dans ce navigateur' : f.fichier?.name ?? 'aucun'],
-    ['Autorisation d’écrire', f.fichier ? f.autorisation || '?' : '–'],
+    ['Dossier de sauvegarde', !sauvegarde.disponible ? 'impossible dans ce navigateur' : f.dossier?.name ?? 'aucun'],
+    ['Autorisation d’écrire', f.dossier ? f.autorisation || '?' : '–'],
     ['Dernière sauvegarde', f.derniere ? f.derniere.toLocaleTimeString('fr-FR') : 'aucune pendant cette session'],
+    ['Sauvegardes gardées', f.dossier ? `${f.liste.length} (une par jour, ${sauvegarde.GARDER} au plus)` : '–'],
     ['Sauvegarde automatique', f.suspendue ? 'suspendue (après la perte simulée)' : 'après chaque modification'],
   ]);
+  $('#sauvegardes-liste').innerHTML = f.liste.length
+    ? f.liste.map((x) => `<option value="${echapper(x.nom)}">${echapper(dateMoyenne(edt.dateDepuisIso(x.date)))} · ${x.modifie.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} · ${Math.ceil(x.taille / 1024)} Ko</option>`).join('')
+    : '<option value="">aucune</option>';
 }
 
 const actionsDonnees = {
   'choisir-sauvegarde': async () => {
     try {
-      sauvegardeEtat.fichier = await sauvegarde.choisirFichier();
-      journaliser(`Fichier de sauvegarde choisi : ${sauvegardeEtat.fichier.name}`);
+      sauvegardeEtat.dossier = await sauvegarde.choisirDossier();
+      journaliser(`Dossier de sauvegarde choisi : ${sauvegardeEtat.dossier.name}`);
       await sauvegarder(true);
     } catch (e) {
-      if (e.name !== 'AbortError') journaliser(`Choix du fichier : échec (${e.message})`);
+      if (e.name !== 'AbortError') journaliser(`Choix du dossier : échec (${e.message})`);
     }
   },
   sauvegarder: () => sauvegarder(true),
-  'reprendre-sauvegarde': () => sauvegarder(true),
+  'reprendre-sauvegarde': () => (sauvegardeEtat.dossier ? sauvegarder(true) : actionsDonnees['choisir-sauvegarde']()),
+  'restaurer-datee': async () => {
+    const nom = $('#sauvegardes-liste').value;
+    if (!nom || !sauvegardeEtat.dossier) return;
+    if (!confirm(`Remplacer les données actuelles par la sauvegarde « ${nom} » ?`)) return;
+    try {
+      const { nombre } = await stockage.importer(await sauvegarde.lire(sauvegardeEtat.dossier, nom));
+      await rechargerTout();
+      sauvegardeEtat.suspendue = false;
+      journaliser(`Restauration : ${nombre} devoirs repris de ${nom}`);
+    } catch (e) {
+      journaliser(`Restauration : échec (${e.message})`);
+    }
+    afficherDonnees();
+  },
   restaurer: async () => {
     try {
       const { nom, octets } = await sauvegarde.lireFichierChoisi();
@@ -3046,14 +3111,15 @@ async function demarrerStockage() {
   if (!info.persistant) alerter(`Attention : rien de ce que vous saisissez ne sera enregistré (${info.mode}).`);
   await rechargerTout();
   if (sauvegarde.disponible) {
-    sauvegardeEtat.fichier = (await sauvegarde.fichierEnregistre()) ?? null;
-    if (sauvegardeEtat.fichier) {
+    sauvegardeEtat.dossier = (await sauvegarde.dossierEnregistre()) ?? null;
+    if (sauvegardeEtat.dossier) {
       // La question clé : le navigateur se souvient-il de l'autorisation ?
-      sauvegardeEtat.autorisation = await sauvegarde.autorisation(sauvegardeEtat.fichier);
-      journaliser(`Au démarrage : fichier ${sauvegardeEtat.fichier.name}, autorisation « ${sauvegardeEtat.autorisation} »`);
-      $('[data-action="reprendre-sauvegarde"]').hidden = sauvegardeEtat.autorisation === 'granted';
+      sauvegardeEtat.autorisation = await sauvegarde.autorisation(sauvegardeEtat.dossier);
+      journaliser(`Au démarrage : dossier ${sauvegardeEtat.dossier.name}, autorisation « ${sauvegardeEtat.autorisation} »`);
+      await majListeSauvegardes();
     }
   }
+  majBoutonSauvegarde();
   afficherDonnees();
 }
 

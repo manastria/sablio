@@ -19,6 +19,8 @@ L'environnement de l'enfant varie beaucoup : âge, activités, présence d'un ad
 | **Emploi du temps** | Saisie de la semaine type (cours, créneaux, activités), des matières et des activités. Surtout pour l'adulte : bouton dans l'en-tête, pas dans les onglets de l'élève. |
 | **Réglages** | Profil, sauvegarde. |
 
+**Sauvegardes** : dans un dossier choisi (clé USB, dossier synchronisé), **un fichier par jour** (`sablio-AAAA-MM-JJ.sqlite`), réécrit dans la journée ; on garde les 10 derniers. Une mauvaise manipulation (base vidée ou abîmée) n'écrase donc que la sauvegarde du jour, et une base vide n'est jamais sauvegardée. On restaure une sauvegarde datée du dossier ou n'importe quel fichier. Tant qu'aucun dossier n'est choisi, le menu le propose (point rouge).
+
 **Fenêtres** (détail d'un devoir, saisie, séance…) : elles se ferment par un clic à côté, par Échap ou par leur bouton. Une fenêtre de saisie déjà modifiée demande d'abord « Abandonner les modifications ? ».
 
 **En-tête allégé** : l'heure et la date empilées, avec à côté un carré de semaine de la même hauteur (« sem. 48 » et la lettre du cycle), les onglets (Maintenant, Jour, Semaine, À faire), le bouton « Mode discret » (il doit rester à un clic) et deux icônes : plein écran et menu. Le reste est dans le **menu** : emploi du temps et agenda, profil, mode compact, réglages et outils, et les actions ponctuelles (installer l'application, activer les rappels, reprendre la sauvegarde). Un point rouge sur l'icône du menu signale seulement les actions importantes (rappels, sauvegarde) : Edge propose « Installer » dans tout onglet, même quand l'application est déjà installée.
