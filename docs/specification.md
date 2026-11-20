@@ -109,7 +109,7 @@ Le code ouvre le **mode adulte** pour 10 minutes, prolongées à chaque action ;
 - Affichage : dans Maintenant, « Vacances de Noël · Reprise dans 13 jours » ; dans la vue Jour, un bandeau (« du sam. 19 déc. au dim. 3 janv. · reprise lundi 4 janvier ») ; jours hachurés dans la bande des jours et la vue Semaine. Le sac à préparer est celui du jour de reprise.
 - Réglages dans l'écran Emploi du temps (section « Vacances et jours sans cours »), verrouillés comme le reste de la configuration.
 
-À trancher : les semaines A/B continuent-elles pendant les vacances (calcul actuel) ou la rentrée repart-elle d'une lettre donnée ?
+Les semaines A/B continuent d'alterner pendant les vacances : celles de l'année scolaire durent deux semaines et ne décalent pas l'alternance. Si la rentrée de septembre repart d'une lettre précise, on la règle avec « Cette semaine est la semaine… ».
 
 ### Semaines alternées
 
