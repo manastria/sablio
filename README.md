@@ -10,7 +10,7 @@ Emploi du temps en dur : une semaine type de collégien avec semaines A/B, un cr
 cd refonte/prototype
 npm install
 npm start            # fenêtre normale
-npm run captures     # 24 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
+npm run captures     # 25 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
 ```
 
 Dans la fenêtre :
@@ -27,6 +27,7 @@ Un rappel (notification + carillon) part 5 minutes avant chaque cours.
 - **Maintenant** (accueil) : séance en cours, temps restant, séance suivante, frise du jour, devoirs à faire. Après le dernier cours, la frise laisse la place à « Préparer le sac » pour le prochain jour de classe.
 - **Jour** : emploi du temps du jour avec le repère « Vous êtes ici », devoirs à rendre ce jour (avec leur progression), travail du soir, sac à préparer. Pour changer de jour : les boutons `←` `Aujourd’hui` `→`, les touches `←` `→`, ou la bande des jours de la semaine (`«` `»` pour changer de semaine). Le champ **Aller à** accepte un numéro de semaine (`48`, `48/2027`), une date (`25/12`, `25 décembre`) ou un jour (`demain`, `lundi`).
 
+- **À faire** : tous les devoirs non faits, groupés par échéance (en retard, aujourd'hui, demain, cette semaine, la semaine prochaine, plus tard).
 - **Semaine** : une ligne par jour, les séances en bandes de couleur sur une échelle horaire commune, les devoirs à rendre et leur progression. Un clic sur un jour ouvre la vue Jour. Le week-end, la semaine suivante s'affiche directement.
 
 Un clic sur un devoir l'ouvre (texte complet, échéance, cours, boutons **Modifier** et **Supprimer**) ; seule la case le marque fait. Le devoir de français de la démonstration montre une longue consigne mise en forme, comme sur l'ENT.

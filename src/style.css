@@ -613,6 +613,18 @@ button.lien:hover { text-decoration: underline; }
 .graduations-semaine span { position: absolute; left: calc(var(--position) * 1%); transform: translateX(-50%); white-space: nowrap; }
 .sj-repli { margin: 0; padding: 0.2rem 0.8rem; color: var(--texte-doux); }
 
+/* --- Écran « À faire » --- */
+
+.vue-afaire { flex: 1; display: grid; gap: 1rem; padding: 1rem; align-content: start; max-width: 60rem; width: 100%; margin: 0 auto; }
+.afaire-entete { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.5rem 1rem; }
+.afaire-entete h2 { margin: 0; font-size: 1.5em; }
+.afaire-resume { margin: 0; flex: 1; color: var(--texte-doux); }
+.compte { min-width: 1.6em; padding: 0 0.5em; border-radius: 999px; background: var(--surface-2); text-align: center; font-weight: 700; }
+.groupe-retard { border-left: 6px solid var(--alerte); }
+.groupe-retard .etiquette { color: var(--alerte); }
+.groupe-demain, .groupe-aujourdhui { border-left: 6px solid var(--accent); }
+details.carte.faits summary { margin: 0; }
+
 /* --- Saisie d'un devoir --- */
 
 dialog {

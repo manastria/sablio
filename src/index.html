@@ -22,6 +22,7 @@
       <button type="button" data-action="vue" data-vue="maintenant" aria-current="page">Maintenant</button>
       <button type="button" data-action="vue" data-vue="jour">Jour</button>
       <button type="button" data-action="vue" data-vue="semaine">Semaine</button>
+      <button type="button" data-action="vue" data-vue="afaire">À faire</button>
     </nav>
     <div class="commandes">
       <button type="button" class="discret" data-action="discret" aria-pressed="false">Mode discret</button>
@@ -81,6 +82,8 @@
     </div>
     <section class="semaine-grille" id="semaine-grille" aria-label="Jours de la semaine"></section>
   </main>
+
+  <main class="vue-afaire" id="vue-afaire" hidden></main>
 
   <dialog id="ajout" class="large" aria-labelledby="ajout-titre">
     <form method="dialog" class="formulaire">

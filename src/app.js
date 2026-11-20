@@ -247,6 +247,7 @@ function rendre(forcer = false) {
     afficherVue();
     if (etat.vue === 'jour') construireJour(n, profil);
     else if (etat.vue === 'semaine') construireSemaine(n);
+    else if (etat.vue === 'afaire') construireAFaire(n, profil);
     else construire(s, n, profil);
   }
   mettreAJour(s, n, profil);
@@ -259,6 +260,7 @@ function afficherVue() {
   $('#vue-maintenant').hidden = etat.vue !== 'maintenant';
   $('#vue-jour').hidden = etat.vue !== 'jour';
   $('#vue-semaine').hidden = etat.vue !== 'semaine';
+  $('#vue-afaire').hidden = etat.vue !== 'afaire';
   for (const b of document.querySelectorAll('[data-action="vue"]')) {
     if (b.dataset.vue === etat.vue) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
@@ -461,7 +463,8 @@ async function supprimerDevoir() {
 function ligneAFaire(d, n, profil) {
   const ecart = edt.ecartJours(n, d.rendu);
   const precision = [
-    d.aFaireLe && ecart > 0 ? `à faire ${edt.quandTexte(d.aFaireLe, n, profil)}` : '',
+    d.aFaireLe && ecart > 0
+      ? `${edt.ecartJours(n, d.aFaireLe) < 0 ? 'prévu' : 'à faire'} ${edt.quandTexte(d.aFaireLe, n, profil)}` : '',
     !d.fait && !d.aFaireLe ? edt.soirsTexte(d.rendu, n) : '',
   ].filter(Boolean).join(' · ');
   return ligneDevoir(d, { precision, droite: edt.echeanceTexte(d.rendu, n, profil), proche: ecart <= 1 });
@@ -478,9 +481,63 @@ function htmlDevoirs(n, profil) {
     <div class="entete-carte"><p class="etiquette">Devoirs à faire</p>
       <button type="button" class="lien" data-action="ajouter">+ Ajouter un devoir</button></div>
     ${visibles.length ? `<ul class="liste-devoirs">${visibles.map((d) => ligneAFaire(d, n, profil)).join('')}</ul>` : '<p class="vide">Tout est fait. Bravo !</p>'}
-    ${caches > 0 ? `<p class="vide">Et ${caches} autre${caches > 1 ? 's' : ''} plus tard.</p>` : ''}
+    ${caches > 0 ? `<p class="vide">Et ${caches} autre${caches > 1 ? 's' : ''} plus tard. <button type="button" class="lien" data-action="vue" data-vue="afaire">Tout voir</button></p>` : ''}
     ${faits.length ? `<details class="faits"><summary>${pluriel(faits.length, 'devoir')} fait${faits.length > 1 ? 's' : ''}</summary>
       <ul class="liste-devoirs">${faits.map((d) => ligneDevoir(d, { droite: edt.echeanceTexte(d.rendu, n, profil) })).join('')}</ul></details>` : ''}`;
+}
+
+// --- Écran « À faire » ---
+// Tous les devoirs non faits, groupés par échéance (comme la liste « À faire »
+// de MyDevoirs, mais en temps relatif) ; les devoirs faits sont repliés.
+
+const GROUPES = [
+  ['retard', 'En retard'],
+  ['aujourdhui', 'Pour aujourd’hui'],
+  ['demain', 'Pour demain'],
+  ['semaine', 'Cette semaine'],
+  ['prochaine', 'La semaine prochaine'],
+  ['plus-tard', 'Plus tard'],
+];
+
+function groupeEcheance(rendu, n) {
+  const ecart = edt.ecartJours(n, rendu);
+  if (ecart < 0) return 'retard';
+  if (ecart === 0) return 'aujourdhui';
+  if (ecart === 1) return 'demain';
+  const semaines = Math.round(edt.ecartJours(edt.lundi(n), edt.lundi(rendu)) / 7);
+  return semaines === 0 ? 'semaine' : semaines === 1 ? 'prochaine' : 'plus-tard';
+}
+
+function construireAFaire(n, profil) {
+  const zone = $('#vue-afaire');
+  if (!etat.devoirs) {
+    zone.innerHTML = `<p class="vide">${echapper(etat.messageDevoirs ?? 'Chargement…')}</p>`;
+    return;
+  }
+  const tri = (a, b) => quandRendre(a) - quandRendre(b);
+  const aFaire = etat.devoirs.filter((d) => !d.fait).sort(tri);
+  const faits = etat.devoirs.filter((d) => d.fait).sort((a, b) => b.rendu - a.rendu);
+  const parGroupe = new Map(GROUPES.map(([cle]) => [cle, []]));
+  for (const d of aFaire) parGroupe.get(groupeEcheance(d.rendu, n)).push(d);
+  const pourDemain = parGroupe.get('demain').length + parGroupe.get('aujourdhui').length;
+  const resume = aFaire.length
+    ? `${pluriel(aFaire.length, 'devoir')} à faire${pourDemain ? `, dont ${pourDemain} pour ${parGroupe.get('aujourdhui').length ? 'aujourd’hui ou demain' : 'demain'}` : ''}${parGroupe.get('retard').length ? `, ${parGroupe.get('retard').length} en retard` : ''}.`
+    : 'Tout est fait. Bravo !';
+  const groupes = GROUPES.filter(([cle]) => parGroupe.get(cle).length).map(([cle, titre]) => `
+    <section class="carte groupe-afaire groupe-${cle}" aria-label="${echapper(titre)}">
+      <div class="entete-carte"><p class="etiquette">${echapper(titre)}</p><span class="compte">${parGroupe.get(cle).length}</span></div>
+      <ul class="liste-devoirs">${parGroupe.get(cle).map((d) => ligneAFaire(d, n, profil)).join('')}</ul>
+    </section>`).join('');
+  zone.innerHTML = `
+    <div class="afaire-entete">
+      <h2>À faire</h2>
+      <p class="afaire-resume">${echapper(resume)}</p>
+      <button type="button" class="mise-en-avant" data-action="ajouter">+ Devoir</button>
+    </div>
+    ${groupes}
+    ${faits.length ? `<details class="carte faits"><summary>${pluriel(faits.length, 'devoir')} fait${faits.length > 1 ? 's' : ''}</summary>
+      <ul class="liste-devoirs">${faits.map((d) => ligneDevoir(d, { droite: edt.echeanceTexte(d.rendu, n, profil) })).join('')}</ul></details>` : ''}`;
+  appliquerStyles(zone);
 }
 
 // --- Préparer le sac ---
@@ -1838,6 +1895,7 @@ if (parametres.get('vue') === 'jour') {
   etat.vue = 'jour';
   etat.jour = parametres.get('jour') ? edt.dateDepuisIso(parametres.get('jour')) : edt.debutJour(maintenant());
 }
+if (parametres.get('vue') === 'afaire') etat.vue = 'afaire';
 if (parametres.get('vue') === 'semaine') {
   etat.vue = 'semaine';
   etat.semaine = parametres.get('jour') ? edt.lundi(edt.dateDepuisIso(parametres.get('jour'))) : semaineParDefaut(maintenant());

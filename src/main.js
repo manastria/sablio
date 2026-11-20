@@ -284,6 +284,8 @@ async function faireCaptures(dossier) {
   await proto('scenario("2026-11-23T11:20", "primaire", "semaine", "2026-11-23")');
   await capturer('24-semaine-etroit');
   fenetre.setContentSize(1100, 720);
+  await proto('scenario("2026-11-25T19:00", "college", "afaire")');
+  await capturer('25-a-faire');
   await proto('scenario("2026-11-23T19:00", "college", "jour", "2026-11-24")');
   await proto('afficherDetail("Lire le chapitre 3")');
   await capturer('19-detail');

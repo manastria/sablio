@@ -15,7 +15,7 @@ L'environnement de l'enfant varie beaucoup : âge, activités, présence d'un ad
 | **Maintenant / Ensuite** | **Écran d'accueil.** Cours en cours, temps restant, cours suivant, frise du jour. Après le dernier cours : « Préparer le sac » et le travail du soir. |
 | **Jour** | Emploi du temps du jour et devoirs du jour. Navigation jour par jour. |
 | **Semaine** | Vue d'ensemble, légère : pastilles et progression par jour. Un clic sur un jour ouvre la vue Jour. |
-| **À faire** | Devoirs non faits, groupés par échéance, en temps relatif (liste « À faire » de MyDevoirs). |
+| **À faire** | Devoirs non faits, groupés par échéance : en retard, pour aujourd'hui, pour demain, cette semaine, la semaine prochaine, plus tard ; devoirs faits repliés. En temps relatif (liste « À faire » de MyDevoirs). |
 | **Réglages** | Profil, matières, activités, emploi du temps, sauvegarde. |
 
 ### Vue Jour
