@@ -751,6 +751,14 @@ $('#verrou form').addEventListener('submit', async (e) => {
   }
 });
 
+// « Code oublié ? » : un code de demande, à saisir sur la page de secours.
+function afficherCodeOublie() {
+  demandeSecours = nouvelleDemande();
+  $('#verrou-demande').textContent = lisible(demandeSecours);
+  $('#verrou-secours').hidden = false;
+  $('#verrou-code').focus();
+}
+
 // À placer au début d'une action verrouillée : si le verrou est actif, on
 // demande le code, on refait l'action s'il est bon, et on renvoie true
 // (l'action en cours doit s'arrêter). Sans verrou, l'action continue.
@@ -979,8 +987,7 @@ $('#edt-serie form').addEventListener('submit', (e) => {
   serieEnCours = enregistrerSerieFormulaire();
 });
 
-async function supprimerSerieEditee() {
-  const x = serieEditee;
+async function supprimerSerieEditee(x = serieEditee) {
   if (!x) return;
   const occurrences = (etat.devoirs ?? []).filter((d) => d.serie === x.id && !d.fait).length;
   const message = `Supprimer ce cours de la semaine type ?${occurrences ? `\n\n${pluriel(occurrences, 'devoir')} à lui rendre ${occurrences > 1 ? 'resteront rattachés' : 'restera rattaché'} à ${occurrences > 1 ? 'leur' : 'sa'} date.` : ''}`;
@@ -1366,8 +1373,7 @@ for (const evenement of ['input', 'change']) {
   });
 }
 
-async function supprimerEvenementEdite() {
-  const x = evenementEdite;
+async function supprimerEvenementEdite(x = evenementEdite) {
   if (!x || !confirm(`Supprimer cet événement${edt.datesEvenement(x).length > 1 ? ' et toutes ses dates' : ''} ?`)) return;
   $('#evenement').close();
   await stockage.supprimerSerie(x.id);
@@ -2490,14 +2496,9 @@ const actions = {
   verrouiller,
   deverrouiller: () => bloque('Mode adulte', () => {}),
   'verrou-definir': ouvrirReglageVerrou,
-  'code-oublie': () => {
-    demandeSecours = nouvelleDemande();
-    $('#verrou-demande').textContent = lisible(demandeSecours);
-    $('#verrou-secours').hidden = false;
-    $('#verrou-code').focus();
-  },
+  'code-oublie': afficherCodeOublie,
   'verrou-retirer': retirerVerrou,
-  'serie-supprimer': supprimerSerieEditee,
+  'serie-supprimer': () => supprimerSerieEditee(),
   'categorie-nouvelle': (bouton) => ouvrirCategorie(null, bouton.dataset.nature),
   'categorie-supprimer': supprimerCategorieEditee,
   'seance-serie': () => {
@@ -2507,7 +2508,7 @@ const actions = {
     else ouvrirSerie(serie.id);
   },
   'evenement-nouveau': (bouton) => ouvrirEvenement(null, bouton.dataset.date),
-  'evenement-supprimer': supprimerEvenementEdite,
+  'evenement-supprimer': () => supprimerEvenementEdite(),
   'seance-ajouter-devoir': () => {
     $('#seance').close();
     ouvrirAjout(null, seanceOuverte);
@@ -2801,10 +2802,9 @@ async function essaisInterface() {
   await supprimerCategorieEditee();
   const refus = $('#cat-erreur').hidden ? 'acceptée à tort' : 'refusée';
   $('#edt-categorie').close();
-  serieEditee = edt.series().find((x) => x.cle === equitation.cle);
   const confirmer = window.confirm;
   window.confirm = () => true;
-  await supprimerSerieEditee();
+  await supprimerSerieEditee(edt.series().find((x) => x.cle === equitation.cle));
   ouvrirCategorie(equitation.cle);
   await supprimerCategorieEditee();
   window.confirm = confirmer;
@@ -2823,10 +2823,9 @@ async function essaisInterface() {
   $('#evenement form').requestSubmit($('#evenement button[value="ok"]'));
   await evenementEnCours;
   const rdv = [0, 7, 14, 21].map((j) => edt.coursDuJour(edt.ajouterJours(mercredi, j), (o) => o.cle === 'psy').length);
-  evenementEdite = edt.evenements().find((x) => x.cle === 'psy');
   const confirmerEvt = window.confirm;
   window.confirm = () => true;
-  await supprimerEvenementEdite();
+  await supprimerEvenementEdite(edt.evenements().find((x) => x.cle === 'psy'));
   window.confirm = confirmerEvt;
   journaliser(`Essai agenda : « ${resume} » ; psy les mercredis ${rdv.join('/')} (attendu 1/1/1/0) ; après suppression : ${edt.evenements().some((x) => x.cle === 'psy') ? 'encore là' : 'retiré'}`);
 
