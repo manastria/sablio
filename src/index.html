@@ -13,11 +13,15 @@
 </head>
 <body>
   <header class="entete">
+    <!-- Heure et date empilées, carré de semaine de la même hauteur à côté. -->
     <div class="horloge">
-      <span class="heure" data-champ="heure">–</span>
+      <div class="temps">
+        <span class="heure" data-champ="heure">–</span>
+        <span class="date" data-champ="date"></span>
+      </div>
+      <span class="carre-semaine" data-champ="semaine"></span>
       <span class="simulee" data-champ="simulee" hidden>heure simulée</span>
     </div>
-    <p class="date" data-champ="date"></p>
     <nav class="vues" aria-label="Vues">
       <button type="button" data-action="vue" data-vue="maintenant" aria-current="page">Maintenant</button>
       <button type="button" data-action="vue" data-vue="jour">Jour</button>

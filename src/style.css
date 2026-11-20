@@ -88,7 +88,8 @@ select, input[type="datetime-local"] {
   border-bottom: 1px solid var(--bord);
 }
 
-.horloge { display: flex; align-items: baseline; gap: 0.6rem; }
+.horloge { position: relative; display: flex; align-items: stretch; gap: 0.7rem; }
+.temps { display: grid; align-content: center; line-height: 1.1; }
 .heure {
   font-size: 2em;
   font-weight: 700;
@@ -102,8 +103,27 @@ select, input[type="datetime-local"] {
   border-radius: 999px;
   padding: 0 0.6em;
 }
-.date { margin: 0; color: var(--texte-doux); font-size: 1.1em; }
-.date::first-letter { text-transform: uppercase; }
+.date { color: var(--texte-doux); font-size: 0.95em; white-space: nowrap; }
+/* Prototype : l'étiquette « heure simulée », à côté du carré de semaine. */
+.horloge .simulee { align-self: center; white-space: nowrap; }
+/* Carré de semaine : numéro en haut, lettre du cycle en bas, aussi haut que l'heure et la date. */
+.carre-semaine { display: flex; }
+.badge-semaine.carre {
+  flex-direction: column;
+  aspect-ratio: 1;
+  font-size: 1rem;
+  border-radius: 10px;
+}
+.badge-semaine.carre .bs-num {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  padding: 0.1em 0.5em 0;
+  font-size: 1.3em;
+}
+.badge-semaine.carre .bs-num small { display: block; font-size: 0.45em; margin: 0; text-transform: uppercase; letter-spacing: 0.05em; }
+.badge-semaine.carre .bs-lettre { text-align: center; padding: 0.15em 0.4em; }
 .commandes { margin-left: auto; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 button.icone { position: relative; display: grid; place-items: center; width: 2.4em; height: 2.4em; padding: 0; }
 button.icone svg { width: 1.3em; height: 1.3em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }

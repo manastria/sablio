@@ -21,7 +21,7 @@ L'environnement de l'enfant varie beaucoup : âge, activités, présence d'un ad
 
 **Fenêtres** (détail d'un devoir, saisie, séance…) : elles se ferment par un clic à côté, par Échap ou par leur bouton. Une fenêtre de saisie déjà modifiée demande d'abord « Abandonner les modifications ? ».
 
-**En-tête allégé** : l'heure, la date avec le badge de semaine, les onglets (Maintenant, Jour, Semaine, À faire), le bouton « Mode discret » (il doit rester à un clic) et deux icônes : plein écran et menu. Le reste est dans le **menu** : emploi du temps et agenda, profil, mode compact, réglages et outils, et les actions ponctuelles (installer l'application, activer les rappels, reprendre la sauvegarde). Un point rouge sur l'icône du menu signale seulement les actions importantes (rappels, sauvegarde) : Edge propose « Installer » dans tout onglet, même quand l'application est déjà installée.
+**En-tête allégé** : l'heure et la date empilées, avec à côté un carré de semaine de la même hauteur (« sem. 48 » et la lettre du cycle), les onglets (Maintenant, Jour, Semaine, À faire), le bouton « Mode discret » (il doit rester à un clic) et deux icônes : plein écran et menu. Le reste est dans le **menu** : emploi du temps et agenda, profil, mode compact, réglages et outils, et les actions ponctuelles (installer l'application, activer les rappels, reprendre la sauvegarde). Un point rouge sur l'icône du menu signale seulement les actions importantes (rappels, sauvegarde) : Edge propose « Installer » dans tout onglet, même quand l'application est déjà installée.
 
 ### Vue Jour
 

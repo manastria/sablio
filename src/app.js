@@ -1081,7 +1081,7 @@ function badgeSemaine(jour, n, variante = '') {
   const texte = texteSemaine(jour, n);
   const { semaine } = edt.numeroSemaine(jour);
   return `<span class="badge-semaine ${variante}" role="img" aria-label="${echapper(texte)}" title="${echapper(texte)}">
-    <span class="bs-num"><small>S</small>${semaine}</span><span class="bs-lettre">${echapper(edt.lettreSemaine(jour))}</span></span>`;
+    <span class="bs-num"><small>${variante === 'carre' ? 'sem.' : 'S'}</small>${semaine}</span><span class="bs-lettre">${echapper(edt.lettreSemaine(jour))}</span></span>`;
 }
 
 // Champs « Aller à » (vues Jour et Semaine) : une semaine, une date ou un jour.
@@ -1353,11 +1353,12 @@ function mettreAJour(s, n, profil) {
   majPointMenu();
   $('[data-champ="heure"]').textContent = edt.heureTexte(n);
   $('[data-champ="simulee"]').hidden = !horloge.simulee;
+  // Date et semaine ne changent qu'une fois par jour : on ne réécrit que si besoin.
   const champDate = $('[data-champ="date"]');
-  const date = `${echapper(edt.majuscule(edt.dateLongue(n)))} ${badgeSemaine(n, n)}`;
-  if (champDate.dataset.valeur !== date) {
-    champDate.dataset.valeur = date;
-    champDate.innerHTML = date;
+  const date = edt.majuscule(n.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' }));
+  if (champDate.textContent !== date) {
+    champDate.textContent = date;
+    $('[data-champ="semaine"]').innerHTML = badgeSemaine(n, n, 'carre');
   }
   if (etat.vue === 'jour') {
     // Le repère « Vous êtes ici » avance dans le cours en cours.
