@@ -35,7 +35,7 @@ Un rappel (notification + carillon) part 5 minutes avant chaque cours.
 
 **+ Événement** (vues Jour et Semaine, écran Emploi du temps) ajoute un rendez-vous à l'agenda : une activité (le psychologue) ou un titre libre (le dentiste), une date, des heures, et éventuellement une répétition (« chaque semaine, 3 fois »). La démonstration contient un rendez-vous chez le dentiste.
 
-**Pour l'ergothérapeute** : dans l'écran Emploi du temps, **Exporter l'emploi du temps** produit un fichier JSON (matières, activités, cours, événements, vacances, semaines alternées) ; **Importer un emploi du temps…** le reprend sur l'ordinateur de la famille, en remplacement ou en ajout, sans doublon.
+**Pour l'ergothérapeute** : dans l'écran Emploi du temps, **Exporter l'emploi du temps** produit un fichier JSON (matières, activités, cours, événements, vacances, semaines alternées) ; **Importer un emploi du temps…** le reprend sur l'ordinateur de la famille, en remplacement ou en ajout, sans doublon. Le prénom de l'élève figure dans le titre et le nom du fichier ; **Nouvel emploi du temps (vide)** prépare l'élève suivant. Notice : `docs/refonte/notice-professionnel.md`.
 
 **Verrou** (facultatif) : dans **Réglages et outils → Verrou de la configuration**, un code à 4 chiffres protège l'emploi du temps, les séances, les réglages et les données. L'élève garde ses devoirs, peut ajouter des événements et basculer le mode discret. Le code ouvre le mode adulte pour 10 minutes. Code oublié : la fenêtre du code donne un code de demande ; la page `secours.html` (servie avec l'application, à publier sur sablio.manastria.fr/secours) en déduit un code de secours valable le jour même.
 

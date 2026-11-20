@@ -706,6 +706,10 @@ details.carte.faits summary { margin: 0; }
 
 .vue-edt { flex: 1; display: grid; gap: 1rem; padding: 1rem; align-content: start; }
 .cycle-resume { gap: 0.8rem; margin: 0; }
+.notice { padding: 0.6rem 0.9rem; border: 1px solid var(--bord); border-radius: 10px; background: var(--surface); }
+.notice summary { cursor: pointer; font-weight: 600; }
+.notice ol { margin: 0.6rem 0; padding-left: 1.4em; display: grid; gap: 0.3rem; }
+.notice p { margin: 0; color: var(--texte-doux); }
 .periode-fixe { border-left-color: var(--bord); background: var(--surface-2); }
 .pastille-neutre { background: none; }
 

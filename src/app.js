@@ -637,13 +637,25 @@ function construireEdt(n) {
   };
   zone.innerHTML = `
     <div class="afaire-entete">
-      <h2>Emploi du temps</h2>
+      <h2>Emploi du temps${etat.eleve ? ` de ${echapper(etat.eleve)}` : ''}</h2>
+      <button type="button" class="lien" data-action="eleve-nommer">${etat.eleve ? 'Changer le prénom' : 'Indiquer le prénom de l’élève'}</button>
       <p class="afaire-resume">Semaine type. Pour une seule séance (annulée, déplacée), passez par la vue Jour.</p>
     </div>
     <div class="ligne">
       <button type="button" data-action="edt-exporter" title="Pour le préparer sur un autre ordinateur et l’envoyer (ergothérapeute, parent)">Exporter l’emploi du temps</button>
       <button type="button" data-action="edt-importer">Importer un emploi du temps…</button>
+      <button type="button" data-action="edt-vider">Nouvel emploi du temps (vide)…</button>
     </div>
+    <details class="notice">
+      <summary>Préparer l’emploi du temps d’un ou plusieurs élèves (ergothérapeute, enseignant)</summary>
+      <ol>
+        <li><strong>Nouvel élève</strong> : « Nouvel emploi du temps (vide) », puis indiquez son prénom. Les matières sont gardées ; cours, activités, événements et vacances repartent de zéro.</li>
+        <li>Saisissez les cours, les activités (orthophonie, psychologue…) avec leur confidentialité, la zone de vacances et les semaines alternées.</li>
+        <li>« Exporter l’emploi du temps » : le fichier porte le prénom (<code>sablio-emploi-du-temps-leo-….json</code>). Envoyez-le à la famille, qui l’importe dans son Sablio.</li>
+        <li><strong>Élève suivant, ou retouche plus tard</strong> : « Importer un emploi du temps… » avec son fichier, en le <em>remplaçant</em> ; modifiez, puis exportez de nouveau. Gardez un fichier par élève.</li>
+      </ol>
+      <p>Le fichier contient l’emploi du temps seulement : ni devoirs, ni code du verrou. Il peut contenir des rendez-vous de soin : transmettez-le comme une donnée de santé.</p>
+    </details>
     <div class="ligne cycle-resume">
       ${badgeSemaine(n, n)}
       <span>${edt.cycleActuel().actif
@@ -996,7 +1008,8 @@ async function exportEmploiDuTemps() {
     categories: d.categories,
     series: d.series,
     periodes: d.periodes ?? [],
-    reglages: { cycle: d.reglages?.cycle ?? null, vacances: d.reglages?.vacances ?? null },
+    eleve: d.reglages?.eleve?.nom || null,
+    reglages: { cycle: d.reglages?.cycle ?? null, vacances: d.reglages?.vacances ?? null, eleve: d.reglages?.eleve ?? null },
   };
 }
 
@@ -1005,7 +1018,9 @@ async function exporterEmploiDuTemps() {
   const fichier = await exportEmploiDuTemps();
   const lien = document.createElement('a');
   lien.href = URL.createObjectURL(new Blob([JSON.stringify(fichier, null, 2)], { type: 'application/json' }));
-  lien.download = `sablio-emploi-du-temps-${edt.isoLocal(new Date())}.json`;
+  // « sablio-emploi-du-temps-leo-2026-11-20.json » : le prénom évite les confusions.
+  const prenom = (fichier.eleve ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  lien.download = `sablio-emploi-du-temps-${prenom ? `${prenom}-` : ''}${edt.isoLocal(new Date())}.json`;
   lien.click();
   setTimeout(() => URL.revokeObjectURL(lien.href), 10_000);
   journaliser(`Emploi du temps exporté : ${fichier.categories.length} matières et activités, ${fichier.series.length} cours et événements`);
@@ -1034,7 +1049,8 @@ function rapprocher(fichier) {
     categories: fichier.categories.map((c) => ({ ...c, cle: correspondance.get(c.cle) })),
     series,
     periodes: fichier.periodes ?? [],
-    reglages: fichier.reglages ?? {},
+    // En remplacement, le prénom suit le fichier (vide s'il n'en a pas).
+    reglages: { ...fichier.reglages, eleve: fichier.reglages?.eleve ?? { nom: '' } },
     reconnues: [...correspondance].filter(([a, b]) => a !== b).length,
   };
 }
@@ -1047,7 +1063,7 @@ function proposerImport(fichier, nom) {
   }
   importEnAttente = rapprocher(fichier);
   const cours = fichier.series.filter((x) => x.type !== 'evenement').length;
-  const prepare = fichier.exporteLe ? ` préparé le ${new Date(fichier.exporteLe).toLocaleDateString('fr-FR')}` : '';
+  const prepare = `${fichier.eleve ? ` (élève : ${fichier.eleve})` : ''}${fichier.exporteLe ? `, préparé le ${new Date(fichier.exporteLe).toLocaleDateString('fr-FR')}` : ''}`;
   const zone = fichier.reglages?.vacances?.zone;
   $('#import-edt-resume').textContent = `« ${nom} »${prepare} : ${pluriel(fichier.categories.filter((c) => c.nature === 'ecole').length, 'matière')}, ${pluriel(fichier.categories.filter((c) => c.nature === 'perso').length, 'activité')}, ${cours} cours, ${pluriel(fichier.series.length - cours, 'événement')}${fichier.reglages?.cycle?.actif ? `, semaines ${fichier.reglages.cycle.libelles.join('/')}` : ''}${zone ? `, vacances zone ${zone}` : ''}. ${importEnAttente.reconnues ? `${pluriel(importEnAttente.reconnues, 'matière')} déjà présente${importEnAttente.reconnues > 1 ? 's' : ''} sous le même nom.` : ''}`;
   document.querySelector('input[name="import-mode"][value="remplacer"]').checked = true;
@@ -1081,6 +1097,38 @@ $('#import-edt form').addEventListener('submit', (e) => {
   if (e.submitter?.value !== 'ok' || !importEnAttente) return;
   importEnCours = appliquerImport(document.querySelector('input[name="import-mode"]:checked').value === 'remplacer');
 });
+
+// Prénom de l'élève (titre, nom du fichier exporté).
+async function nommerEleve() {
+  if (bloque('Changer le prénom', nommerEleve)) return;
+  const nom = prompt('Prénom de l’élève (pour le titre et le nom du fichier exporté) :', etat.eleve ?? '');
+  if (nom === null) return;
+  await stockage.enregistrerReglage('eleve', { nom: nom.trim() });
+  await rechargerTout();
+  planifierSauvegarde();
+  journaliser(`Prénom de l’élève : ${nom.trim() || '(aucun)'}`);
+}
+
+// Nouvel élève : on garde les matières ; cours, activités, événements,
+// périodes, cycle, zone et prénom repartent de zéro.
+async function viderEmploiDuTemps(confirmer = true) {
+  if (bloque('Repartir d’un emploi du temps vide', () => viderEmploiDuTemps(confirmer))) return;
+  if (confirmer && !confirm('Repartir d’un emploi du temps vide ?\n\nLes matières sont gardées. Les cours, activités, événements et périodes sont retirés ; les semaines alternées et la zone de vacances reviennent aux réglages par défaut. Pensez à exporter l’emploi du temps actuel si vous voulez le garder.')) return;
+  const vide = {
+    categories: edt.matieres(),
+    series: [],
+    periodes: [],
+    reglages: {
+      cycle: { actif: true, libelles: edt.LIBELLES_AB, reference: edt.isoLocal(edt.REFERENCE_AB) },
+      vacances: { zone: '', feries: true },
+      eleve: { nom: '' },
+    },
+  };
+  await stockage.importerEmploiDuTemps(vide, true);
+  await rechargerTout();
+  planifierSauvegarde();
+  journaliser('Emploi du temps vidé (matières gardées)');
+}
 
 // --- Vacances et jours sans cours ---
 
@@ -2434,6 +2482,8 @@ const actions = {
   'cycle-modifier': () => ouvrirCycle(),
   'edt-exporter': exporterEmploiDuTemps,
   'edt-importer': importerEmploiDuTemps,
+  'edt-vider': () => viderEmploiDuTemps(),
+  'eleve-nommer': nommerEleve,
   'vacances-modifier': () => ouvrirVacances(),
   'periode-nouvelle': () => ouvrirPeriode(),
   'periode-supprimer': supprimerPeriodeEditee,
@@ -2919,6 +2969,20 @@ async function essaisInterface() {
   $('#import-edt form').requestSubmit($('#import-edt button[value="ok"]'));
   await importEnCours;
   const apresRemplacement = `${edt.matieres().length} matières, ${edt.semaineType().length} cours`;
+  // Nouvel élève : on vide (matières gardées), on nomme, on exporte, puis on
+  // réimporte l'export d'origine (prénom absent → retiré).
+  await viderEmploiDuTemps(false);
+  const apresVide = `${edt.matieres().length} matières, ${edt.activites().length} activités, ${edt.series().length} cours et événements`;
+  await stockage.enregistrerReglage('eleve', { nom: 'Léo' });
+  await rechargerTout();
+  const exportLeo = await exportEmploiDuTemps();
+  proposerImport(exportLeo, 'leo.json');
+  const resumeLeo = $('#import-edt-resume').textContent;
+  $('#import-edt').close();
+  proposerImport(exporte, 'origine.json');
+  $('#import-edt form').requestSubmit($('#import-edt button[value="ok"]'));
+  await importEnCours;
+  journaliser(`Essai nouvel élève : après « vide » → ${apresVide} ; export « ${exportLeo.eleve} » (« ${resumeLeo.slice(0, 40)}… ») ; après réimport : prénom « ${etat.eleve} », ${edt.semaineType().length} cours`);
   journaliser(`Essai échange d’emploi du temps : « ${resumeImport.slice(0, 90)}… » ; ajout → ${apresAjout} ; remplacement par l’export → ${apresRemplacement} (attendu ${exporte.categories.filter((c) => c.nature === 'ecole').length} matières, ${exporte.series.filter((x) => x.type !== 'evenement').length} cours)`);
 
   // Modification : on ouvre le devoir, on le modifie, on enregistre.
@@ -3088,6 +3152,8 @@ async function chargerEmploiDuTemps() {
   edt.definirEmploiDuTemps(donnees);
   edt.definirExceptions(donnees.exceptions);
   etat.verrou = donnees.reglages?.verrou ?? null;
+  // Prénom de l'élève : utile au professionnel qui prépare plusieurs élèves.
+  etat.eleve = donnees.reglages?.eleve?.nom ?? '';
   // Jours sans cours : vacances de la zone choisie, jours fériés, périodes ajoutées.
   etat.vacances = { zone: '', feries: true, ...donnees.reglages?.vacances };
   etat.periodesSaisies = donnees.periodes ?? [];
