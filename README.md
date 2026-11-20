@@ -59,6 +59,8 @@ L'en-tête ne garde que l'essentiel : onglets, **Mode discret**, plein écran et
 
 Dans **Menu → Réglages et outils → Réglages du profil** : mode discret manuel, automatique (pendant les cours, par défaut) ou toujours actif (une désactivation dure 30 minutes, ou jusqu'à la réouverture) ; champ « à faire le » proposé ou non ; sac préparé la veille au soir (par défaut) ou le matin même.
 
+**Menu → Réglages et outils → Repartir de zéro (usage réel)** efface tout (devoirs, cours, activités, événements, vacances, réglages, code du verrou) et ne garde que la liste des matières ; la démonstration ne revient plus ensuite, même après un rechargement. Les sauvegardes des jours précédents restent dans le dossier.
+
 **Menu → Réglages et outils → Réinitialiser la démonstration** remplace les devoirs par ceux de la démonstration, calculés à partir d'aujourd'hui. C'est utile avec une base créée par une version précédente du prototype : ses devoirs sont conservés, mais rattachés à une date et non à un cours.
 
 ## Version navigateur, installable (PWA)

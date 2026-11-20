@@ -355,6 +355,7 @@ async function faireCaptures(dossier) {
   await basculerCompact();
 
   await proto('lancerTests()');
+  await proto('essaiRepartirDeZero()');
   const rapport = await proto('rapport()');
   fs.writeFileSync(path.join(dossier, 'rapport.txt'), rapport);
   console.log(rapport);

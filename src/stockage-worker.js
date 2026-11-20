@@ -141,8 +141,11 @@ function ecrireException(x) {
   });
 }
 
+// Sauf si la base a été remise à zéro pour un usage réel : la démonstration
+// ne doit plus revenir.
 function completerEmploiDuTemps() {
-  if (graineMigration && !db.selectValue('SELECT count(*) FROM categorie')) insererEmploiDuTemps(graineMigration);
+  const reelle = db.selectValue("SELECT count(*) FROM reglage WHERE cle = 'base' AND supprime = 0");
+  if (graineMigration && !reelle && !db.selectValue('SELECT count(*) FROM categorie')) insererEmploiDuTemps(graineMigration);
 }
 
 function ecrirePeriode(x) {
@@ -371,6 +374,20 @@ const operations = {
   },
 
   // Démonstration : efface tout et remet les devoirs fournis.
+  // Usage réel : tout effacer, ne garder que les matières fournies, et marquer
+  // la base pour que la démonstration ne revienne pas.
+  async repartirDeZero({ matieres }) {
+    await operations.effacer();
+    db.transaction(() => {
+      for (const x of matieres) ecrireCategorie(x);
+      db.exec({
+        sql: "INSERT OR REPLACE INTO reglage (cle, valeur, modifie_le, supprime) VALUES ('base', ?, ?, 0)",
+        bind: [JSON.stringify({ reelle: true, depuis: new Date().toISOString() }), Date.now()],
+      });
+    });
+    return { nombre: compter() };
+  },
+
   async reinitialiser({ graine }) {
     await operations.effacer();
     inserer(graine.devoirs ?? []);

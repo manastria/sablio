@@ -3037,6 +3037,15 @@ window.prototypeMyDevoirs = {
   fermerSeance: () => $('#seance').close(),
   afficherDetail: (texte) => afficherDetail(etat.devoirs.find((d) => d.texte.startsWith(texte))?.id),
   fermerDetail: () => $('#detail').close(),
+  // Dernier essai (il efface tout) : « Repartir de zéro ».
+  async essaiRepartirDeZero() {
+    const confirmer = window.confirm;
+    window.confirm = () => true;
+    await actionsDonnees['repartir-zero']();
+    window.confirm = confirmer;
+    const d = await stockage.emploiDuTemps();
+    journaliser(`Essai repartir de zéro : ${etat.devoirs.length} devoirs, ${edt.matieres().length} matières, ${edt.activites().length} activités, ${edt.series().length} cours et événements, base marquée réelle : ${d.reglages?.base?.reelle ? 'oui' : 'NON'}`);
+  },
   // Pour les captures : la fenêtre d'import avec l'emploi du temps actuel.
   async importEssai() {
     proposerImport(await exportEmploiDuTemps(), 'sablio-emploi-du-temps-ergo.json');
@@ -3301,6 +3310,27 @@ const actionsDonnees = {
     await stockage.effacer();
     await rechargerTout();
     journaliser('Perte simulée : la base est vide, la sauvegarde automatique est suspendue');
+    afficherDonnees();
+  },
+  // Passer de la démonstration à un usage réel : base vidée, matières de base
+  // gardées (à modifier), et plus jamais de démonstration.
+  'repartir-zero': async () => {
+    if (!confirm('Repartir de zéro ?\n\nTout est effacé : devoirs, cours, activités, événements, vacances, réglages et code du verrou. Seule la liste des matières est gardée, à modifier ensuite.\n\nLes sauvegardes des jours précédents restent dans le dossier de sauvegarde.')) return;
+    try {
+      await stockage.repartirDeZero(edt.DEMO_CATEGORIES.filter((c) => c.nature === 'ecole'));
+      try {
+        for (const cle of Object.keys(localStorage)) {
+          if (cle === CLE_REFERENCE || cle.startsWith('sablio-sac-')) localStorage.removeItem(cle);
+        }
+      } catch { /* préférences non effacées */ }
+      etat.adulteJusqua = 0;
+      await rechargerTout();
+      sauvegardeEtat.suspendue = false;
+      planifierSauvegarde();
+      journaliser('Base remise à zéro pour un usage réel (matières gardées)');
+    } catch (e) {
+      journaliser(`Remise à zéro : échec (${e.message})`);
+    }
     afficherDonnees();
   },
   reinitialiser: async () => {
