@@ -105,6 +105,38 @@ select, input[type="datetime-local"] {
 .date { margin: 0; color: var(--texte-doux); font-size: 1.1em; }
 .date::first-letter { text-transform: uppercase; }
 .commandes { margin-left: auto; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+button.icone { position: relative; display: grid; place-items: center; width: 2.4em; height: 2.4em; padding: 0; }
+button.icone svg { width: 1.3em; height: 1.3em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.point-menu {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--alerte);
+  box-shadow: 0 0 0 2px var(--fond);
+}
+
+/* Menu : panneau sous l'icône, en haut à droite (API popover : fermeture
+   par Échap ou par un clic ailleurs, sans code). */
+.menu {
+  inset: 4rem 1rem auto auto;
+  margin: 0;
+  width: min(18rem, calc(100vw - 2rem));
+  padding: 0.5rem;
+  border: 1px solid var(--bord);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--texte);
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.18);
+}
+.menu:popover-open { display: grid; gap: 0.3rem; }
+.menu > button { width: 100%; text-align: left; border-color: transparent; }
+.menu > button:not(.mise-en-avant) { background: none; }
+.menu > button:not(.mise-en-avant):hover { background: var(--surface-2); }
+.menu-ligne { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.35em 0.8em; color: var(--texte-doux); }
+.quand-sac { margin-top: 0; font-size: 0.9em; }
 .profil { display: flex; gap: 0.4rem; align-items: center; color: var(--texte-doux); }
 
 .vues { display: flex; gap: 0.25rem; padding: 0.2rem; background: var(--surface-2); border-radius: 10px; }
@@ -872,8 +904,12 @@ html[data-compact] .sortir-compact {
   .jour-entete h2 { flex: 1 1 100%; order: -1; font-size: 1.25em; }
   .bande-jours { gap: 0.15rem; }
   .puce-semaine { padding: 0.3rem 0.35rem; }
-  .seance { grid-template-columns: 4.2em auto 1fr; }
-  .seance .seance-fin { grid-column: 3; justify-self: start; }
+  /* Le « + » et le badge restent sur la ligne du cours. */
+  .seance { grid-template-columns: 3.6em auto minmax(0, 1fr) auto; gap: 0.5rem; padding: 0.45rem 0.5rem; }
+  .seance .badge { font-size: 0.7em; padding: 0.1em 0.45em; }
+  /* Les onglets prennent toute la largeur et passent à la ligne s'il le faut. */
+  .vues { flex: 1 1 100%; flex-wrap: wrap; }
+  .vues button { flex: 1 1 auto; padding: 0.35em 0.5em; }
   .commandes { margin-left: 0; }
 }
 

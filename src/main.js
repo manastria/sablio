@@ -314,6 +314,10 @@ async function faireCaptures(dossier) {
     document.querySelector('#evt-categorie').dispatchEvent(new Event('change', { bubbles: true }));`);
   await capturer('31-evenement');
   await page.executeJavaScript(`document.querySelector('#evenement').close()`);
+  await proto('scenario("2026-11-26T19:00", "college", "jour", "2026-11-26")');
+  await page.executeJavaScript(`document.querySelector('#menu').showPopover()`);
+  await capturer('33-menu');
+  await page.executeJavaScript(`document.querySelector('#menu').hidePopover()`);
   await proto('scenario("2026-11-25T19:00", "college", "afaire")');
   await capturer('25-a-faire');
   await proto('scenario("2026-11-23T19:00", "college", "jour", "2026-11-24")');

@@ -19,6 +19,8 @@ L'environnement de l'enfant varie beaucoup : âge, activités, présence d'un ad
 | **Emploi du temps** | Saisie de la semaine type (cours, créneaux, activités), des matières et des activités. Surtout pour l'adulte : bouton dans l'en-tête, pas dans les onglets de l'élève. |
 | **Réglages** | Profil, sauvegarde. |
 
+**En-tête allégé** : l'heure, la date avec le badge de semaine, les onglets (Maintenant, Jour, Semaine, À faire), le bouton « Mode discret » (il doit rester à un clic) et deux icônes : plein écran et menu. Le reste est dans le **menu** : emploi du temps et agenda, profil, mode compact, réglages et outils, et les actions ponctuelles (installer l'application, activer les rappels, reprendre la sauvegarde) ; un point rouge sur l'icône du menu signale qu'une de ces actions attend.
+
 ### Vue Jour
 
 ```
@@ -94,7 +96,12 @@ Repris de MyDevoirs : semaine suivante affichée le week-end, numéro et lettre 
 
 ### Préparer le sac
 
-Liste déduite de l'emploi du temps du prochain jour de classe : ses matières, avec pour chacune le matériel habituel (champ facultatif de la matière : « calculatrice », « tenue de sport »). Affichée dans Maintenant / Ensuite après le dernier cours, et dans la vue Jour du lendemain. Cases à cocher, remises à zéro chaque jour.
+Liste déduite de l'emploi du temps : les matières du jour visé, avec pour chacune le matériel habituel (champ facultatif de la matière : « calculatrice », « tenue de sport »). Cases à cocher, propres à chaque jour.
+
+**Quand on prépare le sac** se règle par profil :
+
+- **la veille au soir** (par défaut) : le jeudi, on prépare le sac du vendredi. La vue Jour du jeudi affiche « Préparer le sac pour demain · À faire ce soir » ; le vendredi, le sac du lundi. Dans Maintenant, le sac remplace la frise après le dernier cours ;
+- **le matin même** : la vue Jour d'un jour affiche le sac de ce jour ; dans Maintenant, il remplace la frise avant le premier cours.
 
 ## Matières et activités personnelles
 

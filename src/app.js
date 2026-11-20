@@ -110,6 +110,8 @@ const etat = {
   reglages: {
     discret: MODES_DISCRET.includes(lirePreference('sablio-discret', '')) ? lirePreference('sablio-discret', '') : 'automatique',
     aFaireLe: lirePreference('sablio-a-faire-le', '1') === '1',
+    // Le sac se prépare la veille au soir, ou le matin même.
+    sac: lirePreference('sablio-sac-moment', 'veille') === 'matin' ? 'matin' : 'veille',
   },
   rappels: new Set(),
   journal: [],
@@ -257,7 +259,16 @@ function rendre(forcer = false) {
   if (etat.durees.length > 300) etat.durees.shift();
 }
 
+// Point rouge sur l'icône du menu : une action y attend (installer,
+// activer les rappels, reprendre la sauvegarde).
+function majPointMenu() {
+  const attente = [...document.querySelectorAll('#menu .mise-en-avant')].some((b) => !b.hidden);
+  $('[data-champ="point-menu"]').hidden = !attente;
+  $('.bouton-menu').setAttribute('aria-label', attente ? 'Menu (une action vous attend)' : 'Menu');
+}
+
 function afficherVue() {
+  majPointMenu();
   $('#vue-maintenant').hidden = etat.vue !== 'maintenant';
   $('#vue-jour').hidden = etat.vue !== 'jour';
   $('#vue-semaine').hidden = etat.vue !== 'semaine';
@@ -285,10 +296,14 @@ function construire(s, n, profil) {
   carteEnsuite.innerHTML = htmlEnsuite(s, n);
   const prochain = prochainCours(s);
   carteEnsuite.style.setProperty('--couleur', prochain ? affichage(prochain).couleur : 'var(--accent)');
-  // Journée finie : la frise laisse la place au sac du prochain jour de classe.
-  $('#frise').innerHTML = s.etat === 'fini' && s.demain
-    ? htmlSac(s.demain.jour, `Préparer le sac pour ${edt.jourRelatif(s.demain.jour, n)}`, true)
-    : htmlFrise(s);
+  // La frise laisse la place au sac quand c'est le moment de le préparer :
+  // le soir, après les cours, pour le prochain jour de classe (réglage
+  // « la veille ») ; le matin, avant les cours, pour la journée (« le matin »).
+  const aujourdhui = edt.debutJour(n);
+  const auMoment = etat.reglages.sac === 'matin'
+    ? (s.etat === 'avant' && s.cours.some(edt.estEcole) ? aujourdhui : null)
+    : (s.etat === 'fini' ? s.demain?.jour : null);
+  $('#frise').innerHTML = auMoment ? htmlSac(auMoment, n, { lien: true }) : htmlFrise(s);
   $('#devoirs').innerHTML = htmlDevoirs(n, profil);
   appliquerStyles($('#vue-maintenant'));
 }
@@ -974,7 +989,31 @@ function lireSac(jour) {
   try { return new Set(JSON.parse(lirePreference(cleSac(jour), '[]'))); } catch { return new Set(); }
 }
 
-function htmlSac(jour, titre, avecLien = false) {
+// Le jour pour lequel on prépare le sac, vu depuis la journée `jour` :
+// le prochain jour de classe (la veille au soir) ou ce jour même (le matin).
+function jourDuSac(jour) {
+  if (etat.reglages.sac === 'matin') return edt.debutJour(jour);
+  return edt.prochainJourDeCours(jour, edt.estEcole)?.jour ?? null;
+}
+
+// « demain », « aujourd’hui », sinon « vendredi 27 ».
+function jourCourt(d, n) {
+  const ecart = edt.ecartJours(n, d);
+  if (ecart === 0) return 'aujourd’hui';
+  if (ecart === 1) return 'demain';
+  return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric' });
+}
+
+function htmlSac(jour, n, { lien: avecLien = false, depuis = null } = {}) {
+  // Quand le préparer : « ce soir », « jeudi soir », « le matin même ».
+  let quand = 'le matin même';
+  if (etat.reglages.sac === 'veille') {
+    const veille = depuis ?? edt.debutJour(n);
+    const ecart = edt.ecartJours(n, veille);
+    quand = ecart === 0 ? 'ce soir' : ecart === 1 ? 'demain soir'
+      : `${veille.toLocaleDateString('fr-FR', { weekday: 'long' })} soir`;
+  }
+  const titre = `Préparer le sac pour ${jourCourt(jour, n)}`;
   const coches = lireSac(jour);
   const matieres = new Map();
   for (const o of edt.coursDuJour(jour, edt.estEcole)) {
@@ -982,7 +1021,8 @@ function htmlSac(jour, titre, avecLien = false) {
     if (m && !matieres.has(m.cle)) matieres.set(m.cle, m);
   }
   const lien = avecLien ? `<button type="button" class="lien" data-action="voir-jour" data-date="${edt.isoLocal(jour)}">Voir la journée</button>` : '';
-  const entete = `<div class="entete-carte"><p class="etiquette">${echapper(titre)}</p>${lien}</div>`;
+  const entete = `<div class="entete-carte"><p class="etiquette">${echapper(titre)}</p>${lien}</div>
+    <p class="vide quand-sac">À faire ${echapper(quand)}.</p>`;
   if (!matieres.size) return `${entete}<p class="vide">Pas de cours : rien à préparer.</p>`;
   const lignes = [...matieres.values()].map((m) => `<li><label data-css="${couleurs(m)}">
       <input type="checkbox" data-sac="${edt.isoLocal(jour)}" value="${m.cle}" ${coches.has(m.cle) ? 'checked' : ''}>
@@ -1020,7 +1060,10 @@ function construireJour(n, profil) {
     ${htmlBandeJours(jour, n)}`;
   $('#jour-edt').innerHTML = htmlJourEdt(jour, n);
   $('#jour-devoirs').innerHTML = htmlJourDevoirs(jour, n, profil);
-  $('#jour-sac').innerHTML = htmlSac(jour, `Dans le sac pour ${edt.jourRelatif(jour, n)}`);
+  const pourLe = jourDuSac(jour);
+  $('#jour-sac').innerHTML = pourLe
+    ? htmlSac(pourLe, n, { lien: !edt.memeJour(pourLe, jour), depuis: jour })
+    : '<p class="etiquette">Préparer le sac</p><p class="vide">Pas de cours dans les deux semaines.</p>';
   appliquerStyles($('#vue-jour'));
 }
 
@@ -1881,6 +1924,7 @@ function basculerOutils() {
     $('#heure-simulee').value = `${n.getFullYear()}-${p(n.getMonth() + 1)}-${p(n.getDate())}T${p(n.getHours())}:${p(n.getMinutes())}`;
     $('#discret-mode').value = etat.reglages.discret;
     $('#reglage-afaire').checked = etat.reglages.aFaireLe;
+    $('#reglage-sac').value = etat.reglages.sac;
     afficherEnvironnement();
     afficherDonnees();
   }
@@ -1964,6 +2008,9 @@ const actions = {
 };
 
 document.addEventListener('click', (e) => {
+  // Un choix dans le menu le referme (sauf la liste des profils).
+  const menu = $('#menu');
+  if (e.target.closest('#menu button') && menu.matches(':popover-open')) menu.hidePopover();
   const reporterBouton = e.target.closest('[data-reporter]');
   if (reporterBouton) {
     reporter(reporterBouton.dataset.reporter);
@@ -2035,6 +2082,10 @@ document.addEventListener('change', (e) => {
     reglerHorloge({ vitesse: Number(cible.value), simulee: horloge.simulee || cible.value !== '1' });
   } else if (cible.id === 'discret-mode') {
     changerModeDiscret(cible.value);
+  } else if (cible.id === 'reglage-sac') {
+    etat.reglages.sac = cible.value === 'matin' ? 'matin' : 'veille';
+    ecrirePreference('sablio-sac-moment', etat.reglages.sac);
+    rendre(true);
   } else if (cible.id === 'reglage-afaire') {
     etat.reglages.aFaireLe = cible.checked;
     ecrirePreference('sablio-a-faire-le', cible.checked ? '1' : '0');

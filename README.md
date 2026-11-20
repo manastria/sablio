@@ -10,7 +10,7 @@ Emploi du temps de démonstration, modifiable : une semaine type de collégien a
 cd refonte/prototype
 npm install
 npm start            # fenêtre normale
-npm run captures     # 32 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
+npm run captures     # 33 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
 ```
 
 Dans la fenêtre :
@@ -48,9 +48,11 @@ Ce que la démonstration montre :
 
 **+ Devoir**, ou **+** sur un cours de l'emploi du temps, ouvre la saisie. On choisit d'abord **à rendre quand** : un jour (les dix prochains jours de classe, ou une autre date), puis un cours de ce jour ; la matière s'en déduit (sauf pour le DS ou « Sans cours précis »). Le travail s'écrit dans une zone de texte riche (gras, italique, souligné, listes) ; un texte collé depuis l'ENT garde sa mise en forme, nettoyée (`src/contenu.js`).
 
-Dans **Outils → Réglages du profil** : mode discret manuel, automatique (pendant les cours, par défaut) ou toujours actif (une désactivation dure 30 minutes, ou jusqu'à la réouverture) ; champ « à faire le » proposé ou non.
+L'en-tête ne garde que l'essentiel : onglets, **Mode discret**, plein écran et **menu** (☰). Le menu contient l'emploi du temps et l'agenda, le profil, le mode compact, les réglages et outils, et les actions ponctuelles (installer, activer les rappels, reprendre la sauvegarde), signalées par un point rouge sur l'icône.
 
-**Outils → Réinitialiser la démonstration** remplace les devoirs par ceux de la démonstration, calculés à partir d'aujourd'hui. C'est utile avec une base créée par une version précédente du prototype : ses devoirs sont conservés, mais rattachés à une date et non à un cours.
+Dans **Menu → Réglages et outils → Réglages du profil** : mode discret manuel, automatique (pendant les cours, par défaut) ou toujours actif (une désactivation dure 30 minutes, ou jusqu'à la réouverture) ; champ « à faire le » proposé ou non ; sac préparé la veille au soir (par défaut) ou le matin même.
+
+**Menu → Réglages et outils → Réinitialiser la démonstration** remplace les devoirs par ceux de la démonstration, calculés à partir d'aujourd'hui. C'est utile avec une base créée par une version précédente du prototype : ses devoirs sont conservés, mais rattachés à une date et non à un cours.
 
 ## Version navigateur, installable (PWA)
 
@@ -72,7 +74,7 @@ Depuis WSL, le serveur est joignable par Edge sous Windows à l'adresse `http://
 
 Les devoirs sont dans une base SQLite (WebAssembly) enregistrée dans le stockage privé du navigateur (OPFS), dans Electron comme dans Edge. Le schéma est en version 3 (`PRAGMA user_version`) : une base plus ancienne est migrée à l'ouverture, et une base plus récente que le prototype est refusée. `npm install` copie SQLite dans `src/vendor/sqlite/` (fichiers non versionnés) : il faut l'avoir lancé avant de servir `src/`.
 
-Dans **Outils → Données** :
+Dans **Menu → Réglages et outils → Données** :
 
 - **Choisir le fichier de sauvegarde** : ensuite, chaque modification est sauvegardée dans ce fichier au bout de 2 secondes ;
 - **Restaurer depuis un fichier** : remplace les données par celles d'une sauvegarde (un fichier invalide est refusé) ;
