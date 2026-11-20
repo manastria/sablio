@@ -10,7 +10,7 @@ Emploi du temps en dur : une semaine type de collégien avec semaines A/B, un cr
 cd refonte/prototype
 npm install
 npm start            # fenêtre normale
-npm run captures     # 19 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
+npm run captures     # 21 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
 ```
 
 Dans la fenêtre :
@@ -37,7 +37,7 @@ Ce que la démonstration montre :
 - **« à faire le »** : l'exercice de physique pour jeudi est prévu le mardi (le mercredi après-midi est pris par le football) ;
 - **mode discret** (bouton dans l'en-tête) : le psychologue et l'orthophonie deviennent « Rendez-vous ». Le psychologue garde sa couleur, l'orthophonie passe en gris. Les notifications sont toujours neutres pour ces activités.
 
-**+ Devoir** ouvre la saisie. Le travail s'écrit dans une zone de texte riche (gras, italique, souligné, listes) ; un texte collé depuis l'ENT garde sa mise en forme, nettoyée (`src/contenu.js`). La matière proposée est celle du cours en cours ou qui vient de finir, et la date proposée le prochain cours de cette matière. On peut aussi choisir un DS ou une date libre.
+**+ Devoir**, ou **+** sur un cours de l'emploi du temps, ouvre la saisie. On choisit d'abord **à rendre quand** : un jour (les dix prochains jours de classe, ou une autre date), puis un cours de ce jour ; la matière s'en déduit (sauf pour le DS ou « Sans cours précis »). Le travail s'écrit dans une zone de texte riche (gras, italique, souligné, listes) ; un texte collé depuis l'ENT garde sa mise en forme, nettoyée (`src/contenu.js`).
 
 Dans **Outils → Réglages du profil** : mode discret manuel, automatique (pendant les cours, par défaut) ou toujours actif (une désactivation dure 30 minutes, ou jusqu'à la réouverture) ; champ « à faire le » proposé ou non.
 

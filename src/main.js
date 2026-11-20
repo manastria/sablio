@@ -267,6 +267,15 @@ async function faireCaptures(dossier) {
   await proto('fermerAjout()');
   await proto('scenario("2026-11-23T19:00", "college", "jour", "2026-11-24")');
   await capturer('18-jour-texte-long');
+  // « + » sur le cours d'anglais du jeudi 3 décembre.
+  await proto('scenario("2026-11-23T19:00", "college", "jour", "2026-12-03")');
+  await page.executeJavaScript(`document.querySelector('[data-ajouter-seance^="o|s4-0800-an"]').click()`);
+  await capturer('20-plus-anglais');
+  await proto('fermerAjout()');
+  // En plein cours : le repère est dans le cours.
+  await proto('scenario("2026-11-23T11:20", "college", "jour", "2026-11-23")');
+  await capturer('21-jour-en-cours');
+  await proto('scenario("2026-11-23T19:00", "college", "jour", "2026-11-24")');
   await proto('afficherDetail("Lire le chapitre 3")');
   await capturer('19-detail');
   await proto('fermerDetail()');

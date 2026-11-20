@@ -70,7 +70,14 @@
   <dialog id="ajout" class="large" aria-labelledby="ajout-titre">
     <form method="dialog" class="formulaire">
       <h2 id="ajout-titre">Nouveau devoir</h2>
-      <label>Matière <select id="ajout-matiere"></select></label>
+      <fieldset class="rendu">
+        <legend>À rendre</legend>
+        <div class="choix-jours" id="ajout-jours" role="radiogroup" aria-label="Jour"></div>
+        <label class="autre-date">Autre date <input type="date" id="ajout-date"></label>
+        <div class="choix-seances" id="ajout-seances" role="radiogroup" aria-label="Cours"></div>
+        <p class="erreur" id="ajout-erreur-rendu" hidden>Choisissez le cours où le rendre, ou « Sans cours précis ».</p>
+      </fieldset>
+      <label id="ajout-champ-matiere">Matière <select id="ajout-matiere"></select></label>
       <div class="champ">
         <span class="libelle" id="ajout-texte-libelle">Travail</span>
         <div class="barre-outils" role="toolbar" aria-label="Mise en forme">
@@ -85,8 +92,6 @@
           aria-labelledby="ajout-texte-libelle" data-vide="Exercices 4 et 5 p. 82, ou le texte collé depuis l’ENT"></div>
         <p class="erreur" id="ajout-erreur" hidden>Écrivez le travail à faire.</p>
       </div>
-      <label>À rendre <select id="ajout-rendu"></select></label>
-      <label id="ajout-champ-date" hidden>Date <input type="date" id="ajout-date"></label>
       <label id="ajout-champ-afaire"><span>À faire le <span class="facultatif">(facultatif)</span></span> <input type="date" id="ajout-afaire"></label>
       <div class="ligne boutons">
         <button value="ok" class="mise-en-avant" id="ajout-valider">Ajouter</button>

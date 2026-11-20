@@ -376,23 +376,33 @@ button.lien:hover { text-decoration: underline; }
 }
 .aller input[aria-invalid="true"] { border-color: var(--alerte); }
 .aller .erreur { flex-basis: 100%; font-size: 0.9em; }
-/* Ligne 1 : navigation, titre, + Devoir ; ligne 2 : semaine et « Aller à » ;
-   ligne 3 : bande des jours. */
-.jour-entete .saut { order: 1; flex-basis: 100%; height: 0; }
-.jour-entete .semaine { order: 2; flex: 1; }
+/* Ligne 1 : navigation, titre, + Devoir, « Aller à » ; ligne 2 : bande des jours. */
 .aller { order: 2; }
 .bande-jours { order: 3; }
-.numero-semaine {
-  flex: none;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  padding: 0 0.4rem;
-  font-weight: 700;
-  font-size: 1.15em;
-  line-height: 1.1;
+
+/* Numéro de semaine : « S48 » et la lettre du cycle dans une pastille. */
+.badge-semaine {
+  display: inline-flex;
+  align-items: stretch;
+  vertical-align: middle;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 0.85rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--texte);
+  cursor: default;
 }
-.numero-semaine span { font-size: 0.65em; font-weight: 400; color: var(--texte-doux); }
+.bs-num { padding: 0.25em 0.45em; font-weight: 700; background: var(--surface); }
+.bs-num small { font-size: 0.7em; font-weight: 600; color: var(--texte-doux); margin-right: 0.05em; }
+.bs-lettre { padding: 0.25em 0.45em; font-weight: 700; background: var(--accent); color: var(--fond); }
+/* Dans la bande des jours : même hauteur que les jours, en colonne. */
+.badge-semaine.grand { flex: none; flex-direction: column; font-size: 1rem; align-self: stretch; }
+.badge-semaine.grand .bs-num { flex: 1; display: grid; place-items: center; font-size: 1.15em; padding: 0.2em 0.5em; }
+.badge-semaine.grand .bs-lettre { text-align: center; }
+/* Dans la saisie : sépare les semaines. */
+.badge-semaine.petit { font-size: 0.75rem; align-self: center; }
 .jour-entete h2 { margin: 0; font-size: 1.5em; min-width: 0; flex: 1; }
 
 .bande-jours { flex: 1 1 100%; display: flex; gap: 0.35rem; }
@@ -424,6 +434,7 @@ button.lien:hover { text-decoration: underline; }
 
 .seances { list-style: none; margin: 0.4rem 0 0; padding: 0; display: grid; gap: 0.4rem; }
 .seance {
+  position: relative;
   display: grid;
   grid-template-columns: 4.2em auto 1fr auto;
   align-items: center;
@@ -440,6 +451,49 @@ button.lien:hover { text-decoration: underline; }
 .seance.annule strong { text-decoration: line-through; }
 .statut { display: block; font-size: 0.85em; font-weight: 650; color: var(--alerte); }
 .seance.deplace .statut { color: var(--accent); }
+.seance-fin { display: flex; align-items: center; gap: 0.4rem; }
+.ajout-seance {
+  width: 2em;
+  height: 2em;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 1.1em;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--texte-doux);
+}
+.ajout-seance:hover { color: var(--texte); border-color: var(--couleur); }
+.statut.en-cours { color: var(--alerte); }
+/* « Vous êtes ici » dans le cours en cours : une ligne qui descend avec le temps. */
+/* Le texte passe devant la ligne, qui ne masque donc rien. */
+.seance > :not(.ici-dans) { position: relative; z-index: 1; }
+.ici-dans {
+  position: absolute;
+  left: -8px;
+  right: 0;
+  top: calc(var(--avance, 0) * 100%);
+  height: 2px;
+  margin-top: -1px;
+  background: var(--alerte);
+  pointer-events: none;
+  transition: top var(--tick) linear;
+}
+/* Flèche dans la marge, à gauche de la séance. */
+.ici-dans::before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: -6px;
+  border: 7px solid transparent;
+  border-left: 9px solid var(--alerte);
+}
+.ici-dans span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
 .badge {
   white-space: nowrap;
   padding: 0.1em 0.6em;
@@ -493,13 +547,54 @@ dialog::backdrop { background: rgb(0 0 0 / 0.35); }
   padding: 0.4em 0.5em;
 }
 .facultatif { font-weight: 400; color: var(--texte-doux); }
+
+/* Saisie : « À rendre » d'abord, un jour puis un cours. */
+.rendu { margin: 0; padding: 0.6rem 0.8rem 0.8rem; border: 1px solid var(--bord); border-radius: 10px; display: grid; gap: 0.6rem; }
+.rendu legend { font-weight: 600; padding: 0 0.3rem; }
+.choix-jours { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.puce-choix {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  min-width: 3.4em;
+  padding: 0.3rem 0.35rem;
+  border: 1px solid var(--bord);
+  border-radius: 10px;
+  line-height: 1.15;
+  cursor: pointer;
+}
+.formulaire .puce-choix { gap: 0; font-weight: 400; }
+.puce-choix .jour-nom { font-size: 0.75em; color: var(--texte-doux); }
+.puce-choix .jour-num { font-weight: 700; }
+.puce-choix:has(input:checked) { background: var(--accent); border-color: var(--accent); color: var(--fond); }
+.puce-choix:has(input:checked) .jour-nom { color: inherit; }
+.puce-choix:has(input:focus-visible), .choix-seance:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
+/* Les boutons radio restent accessibles au clavier, mais invisibles. */
+.puce-choix input, .choix-seance input { position: absolute; opacity: 0; pointer-events: none; }
+.formulaire .autre-date { display: flex; align-items: center; gap: 0.5rem; font-weight: 400; color: var(--texte-doux); }
+.formulaire .autre-date input { width: auto; }
+.choix-seances { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: 0.35rem; }
+.formulaire .choix-seance {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--bord);
+  border-left: 6px solid var(--couleur, var(--bord));
+  border-radius: 8px;
+  font-weight: 400;
+  cursor: pointer;
+}
+.choix-seance:has(input:checked) { background: var(--surface-2); box-shadow: 0 0 0 2px var(--texte); }
+.choix-seance .pastille { font-size: 0.75em; }
 dialog.large { width: min(42rem, calc(100vw - 2rem)); }
 .champ { display: grid; gap: 0.3rem; }
 .libelle { font-weight: 600; }
 .barre-outils { display: flex; flex-wrap: wrap; gap: 0.3rem; }
 .barre-outils button { padding: 0.15em 0.6em; font-size: 0.9em; }
 .editeur {
-  min-height: 9em;
+  min-height: 6em;
   max-height: 45vh;
   overflow: auto;
   padding: 0.5em 0.7em;
@@ -608,7 +703,7 @@ html[data-compact] .sortir-compact {
   .bande-jours { gap: 0.15rem; }
   .puce-semaine { padding: 0.3rem 0.35rem; }
   .seance { grid-template-columns: 4.2em auto 1fr; }
-  .seance .badge { grid-column: 3; justify-self: start; }
+  .seance .seance-fin { grid-column: 3; justify-self: start; }
   .commandes { margin-left: 0; }
 }
 

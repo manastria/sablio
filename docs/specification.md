@@ -33,10 +33,12 @@ L'environnement de l'enfant varie beaucoup : âge, activités, présence d'un ad
 
 - En-tête en temps relatif (« Demain · mardi 21 novembre »).
 - Navigation à gauche, **à une place fixe** quelle que soit la longueur du titre : jour précédent, « Aujourd'hui » (grisé si on y est déjà), jour suivant.
-- **Numéro de semaine** (ISO, comme MyDevoirs), lettre du cycle et position relative : « Semaine 48 (B) · semaine prochaine ».
+- **Numéro de semaine** (ISO, comme MyDevoirs) et lettre du cycle sous forme d'un **badge** « S48 | B », dans l'en-tête et au début de la bande des jours, plutôt qu'un texte répété. Le texte complet (« Semaine 48 (B) · semaine prochaine ») est dans l'infobulle et pour les lecteurs d'écran.
 - **Aller à** : un champ qui accepte un numéro de semaine (`48`, `s48`, `48/2027` : on va au lundi), une date (`25/12`, `25/12/2026`, `2026-12-25`, `25 décembre`) ou un jour (`demain`, `après-demain`, `hier`, `lundi` = le prochain lundi). Sans année, on prend la plus proche d'aujourd'hui : `2` tapé en décembre vise janvier. Une saisie invalide (`31/02`) est refusée avec un message.
 - **Bande des jours** de la semaine affichée, sous l'en-tête : un clic pour aller deux ou trois jours plus loin, le nombre de devoirs à rendre sur chaque jour, « « » et « » » pour changer de semaine. Les jours sans cours sont grisés.
 - Un cours porte une pastille (`•1`) quand un devoir est à lui rendre.
+- Pendant un cours, le repère « Vous êtes ici » est **dans ce cours** : une ligne qui descend avec le temps, et « En cours · encore 35 min ». Entre deux séances, il est entre elles.
+- Chaque cours à venir a un bouton **« + »** : ajouter un devoir à rendre à ce cours. Pour un devoir de la semaine prochaine : aller au jour (bande des jours ou « Aller à »), puis « + » sur le cours.
 - Les exceptions se voient : cours annulé barré, cours déplacé avec une pastille.
 - « Ce soir » : voir [Jour de travail](#jour-de-travail).
 - Écran étroit : les deux colonnes passent l'une sous l'autre.
@@ -141,10 +143,10 @@ Certains créneaux n'ont pas de matière fixe. Exemple : un « DS » chaque merc
 
 ### Saisie
 
+- **« À rendre » vient en premier** : on choisit un jour parmi les dix prochains jours de classe (puces groupées par semaine, ou « Autre date »), puis un cours de ce jour (ou « Sans cours précis »). La **matière se déduit du cours** ; on ne la choisit que pour un créneau sans matière fixe (DS) ou un devoir sans cours.
+- Choix proposé à l'ouverture : depuis « + » d'un cours, ce cours ; depuis la vue Jour sur un jour à venir, ce jour (le cours reste à choisir) ; sinon, le prochain cours de la matière qui vient de finir.
 - Le travail se saisit dans une **zone de texte riche** : plusieurs lignes, gras, italique, souligné, listes. Les professeurs écrivent parfois de longues consignes mises en forme sur l'ENT : on doit pouvoir les coller telles quelles.
 - **Nettoyage** à la saisie et à l'affichage (une sauvegarde restaurée peut contenir n'importe quoi) : seuls les paragraphes, retours à la ligne, gras, italique, souligné, listes et liens web sont gardés ; scripts, images, styles et attributs sont retirés.
-- Date proposée par défaut : **le prochain cours de cette matière**.
-- Autres choix en un clic : les cours suivants de la matière (« jeudi (dans 3 jours) », « vendredi 28 »), les prochains créneaux à matière variable (« DS · mercredi 26 »), ou une date libre.
 - Sans emploi du temps, la saisie se fait par date, comme dans MyDevoirs.
 
 ### Afficher un devoir

@@ -531,8 +531,6 @@ function construireJour(n, profil) {
     </div>
     <h2>${echapper(edt.titreJour(jour, n))}</h2>
     <button type="button" class="mise-en-avant" data-action="ajouter">+ Devoir</button>
-    <span class="saut"></span>
-    <span class="semaine">${echapper(texteSemaine(jour, n))}</span>
     ${htmlBandeJours(jour, n)}`;
   $('#jour-edt').innerHTML = htmlJourEdt(jour, n);
   $('#jour-devoirs').innerHTML = htmlJourDevoirs(jour, n, profil);
@@ -545,6 +543,15 @@ function texteSemaine(jour, n) {
   const { semaine, annee } = edt.numeroSemaine(jour);
   const autreAnnee = annee !== n.getFullYear() ? ` de ${annee}` : '';
   return `Semaine ${semaine}${autreAnnee} (${edt.lettreSemaine(jour)}) · ${edt.semaineRelative(jour, n)}`;
+}
+
+// Le numéro de semaine en élément graphique : « S48 » et la lettre du cycle.
+// Le texte complet (« Semaine 48 (B) · semaine prochaine ») est dans l'infobulle.
+function badgeSemaine(jour, n, variante = '') {
+  const texte = texteSemaine(jour, n);
+  const { semaine } = edt.numeroSemaine(jour);
+  return `<span class="badge-semaine ${variante}" role="img" aria-label="${echapper(texte)}" title="${echapper(texte)}">
+    <span class="bs-num"><small>S</small>${semaine}</span><span class="bs-lettre">${echapper(edt.lettreSemaine(jour))}</span></span>`;
 }
 
 // Champ « Aller à » : un numéro de semaine, une date ou un jour.
@@ -590,7 +597,7 @@ function htmlBandeJours(jour, n) {
   const { semaine } = edt.numeroSemaine(jour);
   return `<nav class="bande-jours" aria-label="Jours de la semaine ${semaine}">
     <button type="button" class="puce-semaine" data-action="jour-decaler" data-jours="-7" aria-label="Semaine précédente" title="Semaine précédente">«</button>
-    <span class="numero-semaine" aria-hidden="true"><span>sem.</span>${semaine}</span>
+    ${badgeSemaine(jour, n, 'grand')}
     ${puces.join('')}
     <button type="button" class="puce-semaine" data-action="jour-decaler" data-jours="7" aria-label="Semaine suivante" title="Semaine suivante">»</button>
   </nav>`;
@@ -601,7 +608,10 @@ function htmlJourEdt(jour, n) {
   const titre = '<p class="etiquette">Emploi du temps</p>';
   if (!liste.length) return `${titre}<p class="vide">Pas de cours ce jour.</p>`;
   const ecart = edt.ecartJours(n, jour);
-  let repere = ecart !== 0; // le repère « vous êtes ici » n'existe qu'aujourd'hui
+  // Le repère « Vous êtes ici » n'existe qu'aujourd'hui : dans le cours en
+  // cours s'il y en a un, sinon entre deux séances.
+  const enCours = ecart === 0 && liste.some((o) => (o.statut === 'normal' || o.statut === 'deplace') && o.debut <= n && n < o.fin);
+  let repere = ecart !== 0 || enCours;
   const lignes = [];
   const ici = '<li class="ici" aria-label="Vous êtes ici"><span>Vous êtes ici</span></li>';
   for (const o of liste) {
@@ -619,7 +629,8 @@ function ligneSeance(o, n, ecart) {
   const a = affichage(o);
   const classes = ['seance'];
   if (ecart < 0 || (ecart === 0 && o.fin <= n)) classes.push('passe');
-  if (ecart === 0 && o.debut <= n && n < o.fin && (o.statut === 'normal' || o.statut === 'deplace')) classes.push('actuel');
+  const actuel = ecart === 0 && o.debut <= n && n < o.fin && (o.statut === 'normal' || o.statut === 'deplace');
+  if (actuel) classes.push('actuel');
   let statut = '';
   if (o.statut === 'annule') {
     classes.push('annule');
@@ -634,13 +645,20 @@ function ligneSeance(o, n, ecart) {
   const devoirs = o.nature === 'perso' ? [] : devoirsDe(o).filter((d) => !d.fait);
   const badge = devoirs.length && o.statut !== 'parti'
     ? `<span class="badge" title="${echapper(devoirs.map((d) => d.texte).join(' ; '))}">${pluriel(devoirs.length, 'devoir')}</span>` : '';
-  return `<li class="${classes.join(' ')}" data-css="${couleurs(a)}">
+  // « + » : ajouter un devoir à rendre à ce cours (cours à venir seulement).
+  const plus = o.nature !== 'perso' && o.debut > n && (o.statut === 'normal' || o.statut === 'deplace')
+    ? `<button type="button" class="ajout-seance" data-ajouter-seance="${cleSeance(o)}"
+        aria-label="Ajouter un devoir pour ${echapper(a.nom)}, ${echapper(edt.dateLongue(o.debut))} à ${edt.heureTexte(o.debut)}"
+        title="Ajouter un devoir à rendre à ce cours">+</button>` : '';
+  return `<li class="${classes.join(' ')}" data-css="${couleurs(a)}" data-debut="${o.debut.getTime()}" data-fin="${o.fin.getTime()}">
       <span class="horaire">${edt.heureTexte(o.debut)}<br>${edt.heureTexte(o.fin)}</span>
       ${pastille(a)}
       <span class="seance-texte"><strong>${echapper(a.nom)}</strong>
         ${a.lieu ? `<span class="precision">${echapper(a.lieu)}</span>` : ''}
-        ${statut ? `<span class="statut">${echapper(statut)}</span>` : ''}</span>
-      ${badge}
+        ${statut ? `<span class="statut">${echapper(statut)}</span>` : ''}
+        ${actuel ? '<span class="statut en-cours" data-champ="encore"></span>' : ''}</span>
+      <span class="seance-fin">${badge}${plus}</span>
+      ${actuel ? '<span class="ici-dans" aria-hidden="true"><span>Vous êtes ici</span></span>' : ''}
     </li>`;
 }
 
@@ -696,7 +714,22 @@ function allerAuJour(jour) {
 function mettreAJour(s, n, profil) {
   $('[data-champ="heure"]').textContent = edt.heureTexte(n);
   $('[data-champ="simulee"]').hidden = !horloge.simulee;
-  $('[data-champ="date"]').textContent = `${edt.dateLongue(n)} · semaine ${edt.numeroSemaine(n).semaine} (${edt.lettreSemaine(n)})`;
+  const champDate = $('[data-champ="date"]');
+  const date = `${echapper(edt.majuscule(edt.dateLongue(n)))} ${badgeSemaine(n, n)}`;
+  if (champDate.dataset.valeur !== date) {
+    champDate.dataset.valeur = date;
+    champDate.innerHTML = date;
+  }
+  if (etat.vue === 'jour') {
+    // Le repère « Vous êtes ici » avance dans le cours en cours.
+    const actuel = $('#jour-edt .seance.actuel');
+    if (actuel) {
+      const [d, f] = [Number(actuel.dataset.debut), Number(actuel.dataset.fin)];
+      actuel.style.setProperty('--avance', Math.min(1, Math.max(0, (n - d) / (f - d))).toFixed(4));
+      const encore = actuel.querySelector('[data-champ="encore"]');
+      if (encore) encore.textContent = `En cours · encore ${edt.dureeTexte(f - n, profil.motsLongs)}`;
+    }
+  }
   if (etat.vue !== 'maintenant') return;
 
   const restant = $('[data-champ="restant"]');
@@ -784,9 +817,22 @@ function jouerCarillon() {
 }
 
 // --- Saisie d'un devoir ---
+// On choisit d'abord QUAND le rendre : un jour, puis un cours de ce jour.
+// La matière se déduit du cours ; on ne la choisit que pour un créneau sans
+// matière fixe (DS) ou pour un devoir sans cours précis.
+
+const saisie = { jour: null, seance: null };
+const cleSeance = (o) => `o|${o.serie}|${o.dateOrigine}`;
+
+function seanceChoisie() {
+  if (!saisie.seance?.startsWith('o|')) return null;
+  const [, serie, dateOrigine] = saisie.seance.split('|');
+  return edt.trouverOccurrence(serie, dateOrigine);
+}
 
 // Sans argument : nouveau devoir. Avec un devoir : modification.
-function ouvrirAjout(devoir = null) {
+// Avec une séance (bouton « + » d'un cours) : devoir à rendre à ce cours.
+function ouvrirAjout(devoir = null, occurrence = null) {
   if (!etat.devoirs) return;
   etat.edition = devoir?.id ?? null;
   const n = maintenant();
@@ -795,30 +841,52 @@ function ouvrirAjout(devoir = null) {
     matiere.innerHTML = Object.values(edt.MATIERES)
       .map((m) => `<option value="${m.cle}">${m.picto} ${echapper(m.nom)}</option>`).join('');
   }
+  // Matière par défaut : celle du cours en cours ou qui vient de finir,
+  // puisqu'on note le travail à la fin du cours.
+  const s = edt.situation(n, edt.estEcole);
+  const recent = s.actuel ?? s.precedent ?? (s.etat === 'fini' ? s.cours.at(-1) : null);
+  if (recent?.nature === 'ecole') matiere.value = recent.cle;
+
   if (devoir) {
     matiere.value = devoir.matiere.cle;
+    saisie.jour = devoir.rendu;
+    saisie.seance = devoir.seance ? cleSeance(devoir.seance) : 'date';
+  } else if (occurrence) {
+    saisie.jour = edt.debutJour(occurrence.debut);
+    saisie.seance = cleSeance(occurrence);
+  } else if (etat.vue === 'jour' && etat.jour && edt.ecartJours(n, etat.jour) > 0
+    && edt.coursDuJour(etat.jour, edt.estEcole).length) {
+    // Vue Jour sur un jour à venir : on propose ce jour ; reste à choisir le cours.
+    saisie.jour = etat.jour;
+    saisie.seance = null;
   } else {
-    // Matière par défaut : celle du cours en cours ou qui vient de finir,
-    // puisqu'on note le travail à la fin du cours.
-    const s = edt.situation(n, edt.estEcole);
-    const recent = s.actuel ?? s.precedent ?? (s.etat === 'fini' ? s.cours.at(-1) : null);
-    if (recent?.nature === 'ecole') matiere.value = recent.cle;
+    // Sinon : le prochain cours de la matière qui vient de finir.
+    const [prochain] = recent?.nature === 'ecole' ? edt.prochainesOccurrences(n, (o) => o.cle === recent.cle, 1) : [];
+    saisie.jour = prochain ? edt.debutJour(prochain.debut)
+      : edt.prochainJourDeCours(n)?.jour ?? edt.ajouterJours(edt.debutJour(n), 1);
+    saisie.seance = prochain ? cleSeance(prochain) : null;
   }
+
   const editeur = $('#ajout-texte');
   editeur.innerHTML = devoir ? nettoyerHtml(devoir.contenu ?? htmlDepuisTexte(devoir.texte)) : '';
   $('#ajout-erreur').hidden = true;
+  $('#ajout-erreur-rendu').hidden = true;
   $('#ajout-afaire').value = devoir?.aFaireLe ? edt.isoLocal(devoir.aFaireLe) : '';
-  $('#ajout-date').value = edt.isoLocal(devoir?.pour ?? (etat.vue === 'jour' && etat.jour ? etat.jour : edt.ajouterJours(n, 1)));
   $('#ajout-champ-afaire').hidden = !etat.reglages.aFaireLe && !devoir?.aFaireLe;
   $('#ajout-titre').textContent = devoir ? 'Modifier le devoir' : 'Nouveau devoir';
   $('#ajout-valider').textContent = devoir ? 'Enregistrer' : 'Ajouter';
-  remplirRendu();
+  remplirJours();
+  remplirSeances();
   const dialogue = $('#ajout');
   dialogue.returnValue = '';
   dialogue.showModal();
+  // Cours déjà choisi : on passe directement au travail à faire.
+  if (!saisie.seance) {
+    $('#ajout-jours input:checked')?.focus();
+    return;
+  }
   editeur.focus();
-  // Curseur à la fin du texte existant.
-  const plage = document.createRange();
+  const plage = document.createRange(); // curseur à la fin du texte existant
   plage.selectNodeContents(editeur);
   plage.collapse(false);
   getSelection().removeAllRanges();
@@ -827,58 +895,95 @@ function ouvrirAjout(devoir = null) {
 
 const devoirEnEdition = () => (etat.edition ? etat.devoirs?.find((d) => d.id === etat.edition) : null);
 
-// Choix de la séance : les prochains cours de la matière (le premier est
-// proposé), les prochains créneaux à matière variable (DS), ou une date.
-function remplirRendu() {
+// Les dix prochains jours de classe, en puces groupées par semaine.
+function remplirJours() {
   const n = maintenant();
-  const cle = $('#ajout-matiere').value;
-  const m = edt.MATIERES[cle];
-  const cours = edt.prochainesOccurrences(n, (o) => o.cle === cle, 4);
-  const creneaux = edt.prochainesOccurrences(n, (o) => o.nature === 'creneau', 2);
-  const option = (o, prefixe = '') => `<option value="o|${o.serie}|${o.dateOrigine}">${echapper(prefixe)}${echapper(edt.majuscule(edt.quandTexte(o.debut, n)))} · ${edt.heureTexte(o.debut)}</option>`;
-  let html = '';
-  if (cours.length) html += `<optgroup label="Cours de ${echapper(m.nom)}">${cours.map((o) => option(o)).join('')}</optgroup>`;
-  if (creneaux.length) html += `<optgroup label="Créneaux sans matière fixe">${creneaux.map((o) => option(o, `${o.titre} · `)).join('')}</optgroup>`;
-  html += '<option value="date">Autre date…</option>';
-  const choix = $('#ajout-rendu');
-  // Modification sans changer de matière : on garde la séance actuelle,
-  // même si elle n'est plus dans les prochaines.
-  const devoir = devoirEnEdition();
-  const garder = devoir && devoir.matiere.cle === cle;
-  const actuelle = garder && devoir.seance ? `o|${devoir.serie}|${devoir.dateOrigine}` : null;
-  if (actuelle && !html.includes(`value="${actuelle}"`)) {
-    html = `<option value="${actuelle}">Actuel : ${echapper(edt.majuscule(edt.quandTexte(devoir.seance.debut, n)))} · ${edt.heureTexte(devoir.seance.debut)}</option>${html}`;
+  const jours = [];
+  let j = edt.debutJour(n);
+  for (let i = 0; i < 31 && jours.length < 10; i++, j = edt.ajouterJours(j, 1)) {
+    if (edt.coursDuJour(j, edt.estEcole).some((o) => i > 0 || o.debut > n)) jours.push(j);
   }
-  choix.innerHTML = html;
-  choix.selectedIndex = 0;
-  if (actuelle) choix.value = actuelle;
-  else if (garder) choix.value = 'date';
-  majDateLibre();
+  if (saisie.jour && !jours.some((x) => edt.memeJour(x, saisie.jour))) {
+    jours.push(saisie.jour);
+    jours.sort((a, b) => a - b);
+  }
+  let semaine = null;
+  const html = [];
+  for (const x of jours) {
+    const s = edt.numeroSemaine(x).semaine;
+    if (s !== semaine) {
+      html.push(badgeSemaine(x, n, 'petit'));
+      semaine = s;
+    }
+    const ecart = edt.ecartJours(n, x);
+    const nom = ecart === 0 ? 'auj.' : ecart === 1 ? 'demain' : x.toLocaleDateString('fr-FR', { weekday: 'short' }).replace('.', '');
+    const choisi = saisie.jour && edt.memeJour(x, saisie.jour);
+    html.push(`<label class="puce-choix" title="${echapper(edt.dateLongue(x))}">
+      <input type="radio" name="rendu-jour" value="${edt.isoLocal(x)}" ${choisi ? 'checked' : ''}>
+      <span class="jour-nom">${echapper(nom)}</span><span class="jour-num">${x.getDate()}</span></label>`);
+  }
+  $('#ajout-jours').innerHTML = html.join('');
+  $('#ajout-date').value = saisie.jour ? edt.isoLocal(saisie.jour) : '';
 }
 
-function majDateLibre() {
-  const libre = $('#ajout-rendu').value === 'date';
-  $('#ajout-champ-date').hidden = !libre;
-  $('#ajout-date').required = libre;
+// Les cours du jour choisi (et les créneaux comme le DS), plus « Sans cours précis ».
+function remplirSeances() {
+  const zone = $('#ajout-seances');
+  if (!saisie.jour) {
+    zone.innerHTML = '';
+    return;
+  }
+  const seances = edt.coursDuJour(saisie.jour, edt.estEcole);
+  // En modification, la séance actuelle reste proposée, même annulée.
+  const actuelle = seanceChoisie();
+  if (actuelle && edt.memeJour(actuelle.debut, saisie.jour) && !seances.some((o) => cleSeance(o) === saisie.seance)) {
+    seances.push(actuelle);
+    seances.sort((a, b) => a.debut - b.debut);
+  }
+  const options = seances.map((o) => {
+    const a = o.nature === 'creneau' ? { nom: `${o.titre} (matière au choix)`, picto: o.picto, couleur: GRIS } : affichage(o);
+    const statut = o.statut === 'annule' ? ' · annulé' : o.statut === 'deplace' ? ' · déplacé' : '';
+    return `<label class="choix-seance" data-css="${couleurs(a)}">
+      <input type="radio" name="rendu-seance" value="${cleSeance(o)}" ${cleSeance(o) === saisie.seance ? 'checked' : ''}>
+      ${pastille(a)}<span><strong>${echapper(a.nom)}</strong><span class="precision">${edt.heureTexte(o.debut)}${statut}</span></span></label>`;
+  });
+  options.push(`<label class="choix-seance sans-cours">
+      <input type="radio" name="rendu-seance" value="date" ${saisie.seance === 'date' ? 'checked' : ''}>
+      <span><strong>Sans cours précis</strong><span class="precision">seulement la date</span></span></label>`);
+  zone.innerHTML = `${seances.length ? '' : '<p class="vide">Pas de cours ce jour-là.</p>'}${options.join('')}`;
+  appliquerStyles(zone);
+  majMatiere();
+}
+
+// La matière vient du cours choisi ; le champ ne sert que sinon.
+function majMatiere() {
+  const o = seanceChoisie();
+  $('#ajout-champ-matiere').hidden = o?.nature === 'ecole';
+  if (o?.nature === 'ecole') $('#ajout-matiere').value = o.cle;
+}
+
+// Nouveau jour : on présélectionne le cours de la matière en cours, s'il y en a un.
+function choisirJourSaisie(jour) {
+  saisie.jour = edt.debutJour(jour);
+  const cle = $('#ajout-matiere').value;
+  const cours = edt.coursDuJour(saisie.jour, (o) => o.cle === cle);
+  saisie.seance = cours.length === 1 ? cleSeance(cours[0]) : null;
+  $('#ajout-erreur-rendu').hidden = true;
+  remplirJours();
+  remplirSeances();
 }
 
 async function enregistrerAjout() {
-  const choix = $('#ajout-rendu').value;
-  let serie = null;
-  let dateOrigine = null;
-  let pour;
-  if (choix.startsWith('o|')) {
-    [, serie, dateOrigine] = choix.split('|');
-    pour = edt.isoLocal(edt.trouverOccurrence(serie, dateOrigine).debut);
-  } else {
-    pour = $('#ajout-date').value;
-  }
+  const o = seanceChoisie();
+  const serie = o?.serie ?? null;
+  const dateOrigine = o?.dateOrigine ?? null;
+  const pour = edt.isoLocal(o ? o.debut : saisie.jour);
   // Le contenu mis en forme est nettoyé ; `texte` en garde la version brute.
   const contenu = nettoyerHtml($('#ajout-texte').innerHTML);
   const edition = etat.edition;
   const devoir = {
     id: edition ?? crypto.randomUUID(),
-    matiere: $('#ajout-matiere').value,
+    matiere: o?.nature === 'ecole' ? o.cle : $('#ajout-matiere').value,
     texte: texteBrut(contenu),
     contenu,
     pour,
@@ -1154,6 +1259,12 @@ document.addEventListener('click', (e) => {
     reporter(reporterBouton.dataset.reporter);
     return;
   }
+  const plus = e.target.closest('[data-ajouter-seance]');
+  if (plus) {
+    const [, serie, dateOrigine] = plus.dataset.ajouterSeance.split('|');
+    ouvrirAjout(null, edt.trouverOccurrence(serie, dateOrigine));
+    return;
+  }
   const ouvrir = e.target.closest('[data-ouvrir]');
   if (ouvrir) {
     afficherDetail(ouvrir.dataset.ouvrir);
@@ -1197,10 +1308,14 @@ document.addEventListener('change', (e) => {
   } else if (cible.id === 'reglage-afaire') {
     etat.reglages.aFaireLe = cible.checked;
     ecrirePreference('sablio-a-faire-le', cible.checked ? '1' : '0');
-  } else if (cible.id === 'ajout-matiere') {
-    remplirRendu();
-  } else if (cible.id === 'ajout-rendu') {
-    majDateLibre();
+  } else if (cible.name === 'rendu-jour') {
+    choisirJourSaisie(edt.dateDepuisIso(cible.value));
+  } else if (cible.id === 'ajout-date' && cible.value) {
+    choisirJourSaisie(edt.dateDepuisIso(cible.value));
+  } else if (cible.name === 'rendu-seance') {
+    saisie.seance = cible.value;
+    $('#ajout-erreur-rendu').hidden = true;
+    majMatiere();
   }
 });
 
@@ -1210,6 +1325,12 @@ let ajoutEnCours = Promise.resolve();
 $('#ajout form').addEventListener('submit', (e) => {
   if (e.submitter?.value !== 'ok') {
     etat.edition = null;
+    return;
+  }
+  if (!saisie.seance) {
+    e.preventDefault();
+    $('#ajout-erreur-rendu').hidden = false;
+    $('#ajout-seances input')?.focus();
     return;
   }
   // L'éditeur n'est pas un champ de formulaire : on vérifie nous-mêmes.
@@ -1239,15 +1360,27 @@ async function essaisInterface() {
   $('#aller-saisie').value = '';
   $('#aller-erreur').hidden = true;
 
+  // Saisie sur un jour à venir : il faut choisir le cours avant d'enregistrer.
+  ouvrirAjout();
+  $('#ajout-texte').innerHTML = 'Sans cours choisi';
+  $('#ajout form').requestSubmit($('#ajout button[value="ok"]'));
+  journaliser(`Essai saisie sans cours : ${$('#ajout').open && !$('#ajout-erreur-rendu').hidden ? 'refusée, la fenêtre reste ouverte' : 'acceptée à tort'}`);
+  $('#ajout').close();
+  allerAuJour(maintenant());
+
   // Nettoyage : un contenu dangereux, analysé sans être exécuté.
   const piege = '<p onclick="x()">Texte <b>gras</b><script>alert(1)</script><img src="x" onerror="alert(1)"> <a href="javascript:alert(1)">lien</a> <a href="https://exemple.fr">site</a></p>';
   journaliser(`Essai nettoyage : ${nettoyerHtml(piege)}`);
   ouvrirAjout();
   $('#ajout-texte').innerHTML = '<p>Essai <strong>automatique</strong></p><ul><li>premier point</li><li>second point</li></ul>';
-  const choix = $('#ajout-rendu').selectedOptions[0].textContent;
+  const choix = $('input[name="rendu-seance"]:checked')?.closest('label').textContent.trim().replace(/\s+/g, ' ');
   $('#ajout form').requestSubmit($('#ajout button[value="ok"]'));
   await ajoutEnCours;
   const ajoute = etat.devoirs.find((d) => d.texte.startsWith('Essai automatique'));
+  if (!ajoute) {
+    journaliser(`Essai saisie : ÉCHEC, rien n'a été ajouté (choix « ${choix} »)`);
+    return;
+  }
   journaliser(`Essai texte brut : ${JSON.stringify(ajoute?.texte)}`);
   journaliser(`Essai saisie : ${etat.devoirs.length - avant} devoir ajouté (${ajoute?.matiere.nom}, « ${choix} »), à rendre ${ajoute ? edt.dateLongue(ajoute.rendu) : '?'}, rattaché ${ajoute?.serie ? 'au cours' : 'à une date'}`);
   const annule = etat.devoirs.find((d) => d.seance?.statut === 'annule');
