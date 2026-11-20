@@ -141,8 +141,13 @@
     <form method="dialog" class="formulaire">
       <h2 id="verrou-titre">Mode adulte</h2>
       <p class="vide" id="verrou-raison"></p>
-      <label>Code <input id="verrou-code" type="password" inputmode="numeric" autocomplete="off" maxlength="4" pattern="[0-9]{4}" required></label>
+      <label>Code <input id="verrou-code" type="password" inputmode="numeric" autocomplete="off" maxlength="6" pattern="[0-9]{4}|[0-9]{6}" required></label>
       <p class="erreur" id="verrou-erreur" hidden>Code incorrect.</p>
+      <button type="button" class="lien" data-action="code-oublie">Code oublié ?</button>
+      <div class="vide" id="verrou-secours" hidden>
+        <p>Code de demande : <strong class="code-secours" id="verrou-demande"></strong></p>
+        <p>Sur <a href="secours.html" target="_blank" rel="noopener">la page de secours</a> (sablio.manastria.fr/secours), saisissez ce code de demande. Tapez ensuite ici le code de secours à six chiffres qu’elle donne : il est valable aujourd’hui.</p>
+      </div>
       <div class="ligne boutons">
         <button value="ok" class="mise-en-avant">Déverrouiller</button>
         <button value="annuler" formnovalidate>Annuler</button>

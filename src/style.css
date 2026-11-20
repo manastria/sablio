@@ -697,6 +697,11 @@ button.lien:hover { text-decoration: underline; }
 .groupe-demain, .groupe-aujourdhui { border-left: 6px solid var(--accent); }
 details.carte.faits summary { margin: 0; }
 
+/* --- Code oublié --- */
+
+.code-secours { font-size: 1.3em; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.05em; }
+.page-secours { max-width: 36rem; margin: 2rem auto; padding: 0 1rem; display: grid; gap: 1rem; }
+
 /* --- Écran « Emploi du temps » --- */
 
 .vue-edt { flex: 1; display: grid; gap: 1rem; padding: 1rem; align-content: start; }

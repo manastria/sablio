@@ -4,6 +4,7 @@
 import * as edt from './emploi-du-temps.js';
 import { htmlDepuisTexte, nettoyerHtml, texteBrut } from './contenu.js';
 import { SOURCE_VACANCES, VACANCES } from './vacances.js';
+import { codeSecours, lisible, nouvelleDemande } from './secours.js';
 import * as sauvegarde from './sauvegarde.js';
 import { ouvrirStockage } from './stockage.js';
 
@@ -693,12 +694,22 @@ function prolongerAdulte() {
 }
 
 let resoudreVerrou = null;
+let demandeSecours = null; // code de demande affiché après « Code oublié ? »
+
+// Le code de secours du jour (la veille et le lendemain aussi, pour minuit).
+async function estCodeSecours(code) {
+  if (!demandeSecours || !/^\d{6}$/.test(code)) return false;
+  const jours = [-1, 0, 1].map((k) => edt.isoLocal(edt.ajouterJours(new Date(), k)));
+  return (await Promise.all(jours.map((j) => codeSecours(demandeSecours, j)))).includes(code);
+}
 function demanderCode(raison) {
   return new Promise((resolve) => {
     resoudreVerrou = resolve;
     $('#verrou-raison').textContent = `${raison} : le code adulte est demandé.`;
     $('#verrou-code').value = '';
     $('#verrou-erreur').hidden = true;
+    $('#verrou-secours').hidden = true;
+    demandeSecours = null;
     $('#verrou').showModal();
   });
 }
@@ -710,11 +721,14 @@ $('#verrou form').addEventListener('submit', async (e) => {
   if (e.submitter?.value !== 'ok') return;
   e.preventDefault(); // la vérification est asynchrone : on ferme nous-mêmes
   const code = $('#verrou-code').value;
-  if (etat.verrou && await empreinte(code, etat.verrou.sel) === etat.verrou.empreinte) {
+  const secours = await estCodeSecours(code);
+  if (etat.verrou && (secours || await empreinte(code, etat.verrou.sel) === etat.verrou.empreinte)) {
     etat.adulteJusqua = Date.now() + DUREE_ADULTE;
-    journaliser('Mode adulte ouvert');
+    journaliser(secours ? 'Mode adulte ouvert avec le code de secours' : 'Mode adulte ouvert');
     $('#verrou').close();
     rendre(true);
+    // Code oublié : on propose tout de suite d'en choisir un nouveau.
+    if (secours) ouvrirReglageVerrou();
   } else {
     $('#verrou-erreur').hidden = false;
     $('#verrou-code').select();
@@ -2318,6 +2332,12 @@ const actions = {
   verrouiller,
   deverrouiller: () => bloque('Mode adulte', () => {}),
   'verrou-definir': ouvrirReglageVerrou,
+  'code-oublie': () => {
+    demandeSecours = nouvelleDemande();
+    $('#verrou-demande').textContent = lisible(demandeSecours);
+    $('#verrou-secours').hidden = false;
+    $('#verrou-code').focus();
+  },
   'verrou-retirer': retirerVerrou,
   'serie-supprimer': supprimerSerieEditee,
   'categorie-nouvelle': (bouton) => ouvrirCategorie(null, bouton.dataset.nature),
@@ -2705,6 +2725,18 @@ async function essaisInterface() {
   await new Promise((r) => setTimeout(r, 100));
   const cycleOuvert = $('#edt-cycle').open;
   $('#edt-cycle').close();
+  // Code oublié : code de demande, code de secours calculé comme la page web.
+  verrouiller();
+  ouvrirCycle();
+  actions['code-oublie']();
+  const demande = demandeSecours;
+  $('#verrou-code').value = await codeSecours(demande, edt.isoLocal(new Date()));
+  $('#verrou form').requestSubmit($('#verrou button[value="ok"]'));
+  await new Promise((r) => setTimeout(r, 150));
+  const secoursOk = adulte() && $('#verrou-reglage').open;
+  $('#verrou-reglage').close();
+  $('#edt-cycle').close();
+  journaliser(`Essai code oublié : demande ${lisible(demande)} → ${secoursOk ? 'mode adulte ouvert, nouveau code proposé' : 'ÉCHEC'}`);
   const evenementLibre = (() => { verrouiller(); ouvrirEvenement(null); const ok = $('#evenement').open; $('#evenement').close(); return ok; })();
   // Un événement ajouté par l'élève (sous verrou) se modifie sans code ;
   // celui de l'adulte (le dentiste de la démonstration) demande le code.

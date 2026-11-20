@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'">
+  <title>Sablio – code oublié</title>
+  <link rel="icon" href="icones/favicon.png">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="secours-page.js"></script>
+</head>
+<body>
+  <main class="page-secours">
+    <h1>Code adulte oublié</h1>
+    <p>Dans Sablio, la fenêtre du code propose « Code oublié ? » et affiche un <strong>code de demande</strong> à six chiffres. Saisissez-le ici : vous obtiendrez un <strong>code de secours</strong>, valable aujourd’hui, qui ouvre le mode adulte. Choisissez ensuite un nouveau code.</p>
+    <form id="formulaire" class="formulaire" autocomplete="off">
+      <label>Code de demande <input id="demande" inputmode="numeric" placeholder="482 913" required></label>
+      <button class="mise-en-avant">Obtenir le code de secours</button>
+    </form>
+    <p class="code-secours" id="reponse" aria-live="polite"></p>
+    <p class="vide">Le calcul est public : ce code évite de rester bloqué après un oubli, il ne protège rien. Le verrou de Sablio sert à éviter les modifications par erreur ou par jeu.</p>
+  </main>
+</body>
+</html>

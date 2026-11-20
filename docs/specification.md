@@ -102,7 +102,7 @@ Un événement créé sous verrou, hors mode adulte, appartient à l'élève (co
 
 Le code ouvre le **mode adulte** pour 10 minutes, prolongées à chaque action ; un bouton « 🔓 Mode adulte » dans l'en-tête le referme tout de suite. Le menu propose « Mode adulte (code) » et « Verrouiller maintenant ».
 
-À trancher : que faire d'un code oublié (aujourd'hui, seul l'effacement des données du site le retire).
+**Code oublié** : « Code oublié ? » affiche un **code de demande** à 6 chiffres, tiré au hasard. La page de secours (`secours.html`, à publier sur sablio.manastria.fr/secours) en calcule un **code de secours** valable ce jour-là (SHA-256 de la demande et de la date). Il ouvre le mode adulte, et l'application propose aussitôt de choisir un nouveau code. Le calcul est public : un élève débrouillard peut s'en servir aussi, ce qui reste cohérent avec un verrou qui est un garde-fou, pas une protection.
 
 ### Vacances et jours sans cours
 
