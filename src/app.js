@@ -2128,6 +2128,38 @@ $('#ajout form').addEventListener('submit', (e) => {
   ajoutEnCours = enregistrerAjout();
 });
 $('#ajout').addEventListener('cancel', () => { etat.edition = null; });
+// Quelle que soit la façon de fermer (clic à côté compris). L'enregistrement
+// a déjà lu `etat.edition` : il le fait avant toute attente.
+$('#ajout').addEventListener('close', () => { etat.edition = null; });
+
+// --- Fenêtres : fermer d'un clic à côté ---
+// Pour une fenêtre de lecture (détail d'un devoir), le clic à côté ferme.
+// Pour une fenêtre de saisie modifiée, on demande d'abord : un clic de
+// travers ne doit pas faire perdre ce qu'on a tapé.
+for (const dialogue of document.querySelectorAll('dialog')) {
+  let appuiDehors = false;
+  const dehors = (e) => {
+    const r = dialogue.getBoundingClientRect();
+    return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+  };
+  // L'appui ET le relâchement doivent être à côté : sélectionner du texte
+  // et relâcher hors de la fenêtre ne la ferme pas.
+  dialogue.addEventListener('pointerdown', (e) => { appuiDehors = e.target === dialogue && dehors(e); });
+  dialogue.addEventListener('click', (e) => {
+    const fermer = appuiDehors && e.target === dialogue && dehors(e);
+    appuiDehors = false;
+    if (!fermer) return;
+    if (dialogue.dataset.modifie && !confirm('Abandonner les modifications ?')) return;
+    dialogue.close();
+  });
+  // Une saisie de l'utilisateur marque la fenêtre comme modifiée.
+  for (const type of ['input', 'change']) {
+    dialogue.addEventListener(type, (e) => {
+      if (e.isTrusted && dialogue.querySelector('form')) dialogue.dataset.modifie = '1';
+    });
+  }
+  dialogue.addEventListener('close', () => { delete dialogue.dataset.modifie; });
+}
 
 // Essai des actions sans clic, pour les captures automatiques : saisie,
 // report d'un devoir dont le cours est annulé, bouton du mode discret.
@@ -2255,6 +2287,26 @@ async function essaisInterface() {
   await supprimerEvenementEdite();
   window.confirm = confirmerEvt;
   journaliser(`Essai agenda : « ${resume} » ; psy les mercredis ${rdv.join('/')} (attendu 1/1/1/0) ; après suppression : ${edt.evenements().some((x) => x.cle === 'psy') ? 'encore là' : 'retiré'}`);
+
+  // Clic à côté : le détail se ferme ; une saisie modifiée demande d'abord.
+  const clicDehors = (dialogue) => {
+    for (const type of ['pointerdown', 'click']) {
+      dialogue.dispatchEvent(new MouseEvent(type, { bubbles: true, clientX: 2, clientY: 2 }));
+    }
+  };
+  afficherDetail(etat.devoirs[0].id);
+  clicDehors($('#detail'));
+  const detailFerme = !$('#detail').open;
+  ouvrirAjout();
+  $('#ajout').dataset.modifie = '1';
+  const confirmerClic = window.confirm;
+  window.confirm = () => false;
+  clicDehors($('#ajout'));
+  const saisieGardee = $('#ajout').open;
+  window.confirm = () => true;
+  clicDehors($('#ajout'));
+  window.confirm = confirmerClic;
+  journaliser(`Essai clic à côté : détail ${detailFerme ? 'fermé' : 'resté ouvert'} ; saisie modifiée ${saisieGardee ? 'gardée si on refuse' : 'fermée à tort'}, ${$('#ajout').open ? 'restée ouverte à tort' : 'fermée si on accepte'}`);
 
   // Modification : on ouvre le devoir, on le modifie, on enregistre.
   afficherDetail(ajoute.id);

@@ -19,6 +19,8 @@ L'environnement de l'enfant varie beaucoup : âge, activités, présence d'un ad
 | **Emploi du temps** | Saisie de la semaine type (cours, créneaux, activités), des matières et des activités. Surtout pour l'adulte : bouton dans l'en-tête, pas dans les onglets de l'élève. |
 | **Réglages** | Profil, sauvegarde. |
 
+**Fenêtres** (détail d'un devoir, saisie, séance…) : elles se ferment par un clic à côté, par Échap ou par leur bouton. Une fenêtre de saisie déjà modifiée demande d'abord « Abandonner les modifications ? ».
+
 **En-tête allégé** : l'heure, la date avec le badge de semaine, les onglets (Maintenant, Jour, Semaine, À faire), le bouton « Mode discret » (il doit rester à un clic) et deux icônes : plein écran et menu. Le reste est dans le **menu** : emploi du temps et agenda, profil, mode compact, réglages et outils, et les actions ponctuelles (installer l'application, activer les rappels, reprendre la sauvegarde) ; un point rouge sur l'icône du menu signale qu'une de ces actions attend.
 
 ### Vue Jour
