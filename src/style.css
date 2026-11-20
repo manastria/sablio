@@ -108,9 +108,12 @@ select, input[type="datetime-local"] {
 .horloge .simulee { align-self: center; white-space: nowrap; }
 /* Carré de semaine : numéro en haut, lettre du cycle en bas, aussi haut que l'heure et la date. */
 .carre-semaine { display: flex; }
+/* Jamais plus petit que son contenu : étiré à la hauteur de l'heure et de la
+   date, avec overflow: hidden, il pouvait rogner la lettre du bas. */
 .badge-semaine.carre {
   flex-direction: column;
-  aspect-ratio: 1;
+  min-height: min-content;
+  min-width: 3.4em;
   font-size: 1rem;
   border-radius: 10px;
 }
