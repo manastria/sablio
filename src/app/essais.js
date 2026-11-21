@@ -275,7 +275,7 @@ export async function essaisInterface() {
   const ailleurs = structuredClone(exporte);
   for (const c of ailleurs.categories) c.cle = `ergo-${c.cle}`;
   for (const x of ailleurs.series) { x.id = `ergo-${x.id}`; if (x.cle) x.cle = `ergo-${x.cle}`; }
-  ailleurs.categories.push({ cle: 'ergo-latin', nature: 'ecole', nom: 'Latin', court: 'Lat', picto: '📜', couleur: '#6d4c41', ordre: 99 });
+  ailleurs.categories.push({ cle: 'ergo-latin', nature: 'ecole', nom: 'Latin', court: 'Lat', picto: '🏛️', couleur: '#6d4c41', ordre: 99 });
   ailleurs.series.push({ id: 'ergo-latin-1', cle: 'ergo-latin', jour: 6, debut: '09:00', fin: '10:00', salle: 'L1' });
   proposerImport(ailleurs, 'essai.json');
   const resumeImport = $('#import-edt-resume').textContent;

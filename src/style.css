@@ -38,11 +38,22 @@ html[data-profil="superieur"] { --echelle: 0.9; }
 
 html, body { height: 100%; }
 
+/* Drapeaux des langues (anglais, espagnol, allemand, italien) : Windows
+   n'affiche pas les émojis drapeaux (il écrit « GB »). Cette police ne couvre
+   que leurs lettres régionales ; tout le reste vient des polices suivantes.
+   Dessins Twemoji (CC BY 4.0), via country-flag-emoji-polyfill. */
+@font-face {
+  font-family: "Sablio Drapeaux";
+  src: url("polices/drapeaux.woff2") format("woff2");
+  unicode-range: U+1F1E7, U+1F1E9-1F1EA, U+1F1EC, U+1F1EE, U+1F1F8-1F1F9;
+  font-display: swap;
+}
+
 body {
   margin: 0;
   background: var(--fond);
   color: var(--texte);
-  font-family: system-ui, "Segoe UI", Ubuntu, Cantarell, "Noto Sans", sans-serif;
+  font-family: "Sablio Drapeaux", system-ui, "Segoe UI", Ubuntu, Cantarell, "Noto Sans", sans-serif;
   font-size: calc(16px * var(--echelle));
   line-height: 1.4;
   display: flex;

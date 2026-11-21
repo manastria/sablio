@@ -27,7 +27,7 @@ export const DEMO_CATEGORIES = [
   cat('fr', 'ecole', 'Français', 'Fr', '📖', '#c8553d'),
   cat('ma', 'ecole', 'Mathématiques', 'Ma', '📐', '#2f6fbf', { materiel: 'calculatrice, équerre' }),
   cat('hg', 'ecole', 'Histoire-géographie', 'HG', '🌍', '#8a6d3b'),
-  cat('an', 'ecole', 'Anglais', 'An', '💬', '#7b4fa0'),
+  cat('an', 'ecole', 'Anglais', 'An', '🇬🇧', '#7b4fa0'),
   cat('svt', 'ecole', 'SVT', 'SVT', '🌱', '#3c8d40'),
   cat('pc', 'ecole', 'Physique-chimie', 'PC', '🧪', '#0f7f81', { materiel: 'blouse' }),
   cat('eps', 'ecole', 'EPS', 'EPS', '🏃', '#e0a100', { materiel: 'tenue de sport' }),

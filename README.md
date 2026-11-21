@@ -165,6 +165,7 @@ L'exécutable n'est **pas signé** : le Contrôle intelligent des applications d
 | `src/stockage.js`, `src/stockage-worker.js` | Base SQLite (WebAssembly, OPFS) dans un worker, avec repli en mémoire |
 | `src/sauvegarde.js` | Sauvegarde et restauration dans un fichier choisi |
 | `scripts/copier-sqlite.mjs` | Copie SQLite WebAssembly dans `src/vendor/` (après `npm install`) |
+| `src/polices/drapeaux.woff2` | Drapeaux des langues (anglais, espagnol, allemand, italien), que Windows n'affiche pas en émoji : sous-ensemble de *Twemoji Country Flags* ([country-flag-emoji-polyfill](https://github.com/talkjs/country-flag-emoji-polyfill)), dessins Twemoji sous licence CC BY 4.0. Pour un autre drapeau, refaire le sous-ensemble avec `pyftsubset` (fonttools) et élargir `unicode-range` dans `style.css` |
 | `src/manifest.json`, `src/icones/` | Rendent la page installable (nom, icônes, fenêtre dédiée) |
 | `src/sw.js` | *Service worker* : hors-ligne, retour à l'application au clic sur une notification |
 | `src/guide/` | Guide en ligne (`/guide/`) : présentation, captures, mode d'emploi ; images produites par `scripts/images-guide.py` à partir des captures |
