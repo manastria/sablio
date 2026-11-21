@@ -30,4 +30,12 @@ if [ "${1:-}" = "--essai" ]; then
 else
   rclone sync "$SORTIE" "$DISTANT" "${OPTIONS[@]}"
   echo "Publié sur https://sablio.manastria.fr/"
+  # Le tag « web » suit ce qui est en ligne (voir npm run etat). Seulement si
+  # ce qui a été envoyé est commité : sinon il mentirait.
+  if [ -z "$(git status --porcelain -- src web)" ]; then
+    git tag -f -a web -m "Site publié le $(date '+%d/%m/%Y %H:%M')" HEAD >/dev/null
+    echo "Tag « web » déplacé sur $(git log -1 --format='%h %s'). Pour GitHub : git push -f origin web"
+  else
+    echo "Attention : src/ ou web/ contient des modifications non commitées ; tag « web » laissé en place." >&2
+  fi
 fi

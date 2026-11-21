@@ -8,7 +8,7 @@ Tout est en français : interface, code (noms, commentaires), documents, message
 
 - `npm install` une fois : copie SQLite dans `src/vendor/sqlite/` (non versionné).
 - `python3 -m http.server 8765 --bind 127.0.0.1 -d src`, puis `http://localhost:8765/index.html` dans Edge sous Windows (depuis WSL). `?heure=2026-11-23T10:32&vue=jour&jour=2026-11-24` fige l'horloge.
-- **Avant chaque commit : `npm run verifier`** = `npm test` (node:test, logique sans DOM, sans dépendance) + `npm run captures` (Electron sous WSLg : 43 captures dans `captures/` et essais d'interface ; la commande échoue si un essai échoue). Les captures écrivent leurs données dans `captures/donnees`, recréé à chaque fois.
+- **Avant chaque commit : `npm run verifier`** = `npm test` (node:test, logique sans DOM, sans dépendance) + `npm run captures` (Electron sous WSLg : 44 captures dans `captures/` et essais d'interface ; la commande échoue si un essai échoue). Les captures écrivent leurs données dans `captures/donnees`, recréé à chaque fois.
 - Une modification de l'interface se vérifie en regardant les captures, pas seulement les essais.
 
 ## Repères dans le code
@@ -27,6 +27,8 @@ Tout est en français : interface, code (noms, commentaires), documents, message
 ## Publier
 
 - `scripts/publier.sh --essai`, puis `npm run publier`, puis `npm run verifier-en-ligne`. Hébergement Infomaniak via rclone, partage `infomaniak-web`, dossier `sites/sablio.manastria.fr` (chemin relatif). Ne jamais synchroniser plus large : d'autres sites sont dans `sites/`.
+- Version Windows : `scripts/publier-windows.sh --essai`, puis `npm run publier-windows` (nouvelle version dans `package.json` et `src/version.js`, commit poussé). Seulement à la demande du mainteneur.
+- Tags mobiles `web` et `release` déplacés par ces deux scripts ; `npm run etat` montre le décalage avec HEAD. Les pousser : `git push -f origin web release`.
 - `web/.htaccess` (HTTPS, types MIME `.mjs` et `.wasm`, pas de cache pour la page et le service worker, `/secours`) est publié avec le site.
 
 ## Git et GitHub

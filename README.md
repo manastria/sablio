@@ -20,7 +20,7 @@ Emploi du temps de démonstration, modifiable : une semaine type de collégien a
 ```sh
 npm install
 npm start            # fenêtre normale
-npm run captures     # 43 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
+npm run captures     # 44 captures d'écran + rapport.txt (avec des essais d'interface) dans captures/, puis quitte
 ```
 
 ## Tests
@@ -137,10 +137,21 @@ npm run verifier-en-ligne    # contrôle dans Chromium : console, base, service 
 ## Version Windows portable
 
 ```sh
-npm run preparer-windows   # dist/windows/Sablio-prototype.exe (358 Mo décompressé)
+npm run preparer-windows          # dist/windows/Sablio-prototype.exe (358 Mo décompressé)
+scripts/publier-windows.sh --essai  # archive dist/Sablio-X.Y.Z-windows-x64.zip, rien de publié
+npm run publier-windows           # release GitHub vX.Y.Z (pré-version) avec l'archive
 ```
 
-L'exécutable n'est **pas signé** : le Contrôle intelligent des applications de Windows 11 le bloque (voir `docs/faisabilite.md`).
+L'exécutable n'est **pas signé** : le Contrôle intelligent des applications de Windows 11 le bloque (voir `docs/faisabilite.md`). Chaque release demande une nouvelle version (`package.json` et `src/version.js`) et un commit déjà poussé. Le guide pointe vers la dernière release.
+
+## Où en est-on
+
+Deux tags **mobiles** suivent ce qui est publié : `web` (déplacé par `npm run publier`, seulement si `src/` et `web/` sont commités) et `release` (déplacé par `npm run publier-windows`, à côté du tag `vX.Y.Z` de la release).
+
+```sh
+npm run etat    # HEAD, site, release : retard de chacun et commits pas encore publiés
+git push -f origin web release   # les tags déplacés, sur GitHub
+```
 
 ## Fichiers
 
@@ -169,6 +180,7 @@ L'exécutable n'est **pas signé** : le Contrôle intelligent des applications d
 | `src/manifest.json`, `src/icones/` | Rendent la page installable (nom, icônes, fenêtre dédiée) |
 | `src/sw.js` | *Service worker* : hors-ligne, retour à l'application au clic sur une notification |
 | `src/guide/` | Guide en ligne (`/guide/`) : présentation, captures, mode d'emploi ; images produites par `scripts/images-guide.py` à partir des captures |
-| `scripts/publier.sh`, `scripts/verifier-en-ligne.js`, `web/.htaccess` | Publication sur sablio.manastria.fr et contrôle en ligne |
+| `scripts/publier.sh`, `scripts/verifier-en-ligne.js`, `web/.htaccess` | Publication sur sablio.manastria.fr (tag `web`) et contrôle en ligne |
+| `scripts/publier-windows.sh`, `scripts/etat.sh` | Release GitHub de la version Windows (tag `release`) ; où en sont HEAD, le site et la release |
 | `scripts/preparer-windows.mjs` | Assemble la version Windows portable depuis Linux |
 | `scripts/icones.py` | Dessine les icônes : un sablier (Pillow) |

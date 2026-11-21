@@ -12,7 +12,9 @@
     "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --test \"tests/*.test.mjs\"",
     "verifier": "npm test && npm run captures",
     "publier": "scripts/publier.sh",
-    "verifier-en-ligne": "electron scripts/verifier-en-ligne.js"
+    "verifier-en-ligne": "electron scripts/verifier-en-ligne.js",
+    "publier-windows": "scripts/publier-windows.sh",
+    "etat": "scripts/etat.sh"
   },
   "devDependencies": {
     "@sqlite.org/sqlite-wasm": "3.54.1-build1",
