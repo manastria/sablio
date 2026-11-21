@@ -137,7 +137,7 @@ npm run verifier-en-ligne    # contrôle dans Chromium : console, base, service 
 ## Version Windows portable
 
 ```sh
-npm run preparer-windows   # dist/windows/MyDevoirs-prototype.exe (358 Mo décompressé)
+npm run preparer-windows   # dist/windows/Sablio-prototype.exe (358 Mo décompressé)
 ```
 
 L'exécutable n'est **pas signé** : le Contrôle intelligent des applications de Windows 11 le bloque (voir `docs/faisabilite.md`).
