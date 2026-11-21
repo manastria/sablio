@@ -126,6 +126,24 @@ export async function essaisInterface() {
   window.confirm = confirmer;
   journaliser(`Essai emploi du temps : couleur ${equitation.couleur}, samedi ${edt.isoLocal(samedi)} → ${auCentre || 'rien'} ; suppression de l’activité utilisée ${refus} ; après suppression : ${edt.activites().some((x) => x.nom === 'Équitation') ? 'encore là' : 'retirée'}`);
 
+  // Horaires déjà saisis : nouveau cours le mardi. Le premier horaire libre est
+  // proposé d'office ; un clic sur un autre (même pris : semaines A/B) le remplace.
+  ouvrirSerie(null, 2);
+  const puces = () => [...document.querySelectorAll('#serie-creneaux-liste button')];
+  const heures = () => `${$('#serie-debut').value}-${$('#serie-fin').value}`;
+  const premierLibre = puces().find((b) => !b.classList.contains('occupe'));
+  const proposeMardi = heures();
+  const dOffice = premierLibre && proposeMardi === `${premierLibre.dataset.debut}-${premierLibre.dataset.fin}`
+    && premierLibre.getAttribute('aria-pressed') === 'true';
+  const autre = puces().find((b) => b.getAttribute('aria-pressed') === 'false');
+  autre?.click();
+  const choisi = heures();
+  const enfonce = puces().filter((b) => b.getAttribute('aria-pressed') === 'true');
+  const clicOk = autre && choisi === `${autre.dataset.debut}-${autre.dataset.fin}`
+    && enfonce.length === 1 && enfonce[0].dataset.debut === autre.dataset.debut && enfonce[0].dataset.fin === autre.dataset.fin;
+  $('#edt-serie').close();
+  journaliser(`Essai horaires : ${puces().length} proposés, ${puces().filter((b) => b.classList.contains('occupe')).length} pris le mardi ; d’office ${proposeMardi}${dOffice ? '' : ' (NON le premier libre)'} ; clic → ${choisi}${clicOk ? '' : ' : ÉCHEC'}`);
+
   // Agenda : RDV psy le mercredi suivant à 17 h 30, trois semaines de suite.
   const mercredi = edt.ajouterJours(edt.lundi(edt.ajouterJours(maintenant(), 7)), 2);
   ouvrirEvenement(null, edt.isoLocal(mercredi));

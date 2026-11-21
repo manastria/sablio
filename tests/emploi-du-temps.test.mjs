@@ -119,3 +119,23 @@ test('démonstration : huit devoirs, dont un sur la séance qui sera annulée', 
   const annulee = exceptions.find((e) => e.statut === 'annule');
   assert.ok(devoirs.some((x) => x.serie === annulee.serie && x.dateOrigine === annulee.dateOrigine));
 });
+
+test('horaires déjà saisis : sans les activités, triés, occupés selon le jour', () => {
+  const lundi = edt.creneauxConnus(1);
+  const textes = lundi.map((c) => `${c.debut}-${c.fin}`);
+  assert.equal(new Set(textes).size, textes.length, 'pas de doublon');
+  assert.deepEqual(textes, [...textes].sort());
+  assert.ok(textes.includes('08:00-08:55'));
+  assert.ok(!textes.includes('14:30-15:15'), 'orthophonie (activité) exclue');
+  // Un jour sans cours : rien n'est occupé.
+  assert.ok(edt.creneauxConnus(0).every((c) => !c.occupe));
+  // Le lundi à 8 h : occupé, sauf si c'est le cours qu'on modifie.
+  const huitHeures = edt.semaineType().find((x) => x.jour === 1 && x.debut === '08:00');
+  assert.ok(lundi.find((c) => c.debut === '08:00' && c.fin === '08:55').occupe);
+  const sansLui = edt.creneauxConnus(1, huitHeures.id).find((c) => c.debut === '08:00' && c.fin === '08:55');
+  assert.equal(sansLui.occupe, edt.semaineType().some((x) => x.id !== huitHeures.id && x.jour === 1 && x.debut < '08:55' && x.fin > '08:00'));
+  // Une activité (football le mercredi) prend aussi l'horaire.
+  const foot = edt.semaineType().find((x) => x.cle === 'sport' && x.jour === 3);
+  const mercredi = edt.creneauxConnus(3).filter((c) => c.debut < foot.fin && foot.debut < c.fin);
+  assert.ok(mercredi.length > 0 && mercredi.every((c) => c.occupe));
+});

@@ -138,6 +138,10 @@
         <label>De <input type="time" id="serie-debut" required></label>
         <label>à <input type="time" id="serie-fin" required></label>
       </div>
+      <div class="creneaux-connus" id="serie-creneaux" hidden>
+        <span class="precision" id="serie-creneaux-titre">Horaires déjà saisis (barrés : déjà pris ce jour-là)</span>
+        <div id="serie-creneaux-liste" role="group" aria-labelledby="serie-creneaux-titre"></div>
+      </div>
       <label><span>Salle ou lieu <span class="facultatif">(facultatif)</span></span> <input id="serie-salle" autocomplete="off"></label>
       <fieldset class="rendu" id="serie-champ-semaines">
         <legend>Semaines</legend>

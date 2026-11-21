@@ -200,13 +200,16 @@ export function ouvrirSerie(id = null, jour = 1) {
   $('#serie-titre').value = x?.titre ?? 'DS';
   $('#serie-jour').innerHTML = ORDRE_JOURS.map((j) => `<option value="${j}">${edt.majuscule(NOMS_JOURS[j])}</option>`).join('');
   $('#serie-jour').value = String(x?.jour ?? jour);
-  // Nouveau cours : il commence à la fin du dernier cours de ce jour.
+  // Nouveau cours : le premier horaire connu encore libre ce jour-là ; sinon,
+  // il commence à la fin du dernier cours de ce jour.
   const dernier = edt.semaineType().filter((s) => s.jour === Number(jour)).sort((a, b) => b.fin.localeCompare(a.fin))[0];
-  const debut = x?.debut ?? dernier?.fin ?? '08:00';
+  const libre = edt.creneauxConnus(Number(jour)).find((c) => !c.occupe);
+  const debut = x?.debut ?? libre?.debut ?? dernier?.fin ?? '08:00';
   const [h, m] = debut.split(':').map(Number);
   const finDefaut = `${String(Math.min(23, h + Math.floor((m + 55) / 60))).padStart(2, '0')}:${String((m + 55) % 60).padStart(2, '0')}`;
   $('#serie-debut').value = debut;
-  $('#serie-fin').value = x?.fin ?? finDefaut;
+  $('#serie-fin').value = x?.fin ?? libre?.fin ?? finDefaut;
+  majCreneauxConnus();
   $('#serie-salle').value = x?.salle ?? '';
   // Les semaines possibles viennent du cycle (A/B, 1/2/3…).
   const { actif, libelles } = edt.cycleActuel();
@@ -224,6 +227,27 @@ export function ouvrirSerie(id = null, jour = 1) {
   majChampsSerie();
   $('#edt-serie').showModal();
 }
+
+// Les horaires déjà saisis, à côté de « De » et « à » : un clic remplit les
+// deux heures. Barrés : déjà pris ce jour-là (restent cliquables, pour les
+// semaines A/B).
+export function majCreneauxConnus() {
+  const creneaux = edt.creneauxConnus(Number($('#serie-jour').value), serieEditee?.id);
+  const debut = $('#serie-debut').value;
+  const fin = $('#serie-fin').value;
+  $('#serie-creneaux').hidden = creneaux.length === 0;
+  $('#serie-creneaux-liste').innerHTML = creneaux.map((c) => `<button type="button" class="creneau-connu${c.occupe ? ' occupe' : ''}"
+    data-debut="${c.debut}" data-fin="${c.fin}" aria-pressed="${c.debut === debut && c.fin === fin}"
+    ${c.occupe ? 'title="Déjà un cours à cette heure ce jour-là"' : ''}>${heureCourte(c.debut)} – ${heureCourte(c.fin)}</button>`).join('');
+}
+$('#serie-creneaux-liste').addEventListener('click', (e) => {
+  const bouton = e.target.closest('button[data-debut]');
+  if (!bouton) return;
+  $('#serie-debut').value = bouton.dataset.debut;
+  $('#serie-fin').value = bouton.dataset.fin;
+  majCreneauxConnus();
+});
+for (const id of ['#serie-jour', '#serie-debut', '#serie-fin']) $(id).addEventListener('input', majCreneauxConnus);
 
 export function majChampsSerie() {
   const creneau = $('#serie-categorie').value === '';

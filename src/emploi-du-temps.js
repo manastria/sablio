@@ -132,6 +132,19 @@ export const series = () => toutesLesSeries;
 export const semaineType = () => toutesLesSeries.filter((x) => x.type !== 'evenement');
 export const evenements = () => toutesLesSeries.filter((x) => x.type === 'evenement');
 
+// Horaires des cours déjà saisis (semaine type, sans les activités
+// personnelles), proposés quand on ajoute un cours : un collège garde les
+// mêmes heures d'un jour à l'autre. `occupe` : un cours ou une activité de ce
+// jour chevauche déjà l'horaire (sauf `ignorer`, le cours qu'on modifie).
+export function creneauxConnus(jour, ignorer = null) {
+  const ecole = semaineType().filter((x) => categorie(x.cle)?.nature !== 'perso');
+  const ceJour = semaineType().filter((x) => x.jour === jour && x.id !== ignorer);
+  const vus = new Map(ecole.map((x) => [`${x.debut}-${x.fin}`, { debut: x.debut, fin: x.fin }]));
+  return [...vus.values()]
+    .sort((a, b) => a.debut.localeCompare(b.debut) || a.fin.localeCompare(b.fin))
+    .map((c) => ({ ...c, occupe: ceJour.some((x) => x.debut < c.fin && c.debut < x.fin) }));
+}
+
 // Un événement à titre libre (« Dentiste ») porte lui-même ce qu'une
 // catégorie donnerait : nom, pictogramme, couleur, confidentialité.
 function categorieDeSerie(serie) {

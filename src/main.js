@@ -308,6 +308,11 @@ async function faireCaptures(dossier) {
   await page.executeJavaScript(`document.querySelector('[data-categorie="psy"]').click()`);
   await capturer('29-activite');
   await page.executeJavaScript(`document.querySelector('#edt-categorie').close()`);
+  // Nouveau cours le mardi : horaires déjà saisis proposés (barrés : pris),
+  // le seul libre (15 h 35) est choisi d'office.
+  await page.executeJavaScript(`document.querySelector('[data-action="serie-nouvelle"][data-jour="2"]').click()`);
+  await capturer('44-nouveau-cours');
+  await page.executeJavaScript(`document.querySelector('#edt-serie').close()`);
   // Agenda : le dentiste de la démonstration (le mercredi qui suit le jour de
   // référence, ici le 25 novembre), la liste de l'agenda et la saisie.
   await proto('scenario("2026-11-23T19:00", "college", "jour", "2026-11-25")');
